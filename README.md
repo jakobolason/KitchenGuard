@@ -9,7 +9,7 @@ https://brightspace.au.dk/d2l/le/lessons/165644/units/2214349
 ### Requirements Documents
 V1: https://1drv.ms/w/c/61f0a156d85ac089/EbBI84vpWF5Bv8OuPV5Os1ABXHcLlC6EsVbDjJ5QdE1Tew
 
-V2:
+V2: https://typst.app/project/wji2EnLl90SDpZVqyBYhhA
 
 ### Design Document
 https://1drv.ms/w/c/1540926a5cc52ba3/EQBcdCbO-IBOuvBx-6HZRYgB9pOnowt9T_Gkycu7Kfi4tw?e=ejBqIz
