@@ -17,6 +17,10 @@ async fn get_status() -> HttpResponse {
     HttpResponse::Ok().body("API Status: OK")
 }
 
+async fn broker_information() -> HttpResponse {
+    // 
+}
+
 async fn save_data(
     form: web::Json<User>,
     client: web::Data<Client>

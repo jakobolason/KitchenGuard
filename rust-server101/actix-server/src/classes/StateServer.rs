@@ -17,22 +17,32 @@ impl StateServer {
 // Private functions
     // sends topic to turn off stove
     fn turn_off_stove() {
+        // Pre: state in [Unattended, Alarmed, CriticallyAlarmed]
+        // Post: stove is off
 
     }
     // sends topic to LED's and buzzer sound
     fn begin_alarm() {
+        // Pre: state in [Unattended]
+        // Post: timer started for CriticallyAlarmed & LED turned on
 
     }
     // sends topic to powerplug to turn off, and
     fn critical_alarm() {
+        // Pre: state in [Alarmed]
+        // Post: timer started to notify relatives & stove turned off
 
     }
     // stop alarm after elderly has returned to kitchen
     fn stop_alarm() {
+        // Pre: state in [Alarmed, CriticallyAlarmed] & user is in kitchen
+        // Post: state should be changed, LED turned off
 
     }
     // get database information on PIR sensor data
     fn check_users_room() {
+        // Pre: none
+        // Post: 
 
     }
     // somehow notify them
