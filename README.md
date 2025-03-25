@@ -12,7 +12,10 @@ V1: https://1drv.ms/w/c/61f0a156d85ac089/EbBI84vpWF5Bv8OuPV5Os1ABXHcLlC6EsVbDjJ5
 V2: https://typst.app/project/wji2EnLl90SDpZVqyBYhhA
 
 ### Design Document
-https://typst.app/project/w2pMnAuQofCkaqfzFyeU9i
+V1: https://typst.app/project/w2pMnAuQofCkaqfzFyeU9i
+
+### Testing Document
+V1: https://typst.app/project/w1kPZ7sOE10qzxNl9waEui
 
 ### DRAW.IO with all diagram
 https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=sharing
