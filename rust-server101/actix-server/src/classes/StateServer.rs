@@ -5,7 +5,7 @@ pub enum states {
     Attended,
     Unattended,
     Alarmed,
-    Critically-alarmed
+    CriticallyAlarmed
 }
 
 pub struct StateServer {
