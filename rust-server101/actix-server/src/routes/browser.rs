@@ -6,8 +6,8 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/")
             .route("", web::get().to(|| async { HttpResponse::Ok().body("Browser UI") }))
-            .route("/dashboard", web::get().to(dashboard))
-            .route("/settings", web::get().to(settings))
+            .route("dashboard", web::get().to(dashboard))
+            .route("settings", web::get().to(settings))
     );
 }
 

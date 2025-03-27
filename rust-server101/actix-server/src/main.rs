@@ -11,13 +11,13 @@ mod routes {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-
+    log::info!("Setting up mongoDB connection...");
     // Setup mongodb connection
     let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".into());
 
     let client = Client::with_uri_str(uri).await.expect("failed to connect");
     // create_username_index(&client).await;
-
+    log::info!("DB connection successfull, setting up routes...");
     HttpServer::new(move|| {
         let _json_config = web::JsonConfig::default()
             .limit(4096)
@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
                 HttpResponse::NotFound().body("Not Found")
             }))
     })
-    .bind("127.0.0.1:8080")?
+    .bind("127.0.0.1:8080")? // change to 0.0.0.0 to expose server using computer's ip address, port 8080
     .run()
     .await
 }
