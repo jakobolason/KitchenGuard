@@ -17,6 +17,8 @@ V3: https://typst.app/project/wZXM44xnKMyixM6hr2S5lF
 ### Design Document
 V1: https://typst.app/project/w2pMnAuQofCkaqfzFyeU9i
 
+V2: https://typst.app/project/wSjCDNBCTkhM7nfie8lMuA
+
 ### Testing Document
 V1: https://typst.app/project/w1kPZ7sOE10qzxNl9waEui
 
