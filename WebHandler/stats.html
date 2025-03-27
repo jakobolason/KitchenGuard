@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KitchenGuard - Statistik</title>
+    <link href="stylesheet.css" rel="stylesheet">
+</head>
+
+<style>
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+    
+    tr:nth-child(even) {
+        background-color: #dddddd;
+    }
+</style>
+
+<body>
+    <!-- Drop down menu -->
+    <nav class="DropDownMenu">
+        <button class="DropDownButton">
+            <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.thenounproject.com%2Fpng%2F1123247-200.png&f=1&nofb=1&ipt=01f476a25d20356b4901c217bd2fe9329571477b13b9006da797367ca4d2ddd4&ipo=images", style="width: 30; height:30px;">
+        </button>
+
+        <!-- Drop down menu buttons -->
+        <nav class="DropDownMenuContent">
+            <a href="index.html">Forside</a>
+            <a href="stats.html">Statistik</a>
+            <a href="om.html">Om</a>
+            <a href="indstillinger.html">Indstillinger</a>
+        </nav>
+    </nav>
+
+    <!-- Page header -->
+    <div class="CenterContainer">
+        <h1>Statistik</h1>
+    </div>
+
+    <!-- Statistik her -->
+    <!-- <div id="params", class="CenterContainer", style="margin-left: 20%; margin-right: 20%;"></div> -->
+    <div id="params", class="statTable"></div>
+
+
+    <script>
+        makeStatTable();
+        
+        async function makeStatTable() {
+            var params = await fetchStats();
+            console.log(params);
+
+            var paramsContainer = document.querySelector("#params");
+
+            /* Create table headers */
+            var htmlTable = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Amount of activations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            `;
+
+            paramsContainer.innerHTML = htmlTable;
+            var tableBody = paramsContainer.querySelector("tbody");
+
+            for (var param of params) {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${param.Date}</td>
+                        <td>${param.Time}</td>
+                        <td>${param.Activation_amount}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        async function fetchStats() {
+            var response = await fetch("data.json");
+            var data = await response.json();
+
+            return data;
+        }
+    </script>
+
+</body>
+</html>
