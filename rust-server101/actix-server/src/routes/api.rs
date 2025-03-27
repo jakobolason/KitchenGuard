@@ -5,6 +5,7 @@ use mongodb::Client;
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
+            .route("/test-save", web::post().to(save_test))
             .route("/save", web::post().to(save_data))
             .route("/status", web::get().to(get_status))
     );
@@ -21,28 +22,54 @@ async fn get_status() -> HttpResponse {
 //     // 
 // }
 
-async fn save_data(
+async fn save_test(
     form: web::Json<User>,
     client: web::Data<Client>
                     ) -> HttpResponse 
 {
     let collection = client.database(DB_NAME).collection(COLL_NAME);
     let result = collection.insert_one(form.into_inner()).await;
+    log::info!("Save endpoint reached");
     match result {
         Ok(_) => HttpResponse::Ok().body("user added"),
         Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
 }
 
-// HEUCOD event standard, needs implementing
+async fn save_data(
+    form: web::Json<Event>,
+    client: web::Data<Client>
+                    ) -> HttpResponse 
+{
+    let collection = client.database(DB_NAME).collection("EventsTest");
+    let result = collection.insert_one(form.into_inner()).await;
+    log::info!("Save endpoint reached");
+    match result {
+        Ok(_) => HttpResponse::Ok().body("user added"),
+        Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
+    }
+}
+
+// query or body format (struct)
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct User {
+    pub first_name: String,
+    pub last_name: String,
+    pub username: String,
+    pub email: String,
+}
+
+// HEUCOD event standard, needs implementing.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Event {
-    timestamp: str,
-    eventType: str,
-    eventTypeEnum: str,// make an enum for this, using integers to represent states
-    patientId: int,
-    deviceModel: str,
-    deviceVendor: str,
-    gatewayId: int,
-    id: int,
+    pub time_stamp: String,
+    pub mode: String,
+    pub event_data: String,
+    pub event_type_enum: String, // Or you could define an enum here
+    pub patient_id: u32,
+    pub device_model: String,
+    pub device_vendor: String,
+    pub gateway_id: u32,
+    pub id: String,
 }
+

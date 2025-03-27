@@ -1,5 +1,5 @@
 use actix_web::{error, web, App, HttpServer, HttpResponse};
-use log::error;
+use actix_cors::Cors;
 // use model::User;
 use mongodb::Client;
 
@@ -26,8 +26,15 @@ async fn main() -> std::io::Result<()> {
                 error::InternalError::from_response(err, HttpResponse::Conflict().finish())
                     .into()
             });
+        let cors = Cors::default()
+            //.allowed_origin(
+            //    &(std::env::var("SERVER_URL").unwrap().to_string()+ ":" + &std::env::var("FROTEND").unwrap().to_string())
+            //)
+            .allow_any_origin()
+            .allowed_methods(vec!["GET","POST","PUT"]);
 
         App::new()
+            .wrap(cors)
             .app_data(web::Data::new(client.clone()))
             .configure(routes::browser::browser_config) // HTTP server '/'
             .configure(routes::api::api_config)  // State server '/api'
@@ -36,7 +43,7 @@ async fn main() -> std::io::Result<()> {
                 HttpResponse::NotFound().body("Not Found")
             }))
     })
-    .bind("127.0.0.1:8080")? // change to 0.0.0.0 to expose server using computer's ip address, port 8080
+    .bind("0.0.0.0:8080")? // change to 0.0.0.0 to expose server using computer's ip address, port 8080
     .run()
     .await
 }
