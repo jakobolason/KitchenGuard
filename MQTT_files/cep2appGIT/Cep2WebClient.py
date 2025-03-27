@@ -51,7 +51,7 @@ class Cep2WebClient:
         """
         try:
             # A new event is sent as an HTTP POST request.
-            response = requests.post(self.__host + "/api.save", data=event)
+            response = requests.post(self.__host + "/api/save", data=event)
 
             return response.status_code
         except requests.exceptions.ConnectionError:

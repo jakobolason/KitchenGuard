@@ -54,7 +54,7 @@ class Cep2EvemanEvent:
         return cls(device_id=json_obj["device_id"],
                    device_type=json_obj["device_type"],
                    measurement=json_obj["measurement"],
-                   timestamp=datetime.strptime(json_obj["timestamp"], "%Y-%m-%d %H:%M:%S") c  ccd vvvvvvbccccccccbbbbbbbbbbbbbbb)
+                   timestamp=datetime.strptime(json_obj["timestamp"], "%Y-%m-%d %H:%M:%S"))
 
 
 class Cep2EvemanModel:

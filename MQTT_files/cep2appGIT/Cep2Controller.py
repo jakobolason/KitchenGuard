@@ -2,9 +2,12 @@ from Cep2Model import Cep2Model
 from Cep2WebClient import Cep2WebClient, Cep2WebDeviceEvent
 from Cep2Zigbee2mqttClient import (Cep2Zigbee2mqttClient,
                                    Cep2Zigbee2mqttMessage, Cep2Zigbee2mqttMessageType)
+import requests
+import json
+import datetime
 
 class Cep2Controller:
-    HTTP_HOST = "http://127.0.0.1:8000"
+    HTTP_HOST = "http://192.168.198.236:8080"
     MQTT_BROKER_HOST = "localhost"
     MQTT_BROKER_PORT = 1883
 
@@ -31,6 +34,16 @@ class Cep2Controller:
         """
         self.__z2m_client.connect()
         print(f"Zigbee2Mqtt is {self.__z2m_client.check_health()}")
+        # A new event is sent as an HTTP GET request
+        response = requests.get(self.HTTP_HOST + "/api/status")
+        if response.status_code == 200:
+            print("Status of database was a SUCCESS!")
+        else:
+            print("Response from request: ", response)
+            
+        #event = {"first_name": "Jakob", "last_name": "Miller", "username": "Jalle", "email": "jalle@cool.com"}
+        
+        
 
     def stop(self) -> None:
         """ Stop listening for zigbee2mqtt events.
@@ -44,7 +57,7 @@ class Cep2Controller:
         Args:
             message (Cep2Zigbee2mqttMessage): an object with the message received from zigbee2mqtt
         """
-#        print("incoming message: ", message)
+ #       print("incoming message: ", message)
         # If message is None (it wasn't parsed), then don't do anything.
         if not message:
             print("NO MESSAGE RECIEVED")
@@ -70,27 +83,52 @@ class Cep2Controller:
         device = self.__devices_model.find(device_id)
 
         if device:
-            try:
-                occupancy = message.event["occupancy"]
-            except KeyError:
-                pass
+            data = message.event
+            mode = ""
+            if "occupancy" in data.keys():
+                if data["occupancy"] == True:
+                    mode = "Occupied"
+                else:
+                    mode = "Not occupied"
+            elif "state" in data.keys():
+                mode = data["state"]
             else:
-                print("occupancy found: ", occupancy)
-                # Based on the value of occupancy, change the state of the actuators to ON
-                # (occupancy is true, i.e. a person is present in the room) or OFF.
-                new_state = "ON" if occupancy else "OFF"
-                print("New state: ", new_state)
-                # Change the state on all actuators, i.e. LEDs and power plugs.
-                for a in self.__devices_model.actuators_list:
-                    self.__z2m_client.change_state(a.id_, new_state)
+                raise Exception("Neither occupancy nor state keys found") 
 
-                # Register event in the remote web server.
-                web_event = Cep2WebDeviceEvent(device_id=device.id_,
-                                               device_type=device.type_,
-                                               measurement=occupancy)
+            #print(type(device.type_))
+            #print(type(device.id_))
+            # Based on the value of occupancy, change the state of the actuators to ON
+            # (occupancy is true, i.e. a person is present in the room) or OFF.
+#            new_state = "ON" if occupancy else "OFF"
+#            print("New state: ", new_state)
+            # Change the state on all actuators, i.e. LEDs and power plugs.
+ #           for a in self.__devices_model.actuators_list:
+ #               self.__z2m_client.change_state(a.id_, new_state)
+            daTime = f"{datetime.datetime.now()}"
+            
+            # Convert event_data to string
+            data_str = f"{data}"
+            
+            # Register event in the remote web server.
+            web_event = {
+                "time_stamp": daTime, 
+                "mode": mode,
+                "event_data": data_str, 
+                "event_type_enum": "17", 
+                "patient_id": 5, 
+                "device_model": device.type_, 
+                "device_vendor": "Aqara", 
+                "gateway_id": 13, 
+                "id": device.id_
+                }
+            try:
 
-                client = Cep2WebClient(self.HTTP_HOST)
-                try:
-                    client.send_event(web_event.to_json())
-                except ConnectionError as ex:
-                    print(f"{ex}")
+    
+                if device.type_ == "LED":
+                    print("Trying to save: ", web_event)
+                
+                responseSave = requests.post(self.HTTP_HOST + "/api/save", json = web_event)
+    
+                print("Response from save function: ", responseSave)
+            except ConnectionError as ex:
+                print(f"{ex}")
