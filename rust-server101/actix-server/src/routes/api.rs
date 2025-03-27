@@ -34,11 +34,15 @@ async fn save_data(
     }
 }
 
-// query or body format (struct)
+// HEUCOD event standard, needs implementing
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct User {
-    pub first_name: String,
-    pub last_name: String,
-    pub username: String,
-    pub email: String,
+pub struct Event {
+    timestamp: str,
+    eventType: str,
+    eventTypeEnum: str,// make an enum for this, using integers to represent states
+    patientId: int,
+    deviceModel: str,
+    deviceVendor: str,
+    gatewayId: int,
+    id: int,
 }
