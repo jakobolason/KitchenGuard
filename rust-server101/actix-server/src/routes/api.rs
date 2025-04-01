@@ -5,7 +5,7 @@ use mongodb::Client;
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
-            .route("/test-save", web::post().to(save_test))
+            .route("/test-save", web::post().to(test_save))
             .route("/save", web::post().to(save_data))
             .route("/status", web::get().to(get_status))
     );
@@ -22,7 +22,7 @@ async fn get_status() -> HttpResponse {
 //     // 
 // }
 
-async fn save_test(
+async fn test_save(
     form: web::Json<User>,
     client: web::Data<Client>
                     ) -> HttpResponse 
