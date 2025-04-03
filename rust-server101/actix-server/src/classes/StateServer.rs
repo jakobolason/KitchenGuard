@@ -8,10 +8,36 @@ pub enum states {
     CriticallyAlarmed
 }
 
+pub enum sensorType {
+    PIR,
+    PP, // PowerPlug
+    LED,
+    SP, // speaker
+}
+
+// For every sensor event
+struct SensorEvent {
+    resId: str,
+    timestamp: DateTime<Utc>,
+    sensor_id: String,
+    sensor_type: sensorType,
+    value: str,              // could be state, or data. Maybe make it more general
+}
+
+// For when an alarm is sounded
+struct AlertEvent {
+    id: Uuid,
+    timestamp: DateTime<Utc>,
+    alert_type: AlertType,    // Alarmed or Critically alarmed
+    state: AlertState,        // TRIGGERED, ACKNOWLEDGED, RESOLVED: Mutable, meaning it should be updated if alarm is turned off
+    context: Json,            // Store full system state snapshot here
+}
+
 pub struct StateServer {
     state: states;
     sensor_lookup: HashMap; 
 }
+
 
 impl StateServer {
 // Private functions
@@ -71,12 +97,29 @@ impl StateServer {
     }
 
 // Public functions
-    pub fn event(/** Should be a deserialized json*/) {
+    pub fn event(sensor: sensors, data: str, resId: str) {
+        // check resId is a registered resident in db
+
+        // log the event data
+        let collection = client.database("Residents").collection(resId);
+        let result = collection.insert_one(data.into_inner()).await;
+        match result {
+            Ok(_) => return true, 
+            Err(err) => return false,
+        }
+
+        // If it was PIR sensor in kitchen setting occupancy:false, then check if powerplug is on
+
+        // if it was kitchen PIR saying occupancy:true and alarm is on, then turn off alarm
 
     }
+
+
 // NOTE: Should maybe return both access token and a list of strings
 //       for elder_uids
     pub fn check_credentials(username: str, password: str) -> str{
 
     }
 }
+
+enum
