@@ -97,7 +97,7 @@ impl StateServer {
     }
 
 // Public functions
-    pub fn event(sensor: sensors, data: str, resId: str) {
+    pub fn event(sensor: sensors, data: Event, resId: str) {
         // check resId is a registered resident in db
 
         // log the event data

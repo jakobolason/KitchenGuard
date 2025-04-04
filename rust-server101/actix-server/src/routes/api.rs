@@ -65,8 +65,8 @@ pub struct Event {
     pub time_stamp: String,
     pub mode: String,
     pub event_data: String,
-    pub event_type_enum: String, // Or you could define an enum here
-    pub patient_id: u32,
+    pub event_type_enum: String, // Or we could define an enum here
+    pub res_id: u32, // changed from patient_id to res_id
     pub device_model: String,
     pub device_vendor: String,
     pub gateway_id: u32,
