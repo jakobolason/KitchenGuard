@@ -25,6 +25,7 @@ async fn my_middleware(
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     // pre-processing
+    // println!("req: {:?}", req);
     next.call(req).await
     // post-processing
 }
@@ -65,14 +66,14 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            .wrap(Logger::new("%a %{User-Agent}i %s %T"))
+            .wrap(Logger::default())
             .wrap(from_fn(my_middleware))
             .app_data(web::Data::new(client.clone()))
-            .configure(routes::browser::browser_config) // HTTP server '/'
+            .configure(routes::browser::browser_config) // web server '/'
             .configure(routes::api::api_config)  // State server '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {
-                HttpResponse::NotFound().body("Not Found")
+                HttpResponse::NotFound().body("404 Not Found")
             }))
     })
     .bind("0.0.0.0:8080")? // change to 0.0.0.0 to expose server using computer's ip address, port 8080
