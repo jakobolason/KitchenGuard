@@ -68,3 +68,20 @@ body {
     margin-left: 20%;
     margin-right: 20%;
 }
+
+.statChart {
+    display: grid;
+    place-items: center;
+    height: auto;
+    max-height: 70%;
+    width: 60%;
+    max-width: 60%;
+}
+
+.chartContainer {
+    display: flex;
+    justify-content: center; /* Centers the canvas horizontally */
+    align-items: center; /* Centers the canvas vertically if needed */
+    width: 100%; /* Full width of the parent */
+    height: auto; /* Adjust height as needed */
+}

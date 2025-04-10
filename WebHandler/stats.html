@@ -47,12 +47,25 @@
 
     <!-- Statistik her -->
     <!-- <div id="params", class="CenterContainer", style="margin-left: 20%; margin-right: 20%;"></div> -->
-    <div id="params", class="statTable"></div>
+    <div id="params" class="statTable"></div>
+
+    <br>
+    <br>
+
+    <!-- div for statistic graph -->
+    <div class="chartContainer">
+        <canvas class="statChart" id="chart"></canvas>
+    </div>
 
 
     <script>
-        makeStatTable();
-        
+        async function fetchStats() {
+            var response = await fetch("data.json");
+            var data = await response.json();
+
+            return data;
+        }
+
         async function makeStatTable() {
             var params = await fetchStats();
             console.log(params);
@@ -80,21 +93,63 @@
             for (var param of params) {
                 tableBody.innerHTML += `
                     <tr>
-                        <td>${param.Date}</td>
-                        <td>${param.Time}</td>
-                        <td>${param.Activation_amount}</td>
+                        <td>${param.date}</td>
+                        <td>${param.time}</td>
+                        <td>${param.activation_amount}</td>
                     </tr>
                 `;
             }
         }
 
-        async function fetchStats() {
-            var response = await fetch("data.json");
-            var data = await response.json();
+        makeStatTable();
+    </script>
 
-            return data;
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    <script>
+        async function fetchDates() {
+            var data = await fetchStats();
+            return data.map(item => item.date);
         }
+
+        async function fetchActAmount() {
+            var data = await fetchStats();
+            return data.map(item => item.activation_amount);
+        }
+
+        async function makeStatChart() {
+            let chart = document.getElementById("chart").getContext("2d");
+            let x = await fetchDates();
+            let y = await fetchActAmount();
+
+            new Chart("chart", {
+                type: "line",
+                data: {
+                    labels: x,
+                    datasets: [{
+                        label: "Activation Amount",
+                        data: y,
+                        borderColor: "red",
+                        fill: false
+                    }]
+                },
+                options: {
+                    legend: {display: false},
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+        }
+        makeStatChart();
+        
     </script>
 
 </body>
 </html>
+
+<!-- 
+
+
+
+-->
