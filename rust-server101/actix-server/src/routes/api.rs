@@ -8,6 +8,7 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
             .route("/test-save", web::post().to(test_save))
             .route("/save", web::post().to(save_data))
             .route("/status", web::get().to(get_status))
+            .route("/health_check", web::post().to(health_check))
     );
 }
 
@@ -21,6 +22,20 @@ async fn get_status() -> HttpResponse {
 // async fn broker_information() -> HttpResponse {
 //     // 
 // }
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct healthData {
+    pub PIR: String,
+    pub LED: String,
+    pub PowerPlug: String,
+    pub Bridge: String,
+}
+async fn health_check(form: web::Form<healthData>) -> HttpResponse {
+    log::info!("Save endpoint reached");
+    println!("{:?}", form);
+    HttpResponse::Ok().body("YEP")
+}
+
 
 async fn test_save(
     form: web::Json<User>,
