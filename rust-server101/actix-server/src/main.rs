@@ -47,7 +47,6 @@ async fn main() -> std::io::Result<()> {
     // shows logging information when reaching server
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
-
     HttpServer::new(move|| {
         let _json_config = web::JsonConfig::default()
             .limit(4096)
