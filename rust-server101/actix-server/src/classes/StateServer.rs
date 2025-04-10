@@ -1,11 +1,28 @@
 use std::collections::HashMap;
 
+#[derive(PartialEq, Eq)]
 pub enum states {
     Standby,
     Attended,
     Unattended,
     Alarmed,
     CriticallyAlarmed
+}
+
+impl FromStr for states {
+
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<states, Self::Err> {
+        match input {
+            "Standby"  => Ok(states::Standby),
+            "Attended"  => Ok(states::Attended),
+            "Unattended"  => Ok(states::Unattended),
+            "Alarmed" => Ok(states::Alarmed),
+            "CriticallyAlarmed" => Ok(states::CriticallyAlarmed),
+            _      => Err(()),
+        }
+    }
 }
 
 pub enum sensorType {
@@ -107,11 +124,66 @@ impl StateServer {
             Ok(_) => println!("Logged the event correctly"), 
             Err(err) => return false,
         }
+        // Get state from db, maybe check the latest entry instead of only 1 entry
+        let collection = client.database("States").collection(resId);
+        let currentStateStr = collection.insert_one(
+            doc! {"resId": resId};
+        ).await?;
 
-        // If it was PIR sensor in kitchen setting occupancy:false, then check if powerplug is on
+        println!("{:?}", currentStateStr);
+        // Get the list of sensors for resident
+        let collection = client.database("SensorLookup").collection(resId);
+        let listOfSensors = collection.insert_one(
+            doc! {"resId": resId};
+        ).await?;
 
-        // if it was kitchen PIR saying occupancy:true and alarm is on, then turn off alarm
-
+        // get state from string
+        const currentState = states::from_str(currentStateStr).unwrap();
+        // this if/else statement returns the new state
+        const newState = 
+            if currentState == states::CriticallyAlarmed || currentState == states::Alarmed
+                                                         || currentState == states::Unattended 
+            {
+                // if event is elderly moving into kitchen, then turn off alarm
+                if Event.device_model == listOfSensors.KitchenPIR && Event.mode == "true" { // occupancy: true
+                    if currentState == states::Unattended || currentState == states::Alarmed {
+                        // TODO: cancel jobscheduler timer given the resId
+                    }
+                    // then go into Standby/Stove-attended according to state
+                    match currentState {
+                        states::CriticallyAlarmed => states::Standby,
+                        states::Alarmed => states::Attended,
+                        states::Unattended => states::Attended,
+                    }
+                } else {
+                    // if it's not the user moving into kitchen, don't do anything
+                    currentState
+                }
+            } else if currentState == states::Attended {
+                // if user is entering kitche, then cancel jobscheduler timer 
+                if Event.device_model == listOfSensors.KitchenPIR && Event.mode == "false" { // occupancy: false
+                    // TODO: then start 20min's timer in jobscheduler
+                    states::Unattended
+                } else if Event.device_model == listOfSensors.PowerPlug && Event.mode == "Off" {
+                    states::Standby
+                }
+            } else if currentState == states::Standby {
+                else if Event.device_model == listOfSensors.PowerPlug && Event.mode == "On" {
+                    states::Attended
+                }
+            } else {
+                // default to currentState
+                currentState
+            }
+        }
+        // now insert the new state
+        // TODO: Determine whether we should update db, if it's the same state
+        let collection = client.database("States").collection(resId);
+        let result = collection.insert_one(newState.into_inner()).await;
+        match result {
+            Ok(_) => println!("Changed the state to {:?}", newState), 
+            Err(err) => return false,
+        }
     }
 
 
