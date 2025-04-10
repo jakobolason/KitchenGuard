@@ -104,7 +104,7 @@ impl StateServer {
         let collection = client.database("Residents").collection(resId);
         let result = collection.insert_one(data.into_inner()).await;
         match result {
-            Ok(_) => return true, 
+            Ok(_) => println!("Logged the event correctly"), 
             Err(err) => return false,
         }
 
