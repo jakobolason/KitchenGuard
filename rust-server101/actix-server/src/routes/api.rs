@@ -30,12 +30,20 @@ pub struct healthData {
     pub PowerPlug: String,
     pub Bridge: String,
 }
-async fn health_check(form: web::Form<healthData>) -> HttpResponse {
+async fn health_check(form: web::Json<healthData>) -> HttpResponse {
     log::info!("Save endpoint reached");
     println!("{:?}", form);
     HttpResponse::Ok().body("YEP")
 }
 
+// query or body format (struct)
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct User {
+    pub first_name: String,
+    pub last_name: String,
+    pub username: String,
+    pub email: String,
+}
 
 async fn test_save(
     form: web::Json<User>,
@@ -65,14 +73,6 @@ async fn save_data(
     }
 }
 
-// query or body format (struct)
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct User {
-    pub first_name: String,
-    pub last_name: String,
-    pub username: String,
-    pub email: String,
-}
 
 // HEUCOD event standard, needs implementing.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
