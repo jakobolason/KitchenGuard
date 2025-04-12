@@ -1,8 +1,8 @@
-extern crate timer;
+// extern crate timer;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::future::Future;
-use std::process::Output;
+// use std::process::Output;
 use std::collections::VecDeque;
 use std::thread::sleep;
 
@@ -10,31 +10,31 @@ use std::thread::sleep;
 type CallbackFn = Box<dyn FnOnce() + Send + 'static>;
 
 struct ScheduledTask {
-  id: String,
+  res_id: String,
   callback: CallbackFn,
   execute_at: Instant,
 }
-
-struct JobsSheduler {
+#[derive(Clone)]
+pub struct JobsScheduler {
   tasks: Arc<Mutex<VecDeque<ScheduledTask>>>,
 }
 
-impl JobsSheduler {
+impl JobsScheduler {
   // Constructor to be called in app instantiation (main.rs)
-    fn new() -> Self {
-      JobsSheduler {
+    pub fn new() -> Self {
+      JobsScheduler {
         tasks: Arc::new(Mutex::new(VecDeque::<ScheduledTask>::new())),
       }
     }
 
-	fn schedule<F>(&self, callback: F, delay: Duration, res_id: String)
+	pub fn schedule<F>(&self, callback: F, delay: Duration, res_id: String)
 	where
 		// the callback function for when timer expires, should be called once, 'Send' gives owner
 		// -ship from this thread to the StateServer, and 'static' means the functin should be static
 		F: FnOnce() + Send + 'static,
 	{
 		let task = ScheduledTask {
-			id: res_id,
+			res_id: res_id,
 			callback: Box::new(callback),
 			execute_at: Instant::now() + delay,
 		};
@@ -45,10 +45,10 @@ impl JobsSheduler {
 		tasks.insert(pos, task);
 	}
 
-	fn cancel(&self, id: String) -> bool {
+	pub fn cancel(&self, res_id: String) -> bool {
 		// use unwrap to check integrity of tasks.lock
 		let mut tasks = self.tasks.lock().unwrap();
-		if let Some(pos) = tasks.iter().position(|t| t.id == id) {
+		if let Some(pos) = tasks.iter().position(|t| t.res_id == res_id) {
 			tasks.remove(pos);
 			true
 		} else {
@@ -56,7 +56,7 @@ impl JobsSheduler {
 		}
 	}
 	
-	fn start(self) -> impl Future<Output = ()> {
+	pub fn start(self) -> impl Future<Output = ()> {
 		// make a clone of the address to 'tasks'
 		let tasks = Arc::clone(&self.tasks);
 		async move {

@@ -15,22 +15,21 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
 const DB_NAME: &str = "test";
 const COLL_NAME: &str = "users";
 
+
+
 async fn get_status() -> HttpResponse {
     HttpResponse::Ok().body("API Status: OK")
 }
 
-// async fn broker_information() -> HttpResponse {
-//     // 
-// }
-
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct healthData {
+pub struct HealthData {
     pub PIR: String,
     pub LED: String,
     pub PowerPlug: String,
     pub Bridge: String,
 }
-async fn health_check(form: web::Json<healthData>) -> HttpResponse {
+
+async fn health_check(form: web::Json<HealthData>) -> HttpResponse {
     log::info!("Save endpoint reached");
     println!("{:?}", form);
     HttpResponse::Ok().body("YEP")

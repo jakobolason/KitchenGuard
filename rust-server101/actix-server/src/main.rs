@@ -1,17 +1,7 @@
 use actix_web::{
-    error, 
-    web, 
-    body::MessageBody,
-    dev::{ServiceResponse, ServiceRequest},
-    middleware::{from_fn, Logger, Next}, 
-    App, 
-    HttpServer, 
-    HttpResponse,
-    Error,
-    cookie::Key,
+    body::MessageBody, cookie::{time::format_description::well_known, Key}, dev::{ServiceRequest, ServiceResponse}, error, middleware::{from_fn, Logger, Next}, web, App, Error, HttpResponse, HttpServer
 };
 // use actix_session::{Session, SessionMiddleware, storage::CookieSessionStore};
-
 
 use env_logger::Env;
 use actix_cors::Cors;
@@ -22,6 +12,13 @@ mod routes {
     pub mod api;
     pub mod browser;
 }
+
+mod classes {
+    pub mod job_scheduler;
+    pub mod state_handler;
+}
+use crate::classes::job_scheduler::JobsScheduler;
+use crate::classes::state_handler::StateHandler;
 
 async fn my_middleware(
     req: ServiceRequest,
@@ -47,6 +44,9 @@ async fn main() -> std::io::Result<()> {
     // shows logging information when reaching server
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
+    let state_handler: StateHandler = StateHandler::new();
+    let job_scheduler: JobsScheduler = JobsScheduler::new();
+
     HttpServer::new(move|| {
         let _json_config = web::JsonConfig::default()
             .limit(4096)
@@ -64,13 +64,13 @@ async fn main() -> std::io::Result<()> {
             .allow_any_origin()
             .allowed_methods(vec!["GET","POST","PUT"]);
 
-        let session_key = Key::generate();
-
         App::new()
             .wrap(cors)
             .wrap(Logger::default())
             .wrap(from_fn(my_middleware))
-            .app_data(web::Data::new(client.clone()))
+            .app_data(web::Data::new(job_scheduler.clone()))
+            .app_data(web::Data::new(client.clone())) // mongodb client
+            .app_data(web::Data::new(state_handler.clone()))
             // .service(
                 // web::scope("/")
                 //     .wrap(
@@ -78,9 +78,9 @@ async fn main() -> std::io::Result<()> {
                 //             .cookie_secure(false)
                 //             .build()
                     // )
-                    .configure(routes::browser::browser_config) // web server '/'
+                    .configure(routes::browser::browser_config) // webhandler '/'
             // )
-            .configure(routes::api::api_config)  // State server '/api'
+            .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {
                 HttpResponse::NotFound().body("404 Not Found")
