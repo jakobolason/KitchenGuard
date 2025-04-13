@@ -1,12 +1,9 @@
 use actix::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
-use std::future::Future;
-// use std::process::Output;
 use std::collections::VecDeque;
-use std::thread::sleep;
 
-use super::state_handler::StateHandler;
+use super::state_handler::{StateHandler, JobCompleted};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -105,6 +102,9 @@ impl Handler<CheckJobs> for JobsScheduler {
 			}
 		};
 		if let Some(task) = next_task {
+			self.state_handler.do_send(JobCompleted {
+				res_id: task.res_id,
+			});
 			println!("Do sometghin");
 		} else if is_empty { // might not be neccessary
 			return
@@ -127,36 +127,21 @@ impl JobsScheduler {
 			false
 		}
 	}
-	
-	// pub fn start(self) -> impl Future<Output = ()> {
-	// 	// make a clone of the address to 'tasks'
-	// 	let tasks = Arc::clone(&self.tasks);
-	// 	async move {
-	// 		loop {
-	// 			// Check if the front timer is expired
-	// 			let (next_task, is_empty) = {
-	// 				let mut queue = tasks.lock().unwrap();
-	// 				if queue.is_empty() {
-	// 					(None, true)
-	// 				} else {
-	// 					let now = Instant::now();
-	// 					if queue[0].execute_at <= now {
-	// 						(Some(queue.pop_front().unwrap()), false)
-	// 					} else {
-	// 						(None, false)
-	// 					}
-						
-	// 				}
-	// 			};
-	// 			if let Some(task) = next_task {
-	// 				println!("Do sometghin");
-	// 			} else if is_empty { // might not be neccessary
-	// 				break;
-	// 			}
-	// 			else {
-	// 				sleep(Duration::from_secs(10));
-	// 			}
-	// 		}
-	// 	}
-	// }
+}
+
+
+
+// ====== TESTING ======
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use super::StateHandler;
+	use mongodb::Client;
+
+	#[test]
+	fn test_job_scheduler_initialization() {
+		// call functions of the struct, not the actor
+	}
+
+
 }

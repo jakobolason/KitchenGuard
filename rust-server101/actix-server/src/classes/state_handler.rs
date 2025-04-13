@@ -60,7 +60,8 @@ struct StateLog {
 // ============ Messages across Actors =============
 
 // HEUCOD event standard, needs implementing.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
 pub struct Event {
     pub time_stamp: String,
     pub mode: String,
@@ -73,18 +74,12 @@ pub struct Event {
     pub id: String,
 }
 
-impl Message for Event {
-    type Result = ();
-}
-
-#[derive(Debug)]
+#[derive(Debug, Message)]
+#[rtype(result = "()")]
 pub struct JobCompleted {
-    res_id: String,
+    pub res_id: String,
 }
 
-impl Message for JobCompleted {
-    type Result = ();
-}
 
 #[derive(Clone)]
 pub struct StateHandler {
@@ -361,7 +356,7 @@ impl Handler<JobCompleted> for StateHandler {
     type Result = ();
 
     fn handle(&mut self, msg: JobCompleted, _ctx: &mut Self::Context) {
-        println!("A job was completed! res_id: {:?}", msg);
+        println!("A job was completed! res_id: {:?}", msg.res_id);
     }
 }
 

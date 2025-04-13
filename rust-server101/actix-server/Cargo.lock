@@ -129,23 +129,9 @@ version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24eda4e2a6e042aa4e55ac438a2ae052d3b5da0ecf83d7411e1a368946925208"
 dependencies = [
+ "actix-macros",
  "futures-core",
  "tokio",
-]
-
-[[package]]
-name = "actix-server"
-version = "0.1.0"
-dependencies = [
- "actix",
- "actix-cors",
- "actix-session",
- "actix-web",
- "chrono",
- "env_logger",
- "log",
- "mongodb",
- "serde",
 ]
 
 [[package]]
@@ -213,7 +199,7 @@ dependencies = [
  "actix-macros",
  "actix-router",
  "actix-rt",
- "actix-server 2.5.1",
+ "actix-server",
  "actix-service",
  "actix-utils",
  "actix-web-codegen",
@@ -1514,6 +1500,22 @@ checksum = "1cfaf33c695fc6e08064efbc1f72ec937429614f25eef83af942d0e227c3a28f"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "kitchen_guard_server"
+version = "0.1.0"
+dependencies = [
+ "actix",
+ "actix-cors",
+ "actix-rt",
+ "actix-session",
+ "actix-web",
+ "chrono",
+ "env_logger",
+ "log",
+ "mongodb",
+ "serde",
 ]
 
 [[package]]
