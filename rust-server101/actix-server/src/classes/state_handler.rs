@@ -1,10 +1,26 @@
 use actix::prelude::*;
+use actix_web::rt::task;
 use chrono::DateTime;
-use actix_web::web::Data;
+// use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
 use mongodb::{bson::doc, Client};
+use std::time::{Duration, Instant};
 
-use super::job_scheduler::{self, JobsScheduler};
+use super::job_scheduler::{JobsScheduler, ScheduledTask, CancelTask};
+
+#[derive(Eq, PartialEq)]
+// An extension to scheduled task, to incorporate the type returned  (if it's a new task or a cancellation)
+enum TypeOfTask {
+    Cancellation,
+    NewTask,
+    None,
+}
+
+struct TaskValue {
+    type_of_task: TypeOfTask,
+    scheduled_task: Option<ScheduledTask>, // only used if type is NewTask
+    res_id: String,
+}
 
 #[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
 pub enum States {
@@ -161,15 +177,24 @@ impl StateHandler {
 
     }
 
-    fn determine_new_state(current_state: &States, list_of_sensors: &SensorLookup, data: &Event) -> States{
+    fn determine_new_state(current_state: &States, list_of_sensors: &SensorLookup, data: &Event) -> (States, TaskValue) {
+        let mut scheduled_task = TaskValue {
+            type_of_task: TypeOfTask::None,
+            scheduled_task: None,
+            res_id: String::new(),
+        };
         // IF were in any of these states, then we only check if it's kitchen PIR detecting motion
-        if *current_state == States::CriticallyAlarmed || *current_state == States::Alarmed
-            || *current_state == States::Unattended 
+        let new_state = if *current_state == States::CriticallyAlarmed || *current_state == States::Alarmed
+                                            || *current_state == States::Unattended 
         {
             // if event is elderly moving into kitchen, then turn off alarm
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "true" { // occupancy: true
                 if *current_state == States::Unattended || *current_state == States::Alarmed {
-                // TODO: cancel jobscheduler timer given the res_id
+                    scheduled_task = TaskValue {
+                        type_of_task: TypeOfTask::Cancellation,
+                        scheduled_task: None,
+                        res_id: data.res_id.to_string().clone(),
+                    }
                 }
                 // then go into Standby/Stove-attended according to state
                 match current_state {
@@ -187,11 +212,19 @@ impl StateHandler {
             }
         // In attended, we check both kitchen PIR status and power plug status
         } else if *current_state == States::Attended {
-            // if user is entering kitche, then cancel jobscheduler timer 
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "false" { // occupancy: false
                 // TODO: then start 20min's timer in jobscheduler
+                scheduled_task = TaskValue {
+                    type_of_task: TypeOfTask::NewTask,
+                    scheduled_task: Some(ScheduledTask {
+                        res_id: data.res_id.to_string().clone(),
+                        execute_at: Instant::now() + Duration::from_secs(20 * 60),
+                    }),
+                    res_id: data.res_id.to_string().clone(),
+                };
                 States::Unattended
-            } else if data.device_model == list_of_sensors.power_plug && data.mode == "Off" {
+                // If elderly turns off the stove
+            } else if data.device_model == list_of_sensors.power_plug && data.mode == "Off" { // power: Off
                 States::Standby
             } else {
                 // else do nothing, could be other room PIR saying somethin
@@ -208,7 +241,8 @@ impl StateHandler {
         } else {
             // default to current_state
             current_state.clone()
-        }
+        };
+        return (new_state, scheduled_task)
     }
 
     async fn get_resident_data(res_id: String, db_client: Client) -> Result<(States, SensorLookup), mongodb::error::Error> {
@@ -255,11 +289,17 @@ impl Handler<Event> for StateHandler {
 
     fn handle(&mut self, data: Event, _ctx: &mut Self::Context) {
         let db_client = self.db_client.clone();
-        let job_scheduler = self.job_scheduler.clone();
+        let job_scheduler = match self.job_scheduler.clone() {
+            Some(jobber) => jobber,
+            _=> { 
+                eprint!("There was no job scheduler address available!");
+                return
+            }
+        };
         let res_id = data.res_id.to_string();
 
         // Actor handling doesn't implement async functionality, so do some move magix
-        Box::pin(async move {
+        let fut = async move {
             // Log the event data
             let collection = db_client.database("Residents").collection::<Event>(&res_id);
             if let Err(err) = collection.insert_one(data.clone()).await {
@@ -278,9 +318,26 @@ impl Handler<Event> for StateHandler {
             let state_log = StateLog {
                 res_id: res_id.clone(),
                 timestamp: chrono::Utc::now(),
-                state: new_state.clone(),
+                state: new_state.0.clone(),
                 context: format!("{:?}", data),
             };
+            // if any job scheduling task -- either new task(20 minutes) or a cancellation
+            if new_state.1.type_of_task != TypeOfTask::None {
+                let task_el = new_state.1;
+                if task_el.type_of_task == TypeOfTask::NewTask {
+                   match task_el.scheduled_task {
+                        Some(task) => job_scheduler.do_send(task),
+                        _=> eprint!("Tried to queue task, but was missing it")
+                    }
+                } else if task_el.type_of_task == TypeOfTask::Cancellation {
+                    let res_id = task_el.res_id;
+                    job_scheduler.do_send(CancelTask {
+                        res_id,
+                    });
+                } else {
+                    // do nothing i guess
+                }
+            }
             let state_collection = db_client.database("States").collection::<StateLog>(&res_id);
             if let Err(err) = state_collection.insert_one(state_log).await {
                 eprintln!("Failed to save new state: {:?}", err);
@@ -288,12 +345,14 @@ impl Handler<Event> for StateHandler {
             };
             Ok(())
         }
-        .into_actor(self)) // Convert the future into an actor future
+        .into_actor(self) // Convert the future into an actor future
         .map(|res, _, _| {
             if let Err(err) = res {
                 eprintln!("Error in actor future: {:?}", err);
             }
         });
+
+        _ctx.spawn(fut);
         ()
     }
 }

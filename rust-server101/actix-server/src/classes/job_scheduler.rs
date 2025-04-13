@@ -6,7 +6,7 @@ use std::future::Future;
 use std::collections::VecDeque;
 use std::thread::sleep;
 
-use super::state_handler::{StateHandler};
+use super::state_handler::StateHandler;
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -15,8 +15,13 @@ struct CheckJobs;
 #[derive(Debug, Message)]
 #[rtype(result = "()")]
 pub struct ScheduledTask {
-  res_id: String,
-  execute_at: Instant,
+  pub res_id: String,
+  pub execute_at: Instant,
+}
+#[derive(Debug, Message)]
+#[rtype(result = "()")]
+pub struct CancelTask {
+	pub res_id: String
 }
 
 // impl Message for ScheduledTask {
@@ -52,6 +57,14 @@ impl Handler<StartChecking> for JobsScheduler {
             // Send the check jobs message to self
             ctx.address().do_send(CheckJobs);
         });
+	}
+}
+
+impl Handler<CancelTask> for JobsScheduler {
+	type Result = ();
+
+	fn handle(&mut self, task: CancelTask, _ctx: &mut Self::Context) {
+		self.cancel(task.res_id);
 	}
 }
 
