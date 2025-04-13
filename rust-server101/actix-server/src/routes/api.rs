@@ -2,6 +2,9 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
+use crate::classes::{job_scheduler::JobsScheduler, state_handler::{self, StateHandler, Event}};
+
+
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
@@ -9,13 +12,19 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
             .route("/save", web::post().to(save_data))
             .route("/status", web::get().to(get_status))
             .route("/health_check", web::post().to(health_check))
+            .route("/event", web::post().to(log_event))
     );
 }
 
 const DB_NAME: &str = "test";
 const COLL_NAME: &str = "users";
 
-
+async fn log_event(data: web::Json<Event>, client: web::Data<Client>, 
+    scheduler: web::Data<JobsScheduler>) -> HttpResponse {
+    StateHandler::event(&data.into_inner(), client).await;
+    
+    HttpResponse::Ok().body("OK")
+}
 
 async fn get_status() -> HttpResponse {
     HttpResponse::Ok().body("API Status: OK")
@@ -73,17 +82,5 @@ async fn save_data(
 }
 
 
-// HEUCOD event standard, needs implementing.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Event {
-    pub time_stamp: String,
-    pub mode: String,
-    pub event_data: String,
-    pub event_type_enum: String, // Or we could define an enum here
-    pub res_id: u32, // changed from patient_id to res_id
-    pub device_model: String,
-    pub device_vendor: String,
-    pub gateway_id: u32,
-    pub id: String,
-}
+
 

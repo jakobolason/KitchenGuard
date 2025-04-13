@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+use actix::prelude::*;
 use chrono::DateTime;
 use actix_web::web::Data;
 use serde::{Deserialize, Serialize};
-use mongodb::{bson, bson::doc, Client};
+use mongodb::{bson::doc, Client};
+
+use super::job_scheduler::{self, JobsScheduler};
 
 #[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
 pub enum States {
@@ -38,6 +40,9 @@ struct StateLog {
     state: States,
     context: String,            // Store full system state snapshot here
 }
+
+// ============ Messages across Actors =============
+
 // HEUCOD event standard, needs implementing.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Event {
@@ -52,10 +57,32 @@ pub struct Event {
     pub id: String,
 }
 
-#[derive(Clone)]
-pub struct StateHandler {
+impl Message for Event {
+    type Result = ();
 }
 
+#[derive(Debug)]
+pub struct JobCompleted {
+    res_id: String,
+}
+
+impl Message for JobCompleted {
+    type Result = ();
+}
+
+#[derive(Clone)]
+pub struct StateHandler {
+    db_client: Client,
+    job_scheduler: Option<Addr<JobsScheduler>>, 
+}
+
+impl Actor for StateHandler {
+    type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        println!("Statehandler actor started!");
+    }
+}
 
 impl StateHandler {
 // Private functions
@@ -116,129 +143,149 @@ impl StateHandler {
 
     }
 
-// Public functions
-pub fn new() -> Self {
-        // Initialization logic here
-        StateHandler {
-            // Initialize fields if any
+    fn determine_new_state(current_state: &States, list_of_sensors: &SensorLookup, data: &Event) -> States{
+        // IF were in any of these states, then we only check if it's kitchen PIR detecting motion
+        if *current_state == States::CriticallyAlarmed || *current_state == States::Alarmed
+            || *current_state == States::Unattended 
+        {
+            // if event is elderly moving into kitchen, then turn off alarm
+            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "true" { // occupancy: true
+                if *current_state == States::Unattended || *current_state == States::Alarmed {
+                // TODO: cancel jobscheduler timer given the res_id
+                }
+                // then go into Standby/Stove-attended according to state
+                match current_state {
+                    States::CriticallyAlarmed => States::Standby,
+                    States::Alarmed => States::Attended,
+                    States::Unattended => States::Attended,
+                    _ => {
+                        eprintln!("Unexpected state encountered: {:?}", current_state);
+                        panic!("Invalid state transition detected");
+                    }
+                }
+            } else {
+                // if it's not the user moving into kitchen, don't do anything
+                current_state.clone()
+            }
+        // In attended, we check both kitchen PIR status and power plug status
+        } else if *current_state == States::Attended {
+            // if user is entering kitche, then cancel jobscheduler timer 
+            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "false" { // occupancy: false
+                // TODO: then start 20min's timer in jobscheduler
+                States::Unattended
+            } else if data.device_model == list_of_sensors.power_plug && data.mode == "Off" {
+                States::Standby
+            } else {
+                // else do nothing, could be other room PIR saying somethin
+                current_state.clone()
+            }
+        // If power plug gets turned on
+        } else if *current_state == States::Standby {
+            if data.device_model == list_of_sensors.power_plug && data.mode == "On" {
+                States::Attended
+            } else {
+                current_state.clone()
+            }
+            // Should not be possible, but just in case
+        } else {
+            // default to current_state
+            current_state.clone()
         }
     }
-    pub async fn event(data: &Event, res_id: &str, client: Data<Client>) {
-        // check res_id is a registered resident in db
 
-        // log the event data
-        let collection = client.database("Residents").collection::<Event>(&res_id);
-        let result = collection.insert_one(data).await;
-        match result {
-            Ok(_) => println!("Logged the event correctly"), 
-            Err(err) => panic!("Log of event failed with error:\n {:?}", err),
-        }
-        // Get state from db, maybe check the latest entry instead of only 1 entry
-        let collection = client.database("States").collection::<StateLog>(&res_id);
-        let current_state: States = match collection.find_one(doc! {"res_id": res_id}).await {
-            Ok(Some(document)) => {
-                // Deserialize the document into a StateLog and extract the state
-                println!("Current state captured: {:?}", document.state);
-                document.state
-            }
+    async fn get_resident_data(res_id: String, db_client: Client) -> Result<(States, SensorLookup), mongodb::error::Error> {
+        // Fetch the current state
+        let state_collection = db_client.database("States").collection::<StateLog>(&res_id);
+        let current_state = match state_collection.find_one(doc! {"res_id": &res_id}).await {
+            Ok(Some(document)) => document.state,
             Ok(None) => {
-            println!("No document found with the given query.");
-            return; // Handle no document case appropriately
+                eprintln!("No state found for res_id: {}", res_id);
+                States::Standby
             }
-            Err(e) => {
-            eprintln!("Error occurred while querying: {}", e);
-            return; // Handle query error appropriately
+            Err(err) => {
+                eprintln!("Error querying state: {:?}", err);
+                return Err(err);
             }
         };
 
-        // Get the list of sensors for resident
-        let collection = client.database("SensorLookup").collection::<SensorLookup>(&res_id);
-        let list_of_sensors: SensorLookup = match collection.find_one(doc! {"res_id": res_id}).await {
-            Ok(Some(document)) => {
-                // Document found, print it
-                println!("Sensor lookup captured: {:?}", document);
-                document
-            }
+        // Fetch the list of sensors
+        let sensor_collection = db_client.database("SensorLookup").collection::<SensorLookup>(&res_id);
+        let sensors = match sensor_collection.find_one(doc! {"res_id": &res_id}).await {
+            Ok(Some(document)) => document,
             Ok(None) => {
-                // No document found
-                println!("No document found with the given query.");
-                panic!()
+                eprintln!("No sensors found for res_id: {}", res_id);
+                SensorLookup {
+                    kitchen_pir: String::new(),
+                    power_plug: String::new(),
+                    other_pir: Vec::new(),
+                    led: Vec::new(),
+                    speakers: Vec::new(),
+                }
             }
-            Err(e) => {
-                // Handle any errors
-                eprintln!("Error occurred while querying: {}", e);
-                panic!()
+            Err(err) => {
+                eprintln!("Error querying sensors: {:?}", err);
+                return Err(err);
             }
         };
-        // this if/else statement returns the new state
-        let new_state: States = 
-            // IF were in any of these states, then we only check if it's kitchen PIR detecting motion
-            if current_state == States::CriticallyAlarmed || current_state == States::Alarmed
-                                                         || current_state == States::Unattended 
-            {
-                // if event is elderly moving into kitchen, then turn off alarm
-                if data.device_model == list_of_sensors.kitchen_pir && data.mode == "true" { // occupancy: true
-                    if current_state == States::Unattended || current_state == States::Alarmed {
-                        // TODO: cancel jobscheduler timer given the res_id
-                    }
-                    // then go into Standby/Stove-attended according to state
-                    match current_state {
-                        States::CriticallyAlarmed => States::Standby,
-                        States::Alarmed => States::Attended,
-                        States::Unattended => States::Attended,
-                        _ => {
-                            eprintln!("Unexpected state encountered: {:?}", current_state);
-                            panic!("Invalid state transition detected");
-                        }
-                    }
-                } else {
-                    // if it's not the user moving into kitchen, don't do anything
-                    current_state
-                }
-            // In attended, we check both kitchen PIR status and power plug status
-            } else if current_state == States::Attended {
-                // if user is entering kitche, then cancel jobscheduler timer 
-                if data.device_model == list_of_sensors.kitchen_pir && data.mode == "false" { // occupancy: false
-                    // TODO: then start 20min's timer in jobscheduler
-                    States::Unattended
-                } else if data.device_model == list_of_sensors.power_plug && data.mode == "Off" {
-                    States::Standby
-                } else {
-                    // else do nothing, could be other room PIR saying somethin
-                    current_state
-                }
-            // If power plug gets turned on
-            } else if current_state == States::Standby {
-                if data.device_model == list_of_sensors.power_plug && data.mode == "On" {
-                    States::Attended
-                } else {
-                    current_state
-                }
-            // Should not be possible, but just in case
-            } else {
-                // default to current_state
-                current_state
+
+        Ok((current_state, sensors))
+    }
+}
+
+impl Handler<Event> for StateHandler {
+    type Result = ();
+
+    fn handle(&mut self, data: Event, _ctx: &mut Self::Context) {
+        let db_client = self.db_client.clone();
+        let job_scheduler = self.job_scheduler.clone();
+        let res_id = data.res_id.to_string();
+
+        // Actor handling doesn't implement async functionality, so do some move magix
+        Box::pin(async move {
+            // Log the event data
+            let collection = db_client.database("Residents").collection::<Event>(&res_id);
+            if let Err(err) = collection.insert_one(data.clone()).await {
+                eprintln!("Failed to log event: {:?}", err);
+                return Err(format!("Failed to log event: {:?}", err));
+            }
+            let (current_state, sensors) = match StateHandler::get_resident_data(res_id.clone(), db_client.clone()).await {
+                Ok(vals) => (vals.0, vals.1),
+                Err(_err) => panic!("couldn't get resident data"),
             };
 
-        // now insert the new state
-        // TODO: Determine whether we should update db, if it's the same state
-        let state_collection = client.database("States").collection::<StateLog>(&res_id);
-        let state_log = StateLog {
-            res_id: res_id.to_string(),
-            timestamp: chrono::Utc::now(),
-            state: new_state.clone(),
-            context: format!("{:?}", data),
-        };
-        let result = state_collection.insert_one(state_log).await;
-        match result {
-            Ok(_) => println!("Changed the state to {:?}", new_state), 
-            Err(err) => panic!("Failed to save new state, given error: {:?}", err),
+            // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
+            let new_state = StateHandler::determine_new_state(&current_state, &sensors, &data);
+
+            // Save the new state
+            let state_log = StateLog {
+                res_id: res_id.clone(),
+                timestamp: chrono::Utc::now(),
+                state: new_state.clone(),
+                context: format!("{:?}", data),
+            };
+            let state_collection = db_client.database("States").collection::<StateLog>(&res_id);
+            if let Err(err) = state_collection.insert_one(state_log).await {
+                eprintln!("Failed to save new state: {:?}", err);
+                return Err(format!("Failed to save new state: {:?}", err));
+            };
+            Ok(())
         }
+        .into_actor(self)) // Convert the future into an actor future
+        .map(|res, _, _| {
+            if let Err(err) = res {
+                eprintln!("Error in actor future: {:?}", err);
+            }
+        });
+        ()
     }
+}
 
+impl Handler<JobCompleted> for StateHandler {
+    type Result = ();
 
-
-
+    fn handle(&mut self, msg: JobCompleted, _ctx: &mut Self::Context) {
+        println!("A job was completed! res_id: {:?}", msg);
+    }
 }
 
 // enum

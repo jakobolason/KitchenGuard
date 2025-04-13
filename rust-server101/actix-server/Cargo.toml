@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4"
+actix = "0.13"
 actix-cors = "0.7.1"
 actix-session = "0.10.1"
 mongodb = "3"

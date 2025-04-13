@@ -1,4 +1,4 @@
-// extern crate timer;
+use actix::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::future::Future;
@@ -6,37 +6,48 @@ use std::future::Future;
 use std::collections::VecDeque;
 use std::thread::sleep;
 
-// Define a type alias for the callback function
-type CallbackFn = Box<dyn FnOnce() + Send + 'static>;
+use super::state_handler::StateHandler;
+
+struct CheckJobs;
+
+impl Message for CheckJobs {
+	type Result = ();
+}
 
 struct ScheduledTask {
   res_id: String,
-  callback: CallbackFn,
   execute_at: Instant,
+}
+
+impl Message for ScheduledTask {
+	type Result = ();
 }
 #[derive(Clone)]
 pub struct JobsScheduler {
   tasks: Arc<Mutex<VecDeque<ScheduledTask>>>,
+  state_handler: Addr<StateHandler>,
 }
 
-impl JobsScheduler {
-  // Constructor to be called in app instantiation (main.rs)
-    pub fn new() -> Self {
-      JobsScheduler {
-        tasks: Arc::new(Mutex::new(VecDeque::<ScheduledTask>::new())),
-      }
-    }
+// Use actor for concurrency design
+impl Actor for JobsScheduler {
+	type Context = Context<Self>;
 
-	pub fn schedule<F>(&self, callback: F, delay: Duration, res_id: String)
-	where
-		// the callback function for when timer expires, should be called once, 'Send' gives owner
-		// -ship from this thread to the StateServer, and 'static' means the functin should be static
-		F: FnOnce() + Send + 'static,
-	{
+	fn started(&mut self, ctx: &mut Self::Context) {
+        // Set up recurring check for jobs
+        ctx.run_interval(Duration::from_secs(10), |_act, ctx| {
+            ctx.address().do_send(CheckJobs);
+        });
+    }
+}
+
+// the schedule function, so by sending a 'ScheduledTask' to this struct it is recieved here
+impl Handler<ScheduledTask> for JobsScheduler {
+	type Result = ();
+
+	fn handle(&mut self, msg: ScheduledTask, _ctx: &mut Self::Context) {
 		let task = ScheduledTask {
-			res_id: res_id,
-			callback: Box::new(callback),
-			execute_at: Instant::now() + delay,
+			res_id: msg.res_id,
+			execute_at: msg.execute_at,
 		};
 		let mut tasks = self.tasks.lock().unwrap();
 		// use a lambda function to find the place task should be emplaced
@@ -44,7 +55,39 @@ impl JobsScheduler {
 			.unwrap_or(tasks.len());
 		tasks.insert(pos, task);
 	}
+}
 
+impl Handler<CheckJobs> for JobsScheduler {
+	type Result = ();
+
+	fn handle(&mut self, _msg: CheckJobs, _ctx: &mut Self::Context) {
+		// Check if the front timer is expired
+		let (next_task, is_empty) = {
+			let mut queue = self.tasks.lock().unwrap();
+			if queue.is_empty() {
+				(None, true)
+			} else {
+				let now = Instant::now();
+				if queue[0].execute_at <= now {
+					(Some(queue.pop_front().unwrap()), false)
+				} else {
+					(None, false)
+				}
+				
+			}
+		};
+		if let Some(task) = next_task {
+			println!("Do sometghin");
+		} else if is_empty { // might not be neccessary
+			return
+		}
+		else {
+			// sleep(Duration::from_secs(10));
+		}
+	}
+}
+
+impl JobsScheduler {
 	pub fn cancel(&self, res_id: String) -> bool {
 		// use unwrap to check integrity of tasks.lock
 		let mut tasks = self.tasks.lock().unwrap();
@@ -77,7 +120,7 @@ impl JobsScheduler {
 					}
 				};
 				if let Some(task) = next_task {
-					((task.callback)());
+					println!("Do sometghin");
 				} else if is_empty { // might not be neccessary
 					break;
 				}
