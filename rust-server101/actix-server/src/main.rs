@@ -2,23 +2,29 @@ use actix_web::{
     body::MessageBody, cookie::{time::format_description::well_known, Key}, dev::{ServiceRequest, ServiceResponse}, error, middleware::{from_fn, Logger, Next}, web, App, Error, HttpResponse, HttpServer
 };
 // use actix_session::{Session, SessionMiddleware, storage::CookieSessionStore};
-
+use actix::Actor;
 use env_logger::Env;
 use actix_cors::Cors;
 // use model::User;
 use mongodb::Client;
+use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
 
+// controls endpoint logic
 mod routes {
     pub mod api;
     pub mod browser;
 }
-
+// implementation of business logic
 mod classes {
     pub mod job_scheduler;
     pub mod state_handler;
+    pub mod shared_struct;
 }
-use crate::classes::job_scheduler::JobsScheduler;
-use crate::classes::state_handler::StateHandler;
+use crate::classes::job_scheduler::{JobsScheduler, ScheduledTask};
+use crate::classes::state_handler::{StateHandler, SetJobScheduler};
+use crate::classes::shared_struct::AppState;
+
 
 async fn my_middleware(
     req: ServiceRequest,
@@ -30,6 +36,8 @@ async fn my_middleware(
     // post-processing
 }
 
+
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     log::info!("Setting up mongoDB connection...");
@@ -37,16 +45,39 @@ async fn main() -> std::io::Result<()> {
     let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".into());
 
     // let all workers use the client/Mongodb connection
-    let client = Client::with_uri_str(uri).await.expect("failed to connect");
+    let db_client = Client::with_uri_str(uri).await.expect("failed to connect");
     // create_username_index(&client).await;
     log::info!("DB connection successfull, setting up routes...");
 
     // shows logging information when reaching server
     env_logger::init_from_env(Env::default().default_filter_or("info"));
+    log::info!("Setting up state and scheduler... ");
+    // Start state handler actor
+    let state_handler = StateHandler {
+        db_client: db_client.clone(),
+        job_scheduler: None,
+    }.start();
+    
+    // Start job scheduler actor and link to state handler
+    let job_scheduler = JobsScheduler {
+        tasks: Arc::new(Mutex::new(VecDeque::<ScheduledTask>::new())),
+        state_handler: state_handler.clone(),
+    }.start();
+    
+    // Update state handler with job scheduler reference
+    state_handler.do_send(SetJobScheduler {
+        scheduler: Some(job_scheduler.clone()),
+    });
 
-    let state_handler: StateHandler = StateHandler::new();
-    let job_scheduler: JobsScheduler = JobsScheduler::new();
+    log::info!("Finished setting up state and scheduler! Now setting AppState... ");
+    // Create app state to share actor addresses
+    let app_state = web::Data::new(AppState {
+        state_handler: state_handler.clone(),
+        job_scheduler: job_scheduler.clone(),
+        db_client: db_client.clone(),
+    });
 
+    log::info!("Finished setup! Starting server... ");
     HttpServer::new(move|| {
         let _json_config = web::JsonConfig::default()
             .limit(4096)
@@ -68,9 +99,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .wrap(Logger::default())
             .wrap(from_fn(my_middleware))
-            .app_data(web::Data::new(job_scheduler.clone()))
-            .app_data(web::Data::new(client.clone())) // mongodb client
-            .app_data(web::Data::new(state_handler.clone()))
+            .app_data(app_state.clone()) // holds references to actors and db
             // .service(
                 // web::scope("/")
                 //     .wrap(

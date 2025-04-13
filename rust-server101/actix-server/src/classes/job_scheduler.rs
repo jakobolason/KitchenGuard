@@ -6,38 +6,53 @@ use std::future::Future;
 use std::collections::VecDeque;
 use std::thread::sleep;
 
-use super::state_handler::StateHandler;
+use super::state_handler::{StateHandler};
 
+#[derive(Message)]
+#[rtype(result = "()")]
 struct CheckJobs;
 
-impl Message for CheckJobs {
-	type Result = ();
-}
-
-struct ScheduledTask {
+#[derive(Debug, Message)]
+#[rtype(result = "()")]
+pub struct ScheduledTask {
   res_id: String,
   execute_at: Instant,
 }
 
-impl Message for ScheduledTask {
-	type Result = ();
-}
-#[derive(Clone)]
+// impl Message for ScheduledTask {
+// 	type Result = ();
+// }
+#[derive(Clone, Debug)]
 pub struct JobsScheduler {
-  tasks: Arc<Mutex<VecDeque<ScheduledTask>>>,
-  state_handler: Addr<StateHandler>,
+  pub tasks: Arc<Mutex<VecDeque<ScheduledTask>>>,
+  pub state_handler: Addr<StateHandler>,
 }
 
 // Use actor for concurrency design
 impl Actor for JobsScheduler {
 	type Context = Context<Self>;
 
-	fn started(&mut self, ctx: &mut Self::Context) {
-        // Set up recurring check for jobs
-        ctx.run_interval(Duration::from_secs(10), |_act, ctx| {
+	fn started(&mut self, _ctx: &mut Self::Context) {
+		println!("Job scheduler started!");
+    }
+}
+
+// ====== Handlers for messages to JobsScheduler ======
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct StartChecking;
+// Makes it start looking every 10 seconds for any expired tasks
+impl Handler<StartChecking> for JobsScheduler {
+	type Result = ();
+
+	fn handle(&mut self, _msg: StartChecking, ctx: &mut Self::Context) {
+		println!("Job scheduler have started checking");
+		ctx.run_interval(Duration::from_secs(10), |_, ctx| {
+            // Send the check jobs message to self
             ctx.address().do_send(CheckJobs);
         });
-    }
+	}
 }
 
 // the schedule function, so by sending a 'ScheduledTask' to this struct it is recieved here
@@ -88,6 +103,7 @@ impl Handler<CheckJobs> for JobsScheduler {
 }
 
 impl JobsScheduler {
+
 	pub fn cancel(&self, res_id: String) -> bool {
 		// use unwrap to check integrity of tasks.lock
 		let mut tasks = self.tasks.lock().unwrap();
@@ -99,35 +115,35 @@ impl JobsScheduler {
 		}
 	}
 	
-	pub fn start(self) -> impl Future<Output = ()> {
-		// make a clone of the address to 'tasks'
-		let tasks = Arc::clone(&self.tasks);
-		async move {
-			loop {
-				// Check if the front timer is expired
-				let (next_task, is_empty) = {
-					let mut queue = tasks.lock().unwrap();
-					if queue.is_empty() {
-						(None, true)
-					} else {
-						let now = Instant::now();
-						if queue[0].execute_at <= now {
-							(Some(queue.pop_front().unwrap()), false)
-						} else {
-							(None, false)
-						}
+	// pub fn start(self) -> impl Future<Output = ()> {
+	// 	// make a clone of the address to 'tasks'
+	// 	let tasks = Arc::clone(&self.tasks);
+	// 	async move {
+	// 		loop {
+	// 			// Check if the front timer is expired
+	// 			let (next_task, is_empty) = {
+	// 				let mut queue = tasks.lock().unwrap();
+	// 				if queue.is_empty() {
+	// 					(None, true)
+	// 				} else {
+	// 					let now = Instant::now();
+	// 					if queue[0].execute_at <= now {
+	// 						(Some(queue.pop_front().unwrap()), false)
+	// 					} else {
+	// 						(None, false)
+	// 					}
 						
-					}
-				};
-				if let Some(task) = next_task {
-					println!("Do sometghin");
-				} else if is_empty { // might not be neccessary
-					break;
-				}
-				else {
-					sleep(Duration::from_secs(10));
-				}
-			}
-		}
-	}
+	// 				}
+	// 			};
+	// 			if let Some(task) = next_task {
+	// 				println!("Do sometghin");
+	// 			} else if is_empty { // might not be neccessary
+	// 				break;
+	// 			}
+	// 			else {
+	// 				sleep(Duration::from_secs(10));
+	// 			}
+	// 		}
+	// 	}
+	// }
 }

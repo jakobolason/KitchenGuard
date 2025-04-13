@@ -72,15 +72,33 @@ impl Message for JobCompleted {
 
 #[derive(Clone)]
 pub struct StateHandler {
-    db_client: Client,
-    job_scheduler: Option<Addr<JobsScheduler>>, 
+    pub db_client: Client,
+    pub job_scheduler: Option<Addr<JobsScheduler>>, 
 }
 
 impl Actor for StateHandler {
     type Context = Context<Self>;
 
-    fn started(&mut self, ctx: &mut Self::Context) {
+    fn started(&mut self, _ctx: &mut Self::Context) {
         println!("Statehandler actor started!");
+    }
+}
+
+// ===== FOR SETTING OF SCHEDULER TO HANDLER =====
+#[derive(Debug)]
+pub struct SetJobScheduler {
+    pub scheduler: Option<Addr<JobsScheduler>>,
+}
+impl Message for SetJobScheduler {
+    type Result = ();
+}
+impl Handler<SetJobScheduler> for StateHandler {
+    type Result = ();
+
+    fn handle(&mut self, scheduler: SetJobScheduler, _ctx: &mut Self::Context) {
+        self.job_scheduler = scheduler.scheduler;
+        
+        ()
     }
 }
 

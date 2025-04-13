@@ -2,8 +2,8 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::{job_scheduler::JobsScheduler, state_handler::{self, StateHandler, Event}};
-
+use crate::classes::{job_scheduler::JobsScheduler, state_handler::{StateHandler, Event}};
+use crate::classes::shared_struct::AppState;
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -19,10 +19,8 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
 const DB_NAME: &str = "test";
 const COLL_NAME: &str = "users";
 
-async fn log_event(data: web::Json<Event>, client: web::Data<Client>, 
-    scheduler: web::Data<JobsScheduler>) -> HttpResponse {
-    StateHandler::event(&data.into_inner(), client).await;
-    
+async fn log_event(data: web::Json<Event>, app_state: web::Data<AppState>) -> HttpResponse {
+    // app_state.state_handler.send(msg)
     HttpResponse::Ok().body("OK")
 }
 
