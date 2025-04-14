@@ -16,6 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: List directory structure
+      run: ls -la
+    - name: Check subdirectories
+      run: find . -type d -maxdepth 3 | sort
+    - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
       working-directory: rust-server101/actix_server
