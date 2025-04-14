@@ -70,15 +70,8 @@ impl Handler<ScheduledTask> for JobsScheduler {
 	type Result = ();
 
 	fn handle(&mut self, msg: ScheduledTask, _ctx: &mut Self::Context) {
-		let task = ScheduledTask {
-			res_id: msg.res_id,
-			execute_at: msg.execute_at,
-		};
-		let mut tasks = self.tasks.lock().unwrap();
-		// use a lambda function to find the place task should be emplaced
-		let pos = tasks.iter().position(|t| t.execute_at > task.execute_at)
-			.unwrap_or(tasks.len());
-		tasks.insert(pos, task);
+		println!("Recieved a task to schedule! duration: {:?}", msg.execute_at);
+		self.schedule(msg);
 	}
 }
 
@@ -118,14 +111,25 @@ impl Handler<CheckJobs> for JobsScheduler {
 impl JobsScheduler {
 
 	pub fn cancel(&self, res_id: String) -> bool {
+		println!("Asked to cancel a timer!");
 		// use unwrap to check integrity of tasks.lock
 		let mut tasks = self.tasks.lock().unwrap();
 		if let Some(pos) = tasks.iter().position(|t| t.res_id == res_id) {
 			tasks.remove(pos);
+			println!("successfully removed entry, remaining size: {}", tasks.len());
 			true
 		} else {
+			println!("failed to removed entry, remaining size: {}", tasks.len());
 			false
 		}
+	}
+
+	pub fn schedule(&self, msg: ScheduledTask) {
+		let mut tasks = self.tasks.lock().unwrap();
+		// use a lambda function to find the place task should be emplaced
+		let pos = tasks.iter().position(|t| t.execute_at > msg.execute_at)
+			.unwrap_or(tasks.len());
+		tasks.insert(pos, msg);
 	}
 }
 

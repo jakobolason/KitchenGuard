@@ -21,8 +21,8 @@ const COLL_NAME: &str = "users";
 
 async fn log_event(data: web::Json<Event>, app_state: web::Data<AppState>) -> HttpResponse {
     match app_state.state_handler.send(data.into_inner()).await {
-        Ok(val) => HttpResponse::Ok().body("OK"),
-        Err(err) => HttpResponse::BadRequest().finish()
+        Ok(_) => HttpResponse::Ok().body("OK"),
+        Err(_) => HttpResponse::BadRequest().finish()
     }
 }
 

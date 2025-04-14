@@ -21,7 +21,7 @@ mod classes {
     pub mod state_handler;
     pub mod shared_struct;
 }
-use crate::classes::job_scheduler::{JobsScheduler, ScheduledTask};
+use crate::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking};
 use crate::classes::state_handler::{StateHandler, SetJobScheduler};
 use crate::classes::shared_struct::AppState;
 
@@ -68,6 +68,8 @@ async fn main() -> std::io::Result<()> {
     state_handler.do_send(SetJobScheduler {
         scheduler: Some(job_scheduler.clone()),
     });
+    // Start the scheduler's checking of tasks overdue
+    job_scheduler.do_send(StartChecking);
 
     log::info!("Finished setting up state and scheduler! Now setting AppState... ");
     // Create app state to share actor addresses

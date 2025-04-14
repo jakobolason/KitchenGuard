@@ -1,14 +1,13 @@
 use actix::prelude::*;
-use actix_web::rt::task;
 use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::doc, Client};
+use mongodb::{bson::{oid::ObjectId, doc}, Client,};
 use std::time::{Duration, Instant};
 
 use super::job_scheduler::{JobsScheduler, ScheduledTask, CancelTask};
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 // An extension to scheduled task, to incorporate the type returned  (if it's a new task or a cancellation)
 enum TypeOfTask {
     Cancellation,
@@ -20,6 +19,16 @@ struct TaskValue {
     type_of_task: TypeOfTask,
     scheduled_task: Option<ScheduledTask>, // only used if type is NewTask
     res_id: String,
+}
+
+impl TaskValue {
+    fn new() -> TaskValue {
+        TaskValue {
+            type_of_task: TypeOfTask::None,
+            scheduled_task: None,
+            res_id: "-1".to_string(),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
@@ -34,6 +43,8 @@ pub enum States {
 // holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SensorLookup {
+    _id: ObjectId,
+    res_id: String,
     kitchen_pir: String,
     power_plug: String,
     other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
@@ -41,16 +52,10 @@ pub struct SensorLookup {
     speakers: Vec<String>, 
 }
 
-pub enum SensorType {
-    PIR,
-    PP, // PowerPlug
-    LED,
-    SP, // speaker
-}
-
 // For when an alarm is sounded
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct StateLog {
+    _id: ObjectId,
     res_id: String,
     timestamp: DateTime<chrono::Utc>,
     state: States,
@@ -67,7 +72,7 @@ pub struct Event {
     pub mode: String,
     pub event_data: String,
     pub event_type_enum: String, // Or we could define an enum here
-    pub res_id: u32, // changed from patient_id to res_id
+    pub res_id: String, // changed from patient_id to res_id
     pub device_model: String,
     pub device_vendor: String,
     pub gateway_id: u32,
@@ -80,29 +85,28 @@ pub struct JobCompleted {
     pub res_id: String,
 }
 
-
+// ============= Setup of StateHandler =============
 #[derive(Clone)]
 pub struct StateHandler {
-    pub db_client: Client,
-    pub job_scheduler: Option<Addr<JobsScheduler>>, 
+    pub db_client: Client, 
+    pub job_scheduler: Option<Addr<JobsScheduler>>, // option, because we don't have address of scheduler at initialisation (look in main.rs)
 }
-
+// Makes StateHandler like a CPU from vdm-rt, but no bus is needed in Rust. Instead messages are used. Look for `impl Handler for StateHandler{` to see how that is done
 impl Actor for StateHandler {
     type Context = Context<Self>;
-
+    // deploys the statehandler on a thread, listenin for messages
     fn started(&mut self, _ctx: &mut Self::Context) {
         println!("Statehandler actor started!");
     }
 }
 
 // ===== FOR SETTING OF SCHEDULER TO HANDLER =====
-#[derive(Debug)]
+#[derive(Debug, Message)]
+#[rtype(result = "()")] //
 pub struct SetJobScheduler {
     pub scheduler: Option<Addr<JobsScheduler>>,
 }
-impl Message for SetJobScheduler {
-    type Result = ();
-}
+
 impl Handler<SetJobScheduler> for StateHandler {
     type Result = ();
 
@@ -116,72 +120,72 @@ impl Handler<SetJobScheduler> for StateHandler {
 impl StateHandler {
 // Private functions
     // sends topic to turn off stove
-    fn turn_off_stove() {
-        // Pre: state in [Unattended, Alarmed, CriticallyAlarmed]
-        // Post: stove is off
+//     fn turn_off_stove() {
+//         // Pre: state in [Unattended, Alarmed, CriticallyAlarmed]
+//         // Post: stove is off
 
-    }
-    // sends topic to LED's and buzzer sound
-    fn begin_alarm() {
-        // Pre: state in [Unattended]
-        // Post: timer started for CriticallyAlarmed & LED turned on
+//     }
+//     // sends topic to LED's and buzzer sound
+//     fn begin_alarm() {
+//         // Pre: state in [Unattended]
+//         // Post: timer started for CriticallyAlarmed & LED turned on
 
-    }
-    // sends topic to powerplug to turn off, and
-    fn critical_alarm() {
-        // Pre: state in [Alarmed]
-        // Post: timer started to notify relatives & stove turned off
+//     }
+//     // sends topic to powerplug to turn off, and
+//     fn critical_alarm() {
+//         // Pre: state in [Alarmed]
+//         // Post: timer started to notify relatives & stove turned off
 
-    }
-    // stop alarm after elderly has returned to kitchen
-    fn stop_alarm() {
-        // Pre: state in [Alarmed, CriticallyAlarmed] & user is in kitchen
-        // Post: state should be changed, LED turned off
+//     }
+//     // stop alarm after elderly has returned to kitchen
+//     fn stop_alarm() {
+//         // Pre: state in [Alarmed, CriticallyAlarmed] & user is in kitchen
+//         // Post: state should be changed, LED turned off
 
-    }
-    // get database information on PIR sensor data
-    fn check_users_room() {
-        // Pre: none
-        // Post: 
+//     }
+//     // get database information on PIR sensor data
+//     fn check_users_room() {
+//         // Pre: none
+//         // Post: 
 
-    }
-    // somehow notify them
-    fn notify_relatives(res_id: String) {
+//     }
+//     // somehow notify them
+//     fn notify_relatives(res_id: String) {
 
-    }
-    // make server listen to a topic
-    fn sub(topic: String) {
+//     }
+//     // make server listen to a topic
+//     fn sub(topic: String) {
 
-    }
-    // publish a topic(used in alarm e.g.)
-    fn publish(topic: String) {
+//     }
+//     // publish a topic(used in alarm e.g.)
+//     fn publish(topic: String) {
         
-    }
-    // This handles db connection and querying and response handling
-    fn db_query() { // don't know if hashmap is the best here
+//     }
+//     // This handles db connection and querying and response handling
+//     fn db_query() { // don't know if hashmap is the best here
 
-    }
-    // check users given credentials
-    // NOTE: Should maybe return both access token and a list of strings
-//           for elder_uids
-    fn check_credentials(user: String, pwd: String) {
+//     }
+//     // check users given credentials
+//     // NOTE: Should maybe return both access token and a list of strings
+// //           for elder_uids
+//     fn check_credentials(user: String, pwd: String) {
 
-    }
-    // start a thread, that makes callbacks when 20 minutes ha spassed
-    fn start_clock() {
+//     }
+//     // start a thread, that makes callbacks when 20 minutes ha spassed
+//     fn start_clock() {
 
-    }
+//     }
 
+    /// This function is our main business logic, determining what we should do given a state and an event happening.
+    /// Returns: the new state for the resident, and maybe a task to be scheduled, cancelled or to do nothing.
     fn determine_new_state(current_state: &States, list_of_sensors: &SensorLookup, data: &Event) -> (States, TaskValue) {
-        let mut scheduled_task = TaskValue {
-            type_of_task: TypeOfTask::None,
-            scheduled_task: None,
-            res_id: String::new(),
-        };
+        println!("Current state: {:?}", *current_state);
+        println!("current mode: {:?} and sensor: {:?}", data.mode, data.device_model);
+        let mut scheduled_task = TaskValue::new();
         // IF were in any of these states, then we only check if it's kitchen PIR detecting motion
         let new_state = if *current_state == States::CriticallyAlarmed || *current_state == States::Alarmed
                                             || *current_state == States::Unattended 
-        {
+            {
             // if event is elderly moving into kitchen, then turn off alarm
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "true" { // occupancy: true
                 if *current_state == States::Unattended || *current_state == States::Alarmed {
@@ -213,7 +217,7 @@ impl StateHandler {
                     type_of_task: TypeOfTask::NewTask,
                     scheduled_task: Some(ScheduledTask {
                         res_id: data.res_id.to_string().clone(),
-                        execute_at: Instant::now() + Duration::from_secs(20 * 60),
+                        execute_at: Instant::now() + if cfg!(test) { Duration::from_secs(10) } else { Duration::from_secs(20 * 60) },
                     }),
                     res_id: data.res_id.to_string().clone(),
                 };
@@ -240,10 +244,14 @@ impl StateHandler {
         return (new_state, scheduled_task)
     }
 
+    // Async function to collect GET calls in one function
     async fn get_resident_data(res_id: String, db_client: Client) -> Result<(States, SensorLookup), mongodb::error::Error> {
         // Fetch the current state
-        let state_collection = db_client.database("States").collection::<StateLog>(&res_id);
-        let current_state = match state_collection.find_one(doc! {"res_id": &res_id}).await {
+        let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+        let current_state = match state_collection
+            .find_one(doc! {"res_id": &res_id})
+            .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching res_id
+            .await {
             Ok(Some(document)) => document.state,
             Ok(None) => {
                 eprintln!("No state found for res_id: {}", res_id);
@@ -256,12 +264,17 @@ impl StateHandler {
         };
 
         // Fetch the list of sensors
-        let sensor_collection = db_client.database("SensorLookup").collection::<SensorLookup>(&res_id);
-        let sensors = match sensor_collection.find_one(doc! {"res_id": &res_id}).await {
+        let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+        let sensors = match sensor_collection
+            .find_one(doc! {"res_id": &res_id})
+            .sort(doc!{"_id": -1})
+            .await {
             Ok(Some(document)) => document,
             Ok(None) => {
                 eprintln!("No sensors found for res_id: {}", res_id);
                 SensorLookup {
+                    _id: ObjectId::new(),
+                    res_id: res_id.clone(),
                     kitchen_pir: String::new(),
                     power_plug: String::new(),
                     other_pir: Vec::new(),
@@ -279,10 +292,12 @@ impl StateHandler {
     }
 }
 
+/// Handles what to do, when a sensor event comes from the Pi
 impl Handler<Event> for StateHandler {
     type Result = ();
 
     fn handle(&mut self, data: Event, _ctx: &mut Self::Context) {
+        println!("Caught an event for res_id: {:?}", data.res_id);
         let db_client = self.db_client.clone();
         let job_scheduler = match self.job_scheduler.clone() {
             Some(jobber) => jobber,
@@ -296,7 +311,7 @@ impl Handler<Event> for StateHandler {
         // Actor handling doesn't implement async functionality, so do some move magix
         let fut = async move {
             // Log the event data
-            let collection = db_client.database("Residents").collection::<Event>(&res_id);
+            let collection = db_client.database("ResidentData").collection::<Event>("ResidentLogs");
             if let Err(err) = collection.insert_one(data.clone()).await {
                 eprintln!("Failed to log event: {:?}", err);
                 return Err(format!("Failed to log event: {:?}", err));
@@ -307,18 +322,19 @@ impl Handler<Event> for StateHandler {
             };
 
             // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
-            let new_state = StateHandler::determine_new_state(&current_state, &sensors, &data);
-
+            let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data);
+            println!("new state found to be: {:?}", state_info);
             // Save the new state
             let state_log = StateLog {
+                _id: ObjectId::new(),
                 res_id: res_id.clone(),
                 timestamp: chrono::Utc::now(),
-                state: new_state.0.clone(),
+                state: state_info.clone(),
                 context: format!("{:?}", data),
             };
             // if any job scheduling task -- either new task(20 minutes) or a cancellation
-            if new_state.1.type_of_task != TypeOfTask::None {
-                let task_el = new_state.1;
+            if task_type.type_of_task != TypeOfTask::None {
+                let task_el = task_type;
                 if task_el.type_of_task == TypeOfTask::NewTask {
                    match task_el.scheduled_task {
                         Some(task) => job_scheduler.do_send(task),
@@ -333,7 +349,7 @@ impl Handler<Event> for StateHandler {
                     // do nothing i guess
                 }
             }
-            let state_collection = db_client.database("States").collection::<StateLog>(&res_id);
+            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
             if let Err(err) = state_collection.insert_one(state_log).await {
                 eprintln!("Failed to save new state: {:?}", err);
                 return Err(format!("Failed to save new state: {:?}", err));
@@ -352,6 +368,8 @@ impl Handler<Event> for StateHandler {
     }
 }
 
+// The callback function, for when JobsScheduler has a task that should be executed.
+// 
 impl Handler<JobCompleted> for StateHandler {
     type Result = ();
 
@@ -360,4 +378,131 @@ impl Handler<JobCompleted> for StateHandler {
     }
 }
 
-// enum
+
+// ====== TESTING ======
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+    #[test]
+    fn test_determine_new_state_critically_alarmed_to_standby() {
+        let current_state = States::CriticallyAlarmed;
+        let list_of_sensors = SensorLookup {
+            _id: ObjectId::new(),
+            res_id: "1".to_string(),
+            kitchen_pir: "kitchen_pir_1".to_string(),
+            power_plug: "power_plug_1".to_string(),
+            other_pir: vec![],
+            led: vec![],
+            speakers: vec![],
+        };
+        let data = Event {
+            time_stamp: "2023-01-01T00:00:00Z".to_string(),
+            mode: "true".to_string(),
+            event_data: "".to_string(),
+            event_type_enum: "".to_string(),
+            res_id: "".to_string(),
+            device_model: "kitchen_pir_1".to_string(),
+            device_vendor: "".to_string(),
+            gateway_id: 1,
+            id: "".to_string(),
+        };
+
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+
+        assert_eq!(new_state, States::Standby);
+        assert_eq!(task_value.type_of_task, TypeOfTask::None);
+    }
+
+    #[test]
+    fn test_determine_new_state_attended_to_unattended() {
+        let current_state = States::Attended;
+        let list_of_sensors = SensorLookup {
+            _id: ObjectId::new(),
+            res_id: "1".to_string(),
+            kitchen_pir: "kitchen_pir_1".to_string(),
+            power_plug: "power_plug_1".to_string(),
+            other_pir: vec![],
+            led: vec![],
+            speakers: vec![],
+        };
+        let data = Event {
+            time_stamp: "2023-01-01T00:00:00Z".to_string(),
+            mode: "false".to_string(),
+            event_data: "".to_string(),
+            event_type_enum: "".to_string(),
+            res_id: "".to_string(),
+            device_model: "kitchen_pir_1".to_string(),
+            device_vendor: "".to_string(),
+            gateway_id: 1,
+            id: "".to_string(),
+        };
+
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+
+        assert_eq!(new_state, States::Unattended);
+        assert_eq!(task_value.type_of_task, TypeOfTask::NewTask);
+        assert!(task_value.scheduled_task.is_some());
+    }
+
+    #[test]
+    fn test_determine_new_state_standby_to_attended() {
+        let current_state = States::Standby;
+        let list_of_sensors = SensorLookup {
+            _id: ObjectId::new(),
+            res_id: "1".to_string(),
+            kitchen_pir: "kitchen_pir_1".to_string(),
+            power_plug: "power_plug_1".to_string(),
+            other_pir: vec![],
+            led: vec![],
+            speakers: vec![],
+        };
+        let data = Event {
+            time_stamp: "2023-01-01T00:00:00Z".to_string(),
+            mode: "On".to_string(),
+            event_data: "".to_string(),
+            event_type_enum: "".to_string(),
+            res_id: "".to_string(),
+            device_model: "power_plug_1".to_string(),
+            device_vendor: "".to_string(),
+            gateway_id: 1,
+            id: "".to_string(),
+        };
+
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+
+        assert_eq!(new_state, States::Attended);
+        assert_eq!(task_value.type_of_task, TypeOfTask::None);
+    }
+
+    #[test]
+    fn test_determine_new_state_no_change() {
+        let current_state = States::Attended;
+        let list_of_sensors = SensorLookup {
+            _id: ObjectId::new(),
+            res_id: "1".to_string(),
+            kitchen_pir: "kitchen_pir_1".to_string(),
+            power_plug: "power_plug_1".to_string(),
+            other_pir: vec![],
+            led: vec![],
+            speakers: vec![],
+        };
+        let data = Event {
+            time_stamp: "2023-01-01T00:00:00Z".to_string(),
+            mode: "true".to_string(),
+            event_data: "".to_string(),
+            event_type_enum: "".to_string(),
+            res_id: "".to_string(),
+            device_model: "other_pir_1".to_string(),
+            device_vendor: "".to_string(),
+            gateway_id: 1,
+            id: "".to_string(),
+        };
+
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+
+        assert_eq!(new_state, States::Attended);
+        assert_eq!(task_value.type_of_task, TypeOfTask::None);
+    }	
+
+}
