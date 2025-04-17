@@ -108,6 +108,18 @@ impl Handler<CheckJobs> for JobsScheduler {
 	}
 }
 
+#[derive(Message)]
+#[rtype(result = "Result<i8, std::io::Error>")] // there should only be a length of 1 when testing the length
+pub struct AmountOfJobs;
+impl Handler<AmountOfJobs> for JobsScheduler {
+	type Result = Result<i8, std::io::Error>;
+
+	fn handle(&mut self, _data: AmountOfJobs, _ctx: &mut Self::Context) -> Self::Result { // Self is referrring to AmountOfJobs struct here
+		let tasks = self.tasks.lock().unwrap();
+		return Ok(tasks.len() as i8);
+	}
+}
+
 impl JobsScheduler {
 
 	pub fn cancel(&self, res_id: String) -> bool {
