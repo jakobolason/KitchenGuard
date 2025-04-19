@@ -80,11 +80,6 @@ pub struct Event {
     pub id: String,
 }
 
-#[derive(Debug, Message)]
-#[rtype(result = "()")]
-pub struct JobCompleted {
-    pub res_id: String,
-}
 
 // ============= Setup of StateHandler =============
 #[derive(Clone)]
