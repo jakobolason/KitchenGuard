@@ -3,6 +3,7 @@ use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
 use mongodb::{bson::{oid::ObjectId, doc}, Client,};
+use core::panic;
 use std::time::{Duration, Instant};
 
 use super::job_scheduler::{JobsScheduler, ScheduledTask, CancelTask};
@@ -54,11 +55,11 @@ pub struct SensorLookup {
 
 // For when an alarm is sounded
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct StateLog {
+pub struct StateLog {
     _id: ObjectId,
     res_id: String,
     timestamp: DateTime<chrono::Utc>,
-    state: States,
+    pub state: States,
     context: String,            // Store full system state snapshot here
 }
 
@@ -176,6 +177,14 @@ impl StateHandler {
 
 //     }
 
+    fn alarm_duration_from_state(new_state: States) -> Instant {
+        match new_state {
+            States::Unattended => Instant::now() + if cfg!(test) { Duration::from_secs(10) } else { Duration::from_secs(20 * 60) },
+            States::Alarmed => Instant::now() + if cfg!(test) { Duration::from_secs(10) } else { Duration::from_secs(20 * 3) },
+            _ => panic!("You should not give state '{:?}' to this function!", new_state),
+        }
+    }
+
     /// This function is our main business logic, determining what we should do given a state and an event happening.
     /// Returns: the new state for the resident, and maybe a task to be scheduled, cancelled or to do nothing.
     fn determine_new_state(current_state: &States, list_of_sensors: &SensorLookup, data: &Event) -> (States, TaskValue) {
@@ -205,6 +214,27 @@ impl StateHandler {
                         panic!("Invalid state transition detected");
                     }
                 }
+            } else if data.device_model == "JobScheduler" {
+                // An event from jobscheduler means that a timer was done, so give the appropriate task duration
+                let next_state = match current_state {
+                    States::CriticallyAlarmed => States::Standby,
+                    States::Alarmed => States::Attended,
+                    States::Unattended => States::Attended,
+                    _ => {
+                        eprintln!("Unexpected state encountered: {:?}", current_state);
+                        panic!("Invalid state transition detected");
+                    }
+                };
+                scheduled_task = TaskValue {
+                    type_of_task: TypeOfTask::NewTask,
+                    scheduled_task: Some(ScheduledTask {
+                        res_id: data.res_id.to_string().clone(),
+                        execute_at: StateHandler::alarm_duration_from_state(next_state.clone()),
+                    }),
+                    res_id: data.res_id.to_string().clone(),
+                };
+                next_state
+
             } else {
                 // if it's not the user moving into kitchen, don't do anything
                 current_state.clone()
@@ -212,12 +242,12 @@ impl StateHandler {
         // In attended, we check both kitchen PIR status and power plug status
         } else if *current_state == States::Attended {
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "false" { // occupancy: false
-                // TODO: then start 20min's timer in jobscheduler
+                // then start 20min's timer in jobscheduler
                 scheduled_task = TaskValue {
                     type_of_task: TypeOfTask::NewTask,
                     scheduled_task: Some(ScheduledTask {
                         res_id: data.res_id.to_string().clone(),
-                        execute_at: Instant::now() + if cfg!(test) { Duration::from_secs(10) } else { Duration::from_secs(20 * 60) },
+                        execute_at: StateHandler::alarm_duration_from_state(States::Unattended),
                     }),
                     res_id: data.res_id.to_string().clone(),
                 };
@@ -308,7 +338,7 @@ impl Handler<Event> for StateHandler {
         };
         let res_id = data.res_id.to_string();
 
-        // Actor handling doesn't implement async functionality, so do some move magix
+        // This uses the Arbiter trait from Actix, see more here: https://actix.rs/docs/actix/arbiter
         let fut = async move {
             // Log the event data
             let collection = db_client.database("ResidentData").collection::<Event>("ResidentLogs");
@@ -367,17 +397,6 @@ impl Handler<Event> for StateHandler {
         ()
     }
 }
-
-// The callback function, for when JobsScheduler has a task that should be executed.
-// 
-impl Handler<JobCompleted> for StateHandler {
-    type Result = ();
-
-    fn handle(&mut self, msg: JobCompleted, _ctx: &mut Self::Context) {
-        println!("A job was completed! res_id: {:?}", msg.res_id);
-    }
-}
-
 
 // ====== TESTING ======
 #[cfg(test)]

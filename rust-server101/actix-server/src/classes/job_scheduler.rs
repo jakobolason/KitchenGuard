@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::collections::VecDeque;
 
-use super::state_handler::{StateHandler, JobCompleted};
+use super::state_handler::{StateHandler, JobCompleted, Event};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -95,10 +95,19 @@ impl Handler<CheckJobs> for JobsScheduler {
 			}
 		};
 		if let Some(task) = next_task {
-			self.state_handler.do_send(JobCompleted {
+			let scheduler_event = Event {
+				time_stamp: chrono::Utc::now().to_rfc3339(),
+				mode: "DONE".to_string(),
+				event_data: "COMPLETED".to_string(),
+				event_type_enum: "job_scheduler".to_string(),
 				res_id: task.res_id,
-			});
-			println!("Do sometghin");
+				device_model: "JobScheduler".to_string(),
+				device_vendor: "SELF".to_string(),
+				gateway_id: 1,
+				id: "1".to_string(),
+			};
+			self.state_handler.do_send(scheduler_event);
+			println!("Should have been sent to state handler now");
 		} else if is_empty { // might not be neccessary
 			return
 		}
