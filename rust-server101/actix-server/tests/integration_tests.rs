@@ -130,7 +130,7 @@ mod tests {
             }
             // now send a message saying resident walked into kitchen again, so there should be no scheduled jobs
             state_handler.do_send(enter_kitchen);
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await; // the actors are quite slow
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
 
             let new_jobs_amount = job_scheduler.send(AmountOfJobs).await.unwrap();
             
