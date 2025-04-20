@@ -44,23 +44,23 @@ pub enum States {
 // holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SensorLookup {
-    _id: ObjectId,
-    res_id: String,
-    kitchen_pir: String,
-    power_plug: String,
-    other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
-    led: Vec<String>,
-    speakers: Vec<String>, 
+    pub _id: ObjectId,
+    pub res_id: String,
+    pub kitchen_pir: String,
+    pub power_plug: String,
+    pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
+    pub led: Vec<String>,
+    pub speakers: Vec<String>, 
 }
 
 // For when an alarm is sounded
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct StateLog {
-    _id: ObjectId,
-    res_id: String,
-    timestamp: DateTime<chrono::Utc>,
+    pub _id: ObjectId,
+    pub res_id: String,
+    pub timestamp: DateTime<chrono::Utc>,
     pub state: States,
-    context: String,            // Store full system state snapshot here
+    pub context: String,            // Store full system state snapshot here
 }
 
 // ============ Messages across Actors =============

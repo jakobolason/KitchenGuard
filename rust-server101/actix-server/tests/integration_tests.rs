@@ -5,9 +5,9 @@
 mod tests {
     use tokio;
     use actix::prelude::*;
-    use mongodb::{bson::doc, Client,};
+    use mongodb::{bson::{oid::ObjectId, doc}, options::UpdateOptions, Client,};
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
-    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States};
+    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
     use std::sync::{Arc, Mutex};
     use std::collections::VecDeque;
 
@@ -17,6 +17,48 @@ mod tests {
         local.run_until(async {
             let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".into());
             let db_client = Client::with_uri_str(uri).await.expect("failed to connect");
+
+             // Set up SensorLookup
+            let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+            
+            // Create or update sensor lookup for test_resident_1
+            let filter = doc! { "res_id": "test_resident_1" };
+            let test_sensor = SensorLookup {
+                _id: ObjectId::new(), // This will be ignored in an update operation
+                res_id: "test_resident_1".to_string(),
+                kitchen_pir: "kitchen_pir_1".to_string(),
+                power_plug: "power_plug_1".to_string(),
+                other_pir: vec!["living_pir_1".to_string(), "bedroom_pir_1".to_string()],
+                led: vec!["led_1".to_string(), "led_2".to_string()],
+                speakers: vec!["speaker_1".to_string(), "speaker_2".to_string()],
+            };
+            
+            // Convert to document for upsert operation
+            let sensor_doc = mongodb::bson::to_document(&test_sensor).expect("Failed to convert to document");
+            let update_doc = doc! { "$set": sensor_doc };
+            
+            // Upsert - update if exists, insert if doesn't exist
+            sensor_collection.update_one(filter, update_doc).upsert(true).await
+                .expect("Failed to upsert test sensor data");
+            
+            // Set up StateLog
+            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+            
+            // Create or update state log for test_resident_1
+            let filter = doc! { "res_id": "test_resident_1" };
+            let test_state = StateLog {
+                _id: ObjectId::new(),
+                res_id: "test_resident_1".to_string(),
+                timestamp: chrono::Utc::now(),
+                state: States::Standby, // Use your initial state
+                context: "Initial test state".to_string(),
+            };
+            
+            let state_doc = mongodb::bson::to_document(&test_state).expect("Failed to convert to document");
+            let update_doc = doc! { "$set": state_doc };
+            
+            state_collection.update_one(filter, update_doc).upsert(true).await
+                .expect("Failed to upsert test state data");
     
             // Start state handler actor
             let state_handler: Addr<StateHandler> = StateHandler {
@@ -45,7 +87,7 @@ mod tests {
                 mode: "On".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
-                res_id: "RES1".to_string(),
+                res_id: "test_resident_1".to_string(),
                 device_model: "power_plug_1".to_string(),
                 device_vendor: "".to_string(),
                 gateway_id: 1,
@@ -57,7 +99,7 @@ mod tests {
                 mode: "true".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
-                res_id: "RES1".to_string(),
+                res_id: "test_resident_1".to_string(),
                 device_model: "kitchen_pir_1".to_string(),
                 device_vendor: "".to_string(),
                 gateway_id: 1,
@@ -71,7 +113,7 @@ mod tests {
                 mode: "false".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
-                res_id: "RES1".to_string(),
+                res_id: "test_resident_1".to_string(),
                 device_model: "kitchen_pir_1".to_string(),
                 device_vendor: "".to_string(),
                 gateway_id: 1,
@@ -98,12 +140,12 @@ mod tests {
             // now test db for the correct state
             let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
             match state_collection
-                .find_one(doc! {"res_id": "RES1"})
-                .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching "RES1"
+                .find_one(doc! {"res_id": "test_resident_1"})
+                .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching "test_resident_1"
                 .await
             {
                 Ok(Some(document)) => assert_eq!(document.state, States::Attended),
-                Ok(None) => panic!("No document found for res_id: RES1"),
+                Ok(None) => panic!("No document found for res_id: test_resident_1"),
                 Err(err) => panic!("Error querying the database: {:?}", err),
             };
             // make user activate alarm
@@ -111,12 +153,12 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(15)).await;// the alarm is only 10secs when testing
             // now we should be alarmed
             match state_collection
-                .find_one(doc! {"res_id": "RES1"})
-                .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching "RES1"
+                .find_one(doc! {"res_id": "test_resident_1"})
+                .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching "test_resident_1"
                 .await
             {
                 Ok(Some(document)) => assert_eq!(document.state, States::Alarmed),
-                Ok(None) => panic!("No document found for res_id: RES1"),
+                Ok(None) => panic!("No document found for res_id: test_resident_1"),
                 Err(err) => panic!("Error querying the database: {:?}", err),
             };
 
