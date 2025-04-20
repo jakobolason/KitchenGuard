@@ -56,6 +56,7 @@ async fn main() -> std::io::Result<()> {
     let state_handler = StateHandler {
         db_client: db_client.clone(),
         job_scheduler: None,
+        is_test: false,
     }.start();
     
     // Start job scheduler actor and link to state handler
