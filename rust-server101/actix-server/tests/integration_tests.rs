@@ -34,7 +34,8 @@ mod tests {
             };
             
             // Convert to document for upsert operation
-            let sensor_doc = mongodb::bson::to_document(&test_sensor).expect("Failed to convert to document");
+            let mut sensor_doc = mongodb::bson::to_document(&test_sensor).expect("Failed to convert to document");
+            sensor_doc.remove("_id"); // Remove _id field from the update document
             let update_doc = doc! { "$set": sensor_doc };
             
             // Upsert - update if exists, insert if doesn't exist
@@ -54,7 +55,8 @@ mod tests {
                 context: "Initial test state".to_string(),
             };
             
-            let state_doc = mongodb::bson::to_document(&test_state).expect("Failed to convert to document");
+            let mut state_doc = mongodb::bson::to_document(&test_state).expect("Failed to convert to document");
+            state_doc.remove("_id");
             let update_doc = doc! { "$set": state_doc };
             
             state_collection.update_one(filter, update_doc).upsert(true).await
@@ -74,13 +76,38 @@ mod tests {
             }.start();
             
             // Update state handler with job scheduler reference
-            state_handler.do_send(SetJobScheduler {
+            let _ = state_handler.send(SetJobScheduler {
                 scheduler: Some(job_scheduler.clone()),
-            });
+            }).await;
             // Start the scheduler's checking of tasks overdue
-            job_scheduler.do_send(StartChecking);
+            let _ = job_scheduler.send(StartChecking).await;
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
-    
+            let enter_kitchen = Event { // to make sure we're in Attended mode
+                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                mode: "true".to_string(),
+                event_data: "".to_string(),
+                event_type_enum: "".to_string(),
+                res_id: "test_resident_1".to_string(),
+                device_model: "kitchen_pir_1".to_string(),
+                device_vendor: "".to_string(),
+                gateway_id: 1,
+                id: "".to_string(),
+            };
+            let _ = state_handler.send(enter_kitchen.clone()).await;
+            let stove_off = Event {
+                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                mode: "Off".to_string(),
+                event_data: "".to_string(),
+                event_type_enum: "".to_string(),
+                res_id: "test_resident_1".to_string(),
+                device_model: "power_plug_1".to_string(),
+                device_vendor: "".to_string(),
+                gateway_id: 1,
+                id: "".to_string(),
+            };
+            let _ = state_handler.send(stove_off).await;
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;// make sure scheduler is up and running
+
             // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
             let stove_on = Event {
                 time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -93,20 +120,10 @@ mod tests {
                 gateway_id: 1,
                 id: "".to_string(),
             };
-            state_handler.do_send(stove_on);
-            let enter_kitchen = Event { // to make sure we're in Attended mode
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
-                mode: "true".to_string(),
-                event_data: "".to_string(),
-                event_type_enum: "".to_string(),
-                res_id: "test_resident_1".to_string(),
-                device_model: "kitchen_pir_1".to_string(),
-                device_vendor: "".to_string(),
-                gateway_id: 1,
-                id: "".to_string(),
-            };
-            state_handler.do_send(enter_kitchen.clone());
+            let _ = state_handler.send(stove_on).await;
+            
             println!("Send stove");
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
     
             let leaving_kitchen = Event {
                 time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -119,7 +136,7 @@ mod tests {
                 gateway_id: 1,
                 id: "".to_string(),
             };
-            state_handler.do_send(leaving_kitchen.clone());
+            let _ = state_handler.send(leaving_kitchen.clone()).await;
             println!("Send leaving kitchen");
             tokio::time::sleep(std::time::Duration::from_secs(1)).await; // the actors are quite slow
     
@@ -129,7 +146,7 @@ mod tests {
                 assert_eq!(amount, 1)
             }
             // now send a message saying resident walked into kitchen again, so there should be no scheduled jobs
-            state_handler.do_send(enter_kitchen);
+            let _ = state_handler.send(enter_kitchen).await;
             tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
 
             let new_jobs_amount = job_scheduler.send(AmountOfJobs).await.unwrap();
@@ -149,7 +166,7 @@ mod tests {
                 Err(err) => panic!("Error querying the database: {:?}", err),
             };
             // make user activate alarm
-            state_handler.do_send(leaving_kitchen);
+            let _ = state_handler.send(leaving_kitchen).await;
             tokio::time::sleep(std::time::Duration::from_secs(15)).await;// the alarm is only 10secs when testing
             // now we should be alarmed
             match state_collection
