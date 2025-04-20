@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::collections::VecDeque;
 
-use super::state_handler::{StateHandler, JobCompleted};
+use super::state_handler::{StateHandler, Event};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -79,32 +79,7 @@ impl Handler<CheckJobs> for JobsScheduler {
 	type Result = ();
 
 	fn handle(&mut self, _msg: CheckJobs, _ctx: &mut Self::Context) {
-		// Check if the front timer is expired
-		let (next_task, is_empty) = {
-			let mut queue = self.tasks.lock().unwrap();
-			if queue.is_empty() {
-				(None, true)
-			} else {
-				let now = Instant::now();
-				if queue[0].execute_at <= now {
-					(Some(queue.pop_front().unwrap()), false)
-				} else {
-					(None, false)
-				}
-				
-			}
-		};
-		if let Some(task) = next_task {
-			self.state_handler.do_send(JobCompleted {
-				res_id: task.res_id,
-			});
-			println!("Do sometghin");
-		} else if is_empty { // might not be neccessary
-			return
-		}
-		else {
-			// sleep(Duration::from_secs(10));
-		}
+		self.check_for_jobs();
 	}
 }
 
@@ -142,6 +117,44 @@ impl JobsScheduler {
 		let pos = tasks.iter().position(|t| t.execute_at > msg.execute_at)
 			.unwrap_or(tasks.len());
 		tasks.insert(pos, msg);
+	}
+
+	fn check_for_jobs(&self) {
+		// Check if the front timer is expired
+		let (next_task, is_empty) = {
+			let mut queue = self.tasks.lock().unwrap();
+			if queue.is_empty() {
+				(None, true)
+			} else {
+				let now = Instant::now();
+				if queue[0].execute_at <= now {
+					(Some(queue.pop_front().unwrap()), false)
+				} else {
+					(None, false)
+				}
+				
+			}
+		};
+		if let Some(task) = next_task {
+			let scheduler_event = Event {
+				time_stamp: chrono::Utc::now().to_rfc3339(),
+				mode: "DONE".to_string(),
+				event_data: "COMPLETED".to_string(),
+				event_type_enum: "job_scheduler".to_string(),
+				res_id: task.res_id,
+				device_model: "JobScheduler".to_string(),
+				device_vendor: "SELF".to_string(),
+				gateway_id: 1,
+				id: "1".to_string(),
+			};
+			self.state_handler.do_send(scheduler_event);
+			println!("Should have been sent to state handler now");
+		} else if is_empty { // might not be neccessary
+			return
+		}
+		else {
+			// sleep(Duration::from_secs(10));
+		}
 	}
 }
 

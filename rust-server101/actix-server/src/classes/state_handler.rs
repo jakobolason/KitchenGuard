@@ -3,6 +3,7 @@ use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
 use mongodb::{bson::{oid::ObjectId, doc}, Client,};
+use core::panic;
 use std::time::{Duration, Instant};
 
 use super::job_scheduler::{JobsScheduler, ScheduledTask, CancelTask};
@@ -43,23 +44,23 @@ pub enum States {
 // holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SensorLookup {
-    _id: ObjectId,
-    res_id: String,
-    kitchen_pir: String,
-    power_plug: String,
-    other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
-    led: Vec<String>,
-    speakers: Vec<String>, 
+    pub _id: ObjectId,
+    pub res_id: String,
+    pub kitchen_pir: String,
+    pub power_plug: String,
+    pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
+    pub led: Vec<String>,
+    pub speakers: Vec<String>, 
 }
 
 // For when an alarm is sounded
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct StateLog {
-    _id: ObjectId,
-    res_id: String,
-    timestamp: DateTime<chrono::Utc>,
-    state: States,
-    context: String,            // Store full system state snapshot here
+pub struct StateLog {
+    pub _id: ObjectId,
+    pub res_id: String,
+    pub timestamp: DateTime<chrono::Utc>,
+    pub state: States,
+    pub context: String,            // Store full system state snapshot here
 }
 
 // ============ Messages across Actors =============
@@ -79,17 +80,13 @@ pub struct Event {
     pub id: String,
 }
 
-#[derive(Debug, Message)]
-#[rtype(result = "()")]
-pub struct JobCompleted {
-    pub res_id: String,
-}
 
 // ============= Setup of StateHandler =============
 #[derive(Clone)]
 pub struct StateHandler {
     pub db_client: Client, 
     pub job_scheduler: Option<Addr<JobsScheduler>>, // option, because we don't have address of scheduler at initialisation (look in main.rs)
+    pub is_test: bool,
 }
 // Makes StateHandler like a CPU from vdm-rt, but no bus is needed in Rust. Instead messages are used. Look for `impl Handler for StateHandler{` to see how that is done
 impl Actor for StateHandler {
@@ -176,9 +173,19 @@ impl StateHandler {
 
 //     }
 
+    fn alarm_duration_from_state(new_state: States, is_test: bool) -> Instant {
+        if is_test {println!("we are in tests");}
+        else { println!("not in tests...");}
+        match new_state {
+            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(20 * 60) },
+            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(20 * 3) },
+            _ => panic!("You should not give state '{:?}' to this function!", new_state),
+        }
+    }
+
     /// This function is our main business logic, determining what we should do given a state and an event happening.
     /// Returns: the new state for the resident, and maybe a task to be scheduled, cancelled or to do nothing.
-    fn determine_new_state(current_state: &States, list_of_sensors: &SensorLookup, data: &Event) -> (States, TaskValue) {
+    fn determine_new_state(current_state: &States, list_of_sensors: &SensorLookup, data: &Event, is_test: bool) -> (States, TaskValue) {
         println!("Current state: {:?}", *current_state);
         println!("current mode: {:?} and sensor: {:?}", data.mode, data.device_model);
         let mut scheduled_task = TaskValue::new();
@@ -205,6 +212,27 @@ impl StateHandler {
                         panic!("Invalid state transition detected");
                     }
                 }
+            } else if data.device_model == "JobScheduler" {
+                println!("device found to be from jobscheduler");
+                // An event from jobscheduler means that a timer was done, so give the appropriate task duration
+                let next_state = match current_state {
+                    States::Alarmed => States::CriticallyAlarmed,
+                    States::Unattended => States::Alarmed,
+                    _ => {
+                        eprintln!("Unexpected state encountered: {:?}", current_state);
+                        panic!("Invalid state transition detected");
+                    }
+                };
+                scheduled_task = TaskValue {
+                    type_of_task: TypeOfTask::NewTask,
+                    scheduled_task: Some(ScheduledTask {
+                        res_id: data.res_id.to_string().clone(),
+                        execute_at: StateHandler::alarm_duration_from_state(next_state.clone(), is_test),
+                    }),
+                    res_id: data.res_id.to_string().clone(),
+                };
+                next_state
+
             } else {
                 // if it's not the user moving into kitchen, don't do anything
                 current_state.clone()
@@ -212,12 +240,13 @@ impl StateHandler {
         // In attended, we check both kitchen PIR status and power plug status
         } else if *current_state == States::Attended {
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "false" { // occupancy: false
-                // TODO: then start 20min's timer in jobscheduler
+                println!("resident is out of kitchen!");
+                // then start 20min's timer in jobscheduler
                 scheduled_task = TaskValue {
                     type_of_task: TypeOfTask::NewTask,
                     scheduled_task: Some(ScheduledTask {
                         res_id: data.res_id.to_string().clone(),
-                        execute_at: Instant::now() + if cfg!(test) { Duration::from_secs(10) } else { Duration::from_secs(20 * 60) },
+                        execute_at: StateHandler::alarm_duration_from_state(States::Unattended, is_test),
                     }),
                     res_id: data.res_id.to_string().clone(),
                 };
@@ -307,22 +336,26 @@ impl Handler<Event> for StateHandler {
             }
         };
         let res_id = data.res_id.to_string();
+        let is_test = self.is_test.clone();
 
-        // Actor handling doesn't implement async functionality, so do some move magix
+        // This uses the Arbiter trait from Actix, see more here: https://actix.rs/docs/actix/arbiter
         let fut = async move {
             // Log the event data
             let collection = db_client.database("ResidentData").collection::<Event>("ResidentLogs");
+            println!("HERE1");
             if let Err(err) = collection.insert_one(data.clone()).await {
+                println!("In error");
                 eprintln!("Failed to log event: {:?}", err);
                 return Err(format!("Failed to log event: {:?}", err));
             }
+            println!("HERE2");
             let (current_state, sensors) = match StateHandler::get_resident_data(res_id.clone(), db_client.clone()).await {
                 Ok(vals) => (vals.0, vals.1),
                 Err(_err) => panic!("couldn't get resident data"),
             };
-
+            println!("HERE3");
             // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
-            let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data);
+            let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data, is_test.clone());
             println!("new state found to be: {:?}", state_info);
             // Save the new state
             let state_log = StateLog {
@@ -336,6 +369,7 @@ impl Handler<Event> for StateHandler {
             if task_type.type_of_task != TypeOfTask::None {
                 let task_el = task_type;
                 if task_el.type_of_task == TypeOfTask::NewTask {
+                    println!("Sending task to scheduler!");
                    match task_el.scheduled_task {
                         Some(task) => job_scheduler.do_send(task),
                         _=> eprint!("Tried to queue task, but was missing it")
@@ -368,17 +402,6 @@ impl Handler<Event> for StateHandler {
     }
 }
 
-// The callback function, for when JobsScheduler has a task that should be executed.
-// 
-impl Handler<JobCompleted> for StateHandler {
-    type Result = ();
-
-    fn handle(&mut self, msg: JobCompleted, _ctx: &mut Self::Context) {
-        println!("A job was completed! res_id: {:?}", msg.res_id);
-    }
-}
-
-
 // ====== TESTING ======
 #[cfg(test)]
 mod tests {
@@ -408,7 +431,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, States::Standby);
         assert_eq!(task_value.type_of_task, TypeOfTask::None);
@@ -438,7 +461,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, States::Unattended);
         assert_eq!(task_value.type_of_task, TypeOfTask::NewTask);
@@ -469,7 +492,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, States::Attended);
         assert_eq!(task_value.type_of_task, TypeOfTask::None);
@@ -499,7 +522,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data);
+        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, States::Attended);
         assert_eq!(task_value.type_of_task, TypeOfTask::None);
