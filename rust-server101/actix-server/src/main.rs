@@ -1,7 +1,7 @@
 use actix_web::{
     body::MessageBody, cookie::{time::format_description::well_known, Key}, dev::{ServiceRequest, ServiceResponse}, error, middleware::{from_fn, Logger, Next}, web, App, Error, HttpResponse, HttpServer
 };
-// use actix_session::{Session, SessionMiddleware, storage::CookieSessionStore};
+use actix_session::{Session, SessionMiddleware, storage::CookieSessionStore};
 use actix::Actor;
 use env_logger::Env;
 use actix_cors::Cors;
@@ -35,8 +35,6 @@ async fn my_middleware(
     next.call(req).await
     // post-processing
 }
-
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -103,15 +101,15 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(from_fn(my_middleware))
             .app_data(app_state.clone()) // holds references to actors and db
-            // .service(
-                // web::scope("/")
-                //     .wrap(
-                //         SessionMiddleware::builder(CookieSessionStore::default(), session_key.clone())
-                //             .cookie_secure(false)
-                //             .build()
-                    // )
+            .service(
+                web::scope("/")
+                    .wrap(
+                        SessionMiddleware::builder(CookieSessionStore::default(), session_key.clone())
+                            .cookie_secure(false)
+                            .build()
+                    )
                     .configure(routes::browser::browser_config) // webhandler '/'
-            // )
+            )
             .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {

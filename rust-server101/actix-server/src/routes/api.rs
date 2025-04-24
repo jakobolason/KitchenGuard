@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::{job_scheduler::JobsScheduler, state_handler::{StateHandler, Event}};
+use crate::classes::{job_scheduler::JobsScheduler, state_handler::{StateHandler, Event, LoginInformation}};
 use crate::classes::shared_struct::AppState;
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
@@ -13,11 +13,20 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
             .route("/status", web::get().to(get_status))
             .route("/health_check", web::post().to(health_check))
             .route("/event", web::post().to(log_event))
+            .route("/create_user", web::post().to(create_user))
     );
 }
 
 const DB_NAME: &str = "test";
 const COLL_NAME: &str = "users";
+
+async fn create_user(data: web::Json<LoginInformation>, app_state: web::Data<AppState>) -> HttpResponse {
+    println!("creating user!");
+    match app_state.state_handler.send(data.into_inner()).await {
+        Ok(_) => HttpResponse::Ok().body("OK"),
+        Err(_) => HttpResponse::BadRequest().finish()
+    }
+}
 
 async fn log_event(data: web::Json<Event>, app_state: web::Data<AppState>) -> HttpResponse {
     match app_state.state_handler.send(data.into_inner()).await {

@@ -1,10 +1,14 @@
 use actix::prelude::*;
 use chrono::DateTime;
+use log::Log;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
 use mongodb::{bson::{oid::ObjectId, doc}, Client,};
 use core::panic;
 use std::time::{Duration, Instant};
+use ring::{digest, pbkdf2};
+use std::num::NonZeroU32;
+use data_encoding::HEXLOWER;
 
 use super::job_scheduler::{JobsScheduler, ScheduledTask, CancelTask};
 
@@ -169,9 +173,9 @@ impl StateHandler {
 
 //     }
 //     // start a thread, that makes callbacks when 20 minutes ha spassed
-//     fn start_clock() {
+    // fn start_clock() {
 
-//     }
+    // }
 
     fn alarm_duration_from_state(new_state: States, is_test: bool) -> Instant {
         if is_test {println!("we are in tests");}
@@ -318,6 +322,106 @@ impl StateHandler {
         };
 
         Ok((current_state, sensors))
+    }
+
+    
+    pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<bool, std::io::Error> {
+        // checks the db for username
+        let users = db_client.database("users").collection::<LoggedInformation>("info");
+        match users
+            .find_one(doc! {"username": &username})
+            .await {
+                Ok(Some(doc)) => {
+                    if StateHandler::verify_password(passwd.as_str(), &doc.salt, doc.password.as_str()) {
+                        Ok(true)
+                    } else {
+                        Ok(false)
+                    }
+                },
+                Ok(None) => {
+                    eprintln!("No sensors found for res_id: {}", username);
+                    Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no user found"))
+                }
+                Err(err) => {
+                    eprintln!("Error querying sensors: {:?}", err);
+                    Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {:?}", err)))
+                }
+            }
+    }
+
+    fn verify_password(password: &str, salt: &[u8], stored_hash_hex: &str) -> bool {
+        // Convert hex string back to bytes
+        let stored_hash = HEXLOWER.decode(stored_hash_hex.as_bytes()).unwrap();
+        
+        // Hash the input password with the same parameters
+        let n_iter = NonZeroU32::new(100_000).unwrap();
+        let alg = pbkdf2::PBKDF2_HMAC_SHA256;
+        
+        pbkdf2::verify(
+            alg,
+            n_iter,
+            salt,
+            password.as_bytes(),
+            &stored_hash,
+        ).is_ok()
+    }
+
+    fn hash_password(password: &str, salt: &[u8]) -> String {
+        // Configure PBKDF2 parameters
+        let n_iter = NonZeroU32::new(100_000).unwrap();
+        let alg = pbkdf2::PBKDF2_HMAC_SHA256;
+        
+        // Output buffer for the hash
+        let mut hash = [0u8; digest::SHA256_OUTPUT_LEN];
+        
+        pbkdf2::derive(
+            alg,
+            n_iter,
+            salt,
+            password.as_bytes(),
+            &mut hash,
+        );
+        
+        // Convert to hex string
+        HEXLOWER.encode(&hash)
+    }
+
+    pub async fn create_user(username: &str, password: &str, db_client: Client) {
+        let user_salt = username.as_bytes();
+        let hashed_password =  StateHandler::hash_password(password, user_salt);
+        let usercollection = db_client.database("users").collection::<LoggedInformation>("info");
+        usercollection.insert_one(LoggedInformation {
+            username: username.to_string(),
+            password: hashed_password,
+            salt: user_salt.to_vec(),
+        }).await;
+    }
+    
+}
+// What is saved in db
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct LoggedInformation {
+    username: String,
+    password: String,
+    salt: Vec<u8>,
+}
+// What the user queries the server with
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "Result<bool, std::io::Error>")]
+pub struct LoginInformation {
+    pub username: String,
+    pub password: String,
+}
+impl Handler<LoginInformation> for StateHandler {
+    type Result = Result<bool, std::io::Error>;
+
+    fn handle(&mut self, data: LoginInformation, _ctx: &mut Self::Context ) ->Self::Result {
+        println!("creating user");
+        let db_client = self.db_client.clone();
+        actix::spawn(async move {
+            StateHandler::create_user(&data.username, &data.password, db_client).await;
+        });
+        Ok(true)
     }
 }
 
