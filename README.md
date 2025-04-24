@@ -28,5 +28,7 @@ V1: https://typst.app/project/w1kPZ7sOE10qzxNl9waEui
 ### Implementation specification
 V1: https://typst.app/project/wC2aXm3S3N7MCstKxn5MgK
 
+V2: https://typst.app/project/wMmvfQnbGkEpZQo4VKWu72
+
 ### DRAW.IO with all diagram
 https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=sharing
