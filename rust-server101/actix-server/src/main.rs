@@ -101,15 +101,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .wrap(from_fn(my_middleware))
             .app_data(app_state.clone()) // holds references to actors and db
-            .service(
-                web::scope("/")
-                    .wrap(
-                        SessionMiddleware::builder(CookieSessionStore::default(), session_key.clone())
-                            .cookie_secure(false)
-                            .build()
-                    )
-                    .configure(routes::browser::browser_config) // webhandler '/'
-            )
+            .configure(routes::browser::browser_config) // webhandler '/'
             .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {

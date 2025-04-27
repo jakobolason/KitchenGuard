@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::{job_scheduler::JobsScheduler, state_handler::{StateHandler, Event, LoginInformation}};
+use crate::classes::{state_handler::{Event}, shared_struct::LoginInformation};
 use crate::classes::shared_struct::AppState;
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {

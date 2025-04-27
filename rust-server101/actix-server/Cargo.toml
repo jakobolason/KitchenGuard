@@ -8,7 +8,7 @@ actix-web = "4"
 actix = "0.13"
 actix-rt = "2.10.0"
 actix-cors = "0.7.1"
-actix-session = "0.10.1"
+actix-session = { version = "0.10.1", features = ["cookie-session"]}
 tokio = "1.44.2"
 mongodb = "3"
 serde = { version = "1.0", features = ["derive"] }
@@ -16,4 +16,4 @@ log = "0.4.27"
 env_logger = "0.11.8"
 chrono = { version = "0.4", features = ["serde"] }
 ring = "0.17.14"
-data-encoding = "2.9.0"
+data-encoding = "2.9.0" 
