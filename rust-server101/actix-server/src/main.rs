@@ -1,7 +1,7 @@
 use actix_web::{
-    body::MessageBody, cookie::{time::format_description::well_known, Key}, dev::{ServiceRequest, ServiceResponse}, error, middleware::{from_fn, Logger, Next}, web, App, Error, HttpResponse, HttpServer
+    cookie::{Key, SameSite}, error, middleware::Logger, web, App, HttpResponse, HttpServer
 };
-use actix_session::{Session, SessionMiddleware, storage::CookieSessionStore};
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix::Actor;
 use env_logger::Env;
 use actix_cors::Cors;
@@ -28,18 +28,6 @@ use crate::classes::{
     shared_struct::AppState,
     cookie_manager::CookieManager,
 };
-
-
-
-async fn my_middleware(
-    req: ServiceRequest,
-    next: Next<impl MessageBody>,
-) -> Result<ServiceResponse<impl MessageBody>, Error> {
-    // pre-processing
-    println!("req: {:?}", req);
-    next.call(req).await
-    // post-processing
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -77,6 +65,8 @@ async fn main() -> std::io::Result<()> {
 
     let cookie_manager = CookieManager::new(12).start(); // 12 hour sessions
 
+    let secret_key = Key::generate();
+
     log::info!("Finished setting up state and scheduler! Now setting AppState... ");
     // Create app state to share actor addresses
     let app_state = web::Data::new(AppState {
@@ -107,7 +97,12 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .wrap(Logger::default())
-            .wrap(from_fn(my_middleware))
+            .wrap(SessionMiddleware::builder(
+                CookieSessionStore::default(), secret_key.clone())
+                .cookie_http_only(false)
+                .cookie_same_site(SameSite::Strict)
+                .build()
+            )
             .app_data(app_state.clone()) // holds references to actors and db
             .configure(routes::browser::browser_config) // webhandler '/'
             .configure(routes::api::api_config)  // State handler '/api'

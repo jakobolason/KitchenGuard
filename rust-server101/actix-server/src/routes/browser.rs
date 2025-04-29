@@ -90,7 +90,7 @@ impl WebHandler {
 }
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
-    cfg.route("", web::get().to(front_page))
+    cfg.route("/", web::get().to(front_page))
         .route("/index", web::get().to(front_page))
         .route("/dashboard", web::get().to(dashboard))
         .route("/settings", web::get().to(settings))
@@ -99,7 +99,7 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
 
 
 // login page, which has 2 fields, and then you submit the fields and give them as a request
-async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>) -> HttpResponse {
+async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>, session: Session) -> HttpResponse {
     println!("username: {:?}", info.username);
     println!("passwd: {:?}", info.password);
     let list_of_uids = WebHandler::check_login(info.username.clone(), info.password.clone(), app_state.db_client.clone()).await;
@@ -107,11 +107,17 @@ async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>
         Ok(vec) => {
             match app_state.cookie_manager.send(CreateNewCookie {res_uids: vec}).await {
                 Ok(cookie) => {
+                    // sets proper headers, such that user gets the new cookie and goes to '/dashboard'
+                    // Store the cookie in the session
+                    if let Err(e) = session.insert("cookie", cookie.clone()) {
+                        error!("Failed to insert cookie into session: {}", e);
+                        return HttpResponse::InternalServerError().body("Failed to create session");
+                    }
+
+                    // Redirect to dashboard
                     HttpResponse::SeeOther()
-                    .append_header(("Location", "/dashboard"))
-                    .insert_header(("Set-Cookie", format!("session_cookie={}; Path=/; HttpOnly", cookie)))
-                    .insert_header(("Set-Cookie", cookie))
-                    .body("Login successful") // send them to dashboard
+                        .append_header(("Location", "/dashboard"))
+                        .body("Login successful")
                 }
                 Err(e) => {
                     error!("Failed to create cookie: {}", e);
@@ -142,7 +148,7 @@ async fn front_page() -> HttpResponse {
 }
 
 async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResponse {
-    println!("IN DASHBOARD");
+    println!("IN DASHBOARD, session:");
     // deprecated once middleware is setup
     if let Some(cookie) = session.get::<String>("cookie").unwrap() {
         println!("accessed with cookie: {}", cookie);
@@ -153,8 +159,9 @@ async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResp
             Err(_) => HttpResponse::BadRequest().body("You are not allowed here")
         }
     } else {
+        println!("no cookie found..");
         // User is not logged in, redirect to login
-        HttpResponse::SeeOther().append_header(("Location", "")).finish()
+        HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
     }
 }
 
