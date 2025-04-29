@@ -20,10 +20,15 @@ mod classes {
     pub mod job_scheduler;
     pub mod state_handler;
     pub mod shared_struct;
+    pub mod cookie_manager;
 }
-use crate::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking};
-use crate::classes::state_handler::{StateHandler, SetJobScheduler};
-use crate::classes::shared_struct::AppState;
+use crate::classes::{
+    job_scheduler::{JobsScheduler, ScheduledTask, StartChecking},
+    state_handler::{StateHandler, SetJobScheduler},
+    shared_struct::AppState,
+    cookie_manager::CookieManager,
+};
+
 
 
 async fn my_middleware(
@@ -31,7 +36,7 @@ async fn my_middleware(
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     // pre-processing
-    // println!("req: {:?}", req);
+    println!("req: {:?}", req);
     next.call(req).await
     // post-processing
 }
@@ -70,11 +75,14 @@ async fn main() -> std::io::Result<()> {
     // Start the scheduler's checking of tasks overdue
     job_scheduler.do_send(StartChecking);
 
+    let cookie_manager = CookieManager::new(12).start(); // 12 hour sessions
+
     log::info!("Finished setting up state and scheduler! Now setting AppState... ");
     // Create app state to share actor addresses
     let app_state = web::Data::new(AppState {
         state_handler: state_handler.clone(),
         job_scheduler: job_scheduler.clone(),
+        cookie_manager: cookie_manager.clone(),
         db_client: db_client.clone(),
     });
 

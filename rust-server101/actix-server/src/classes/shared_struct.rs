@@ -1,6 +1,7 @@
 use mongodb::Client;
 use super::job_scheduler::JobsScheduler;
 use super::state_handler::StateHandler;
+use super::cookie_manager::CookieManager;
 
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
@@ -11,6 +12,7 @@ use actix::Message;
 pub struct AppState {
     pub state_handler: actix::Addr<StateHandler>,
     pub job_scheduler: actix::Addr<JobsScheduler>,
+    pub cookie_manager: actix::Addr<CookieManager>,
     pub db_client: Client,
 }
 
@@ -40,6 +42,7 @@ pub struct LoggedInformation {
     pub username: String,
     pub password: String,
     pub salt: Vec<u8>,
+    pub res_ids: Vec<String>,
 }
 
 // What the user queries the server with

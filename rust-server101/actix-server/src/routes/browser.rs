@@ -4,7 +4,7 @@ use std::fs;
 use log::error;
 use actix_web::{body::MessageBody, middleware::Next, dev::{ServiceRequest, ServiceResponse}, Error};
 use crate::classes::{
-    shared_struct::{AppState, LoginInformation, LoggedInformation},
+    cookie_manager::{CreateNewCookie, ValidateSession}, shared_struct::{AppState, LoggedInformation, LoginInformation},
     // web_handler::WebHandler,
 };
 
@@ -20,11 +20,11 @@ pub struct WebHandler {
 impl WebHandler {
     // given a valid cookie, html with information from state server
     // should be provided
-    pub fn get_info(cookie: String) {
+    pub fn get_info(_res_id: String) {
 
     }
 
-    pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<bool, std::io::Error> {
+    pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::Error> {
         // checks the db for username
         let users = db_client.database("users").collection::<LoggedInformation>("info");
         match users
@@ -32,9 +32,10 @@ impl WebHandler {
             .await {
                 Ok(Some(doc)) => {
                     if WebHandler::verify_password(passwd.as_str(), &doc.salt, doc.password.as_str()) {
-                        Ok(true)
+                        Ok(doc.res_ids)
                     } else {
-                        Ok(false)
+                        eprintln!("wrong password entered");
+                        Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "wrong credentials"))
                     }
                 },
                 Ok(None) => {
@@ -101,10 +102,23 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
 async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>) -> HttpResponse {
     println!("username: {:?}", info.username);
     println!("passwd: {:?}", info.password);
-    let password_correct = WebHandler::check_login(info.username.clone(), info.password.clone(), app_state.db_client.clone()).await;
-    match password_correct {
-        Ok(true) => HttpResponse::Ok().body("correct"),
-        Ok(false) => HttpResponse::Unauthorized().body("incorrect"),
+    let list_of_uids = WebHandler::check_login(info.username.clone(), info.password.clone(), app_state.db_client.clone()).await;
+    match list_of_uids {
+        Ok(vec) => {
+            match app_state.cookie_manager.send(CreateNewCookie {res_uids: vec}).await {
+                Ok(cookie) => {
+                    HttpResponse::SeeOther()
+                    .append_header(("Location", "/dashboard"))
+                    .insert_header(("Set-Cookie", format!("session_cookie={}; Path=/; HttpOnly", cookie)))
+                    .insert_header(("Set-Cookie", cookie))
+                    .body("Login successful") // send them to dashboard
+                }
+                Err(e) => {
+                    error!("Failed to create cookie: {}", e);
+                    HttpResponse::InternalServerError().body("Failed to create session cookie")
+                }
+            }
+        },
         Err(e) => {
             error!("Login check failed: {}", e);
             HttpResponse::InternalServerError().body("Internal server error")
@@ -127,12 +141,17 @@ async fn front_page() -> HttpResponse {
     }
 }
 
-async fn dashboard(session: Session) -> HttpResponse {
+async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResponse {
+    println!("IN DASHBOARD");
     // deprecated once middleware is setup
-    if let Some(user_id) = session.get::<i32>("user_id").unwrap() {
-        let username: String = session.get("username").unwrap().unwrap();
-        // User is logged in
-        HttpResponse::Ok().body(format!("Welcome to your dashboard, {}!", username))
+    if let Some(cookie) = session.get::<String>("cookie").unwrap() {
+        println!("accessed with cookie: {}", cookie);
+        // check this cookie for session valid
+        match app_state.cookie_manager.send(ValidateSession { token: cookie}).await {
+            Ok(Some(uids)) => HttpResponse::Ok().body(format!("welcome to your dashboard, you can use these: {:?}", uids)),
+            Ok(None) => HttpResponse::ServiceUnavailable().into(),
+            Err(_) => HttpResponse::BadRequest().body("You are not allowed here")
+        }
     } else {
         // User is not logged in, redirect to login
         HttpResponse::SeeOther().append_header(("Location", "")).finish()

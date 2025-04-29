@@ -2,9 +2,9 @@ use actix::prelude::*;
 use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{oid::ObjectId, doc}, Client,};
+use mongodb::{bson::{oid::ObjectId, doc}, Client, error};
 use core::panic;
-use std::time::{Duration, Instant};
+use std::{time::{Duration, Instant}};
 
 use super::{
     job_scheduler::{JobsScheduler, ScheduledTask, CancelTask}, 
@@ -277,8 +277,7 @@ impl StateHandler {
         return (new_state, scheduled_task)
     }
 
-    // Async function to collect GET calls in one function
-    async fn get_resident_data(res_id: String, db_client: Client) -> Result<(States, SensorLookup), mongodb::error::Error> {
+    async fn get_resident_data(res_id: String, db_client: Client) -> error::Result<(States, SensorLookup)> {
         // Fetch the current state
         let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
         let current_state = match state_collection
@@ -325,7 +324,7 @@ impl StateHandler {
     }
 
     
-    pub async fn create_user(username: &str, password: &str, db_client: Client) {
+    pub async fn create_user(username: &str, password: &str, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
         let user_salt = username.as_bytes();
         let hashed_password =  hash_password(password, user_salt);
         let usercollection = db_client.database("users").collection::<LoggedInformation>("info");
@@ -333,7 +332,10 @@ impl StateHandler {
             username: username.to_string(),
             password: hashed_password,
             salt: user_salt.to_vec(),
-        }).await;
+            res_ids: Vec::new(), // idk how to handle this best
+        }).await.map_err(|e| {
+            eprintln!("Failed to insert user: {:?}", e);
+        }).ok()
     }
     
 }

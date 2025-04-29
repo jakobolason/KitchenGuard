@@ -13,11 +13,11 @@ pub struct WebHandler {
 impl WebHandler {
     // given a valid cookie, html with information from state server
     // should be provided
-    pub fn get_info(cookie: String) {
+    pub fn get_info(_res_id: String) {
 
     }
 
-    pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<bool, std::io::Error> {
+    pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::Error> {
         // checks the db for username
         let users = db_client.database("users").collection::<LoggedInformation>("info");
         match users
@@ -25,9 +25,10 @@ impl WebHandler {
             .await {
                 Ok(Some(doc)) => {
                     if WebHandler::verify_password(passwd.as_str(), &doc.salt, doc.password.as_str()) {
-                        Ok(true)
+                        Ok(doc.res_ids)
                     } else {
-                        Ok(false)
+                        eprintln!("wrong password entered");
+                        Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "wrong credentials"))
                     }
                 },
                 Ok(None) => {
