@@ -1,11 +1,7 @@
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use actix::{Message, Actor, Context, Handler};
-use tokio::runtime::Handle;
 use rand::{distr::Alphanumeric, Rng};
-
-
 
 pub struct CookieEntry {
     pub res_ids: Vec<String>,
@@ -43,23 +39,28 @@ impl CookieManager {
         }
     }
 
-    pub fn check_cookie(cookies: HashMap<String, CookieEntry>, cookie: String) -> Result<bool, std::io::ErrorKind> {
+    pub fn check_cookie(cookies: &mut HashMap<String, CookieEntry>, cookie: String) -> bool {
         if let Some(entry) = cookies.get(&cookie) {
             if entry.lifetime < Instant::now() {
-                // signal that it should be deleted
-                Err(std::io::ErrorKind::PermissionDenied)
+                cookies.remove(&cookie);
+                false
             } else {
-                Ok(true)
+                true
             }
         } else {
-            Ok(false)
+            false
         }
     }
 
-    pub fn get_res_ids(cookies: &HashMap<String, CookieEntry>, cookie: String) -> Option<Vec<String>> {
+    pub fn get_res_ids(cookies: &mut HashMap<String, CookieEntry>, cookie: String) -> Option<Vec<String>> {
         // Attempts to return the value, if the cookie exists
         if let Some(entry) = cookies.get(&cookie) {
-            Some(entry.res_ids.clone())
+            if entry.lifetime < Instant::now() {
+                cookies.remove(&cookie);
+                None
+            } else {
+                Some(entry.res_ids.clone())
+            }
         } else {
             None
         }
@@ -82,7 +83,6 @@ impl Actor for CookieManager {
     }
 }
 
-
 impl Handler<CreateNewCookie> for CookieManager {
     type Result = String;
 
@@ -98,14 +98,12 @@ impl Handler<ValidateSession> for CookieManager {
     
     fn handle(&mut self, msg: ValidateSession, _: &mut Context<Self>) -> Self::Result {
         
-        if let Some(entry) = CookieManager::get_res_ids(&self.cookies, msg.token) {
+        if let Some(entry) = CookieManager::get_res_ids(&mut self.cookies, msg.token) {
             return Some(entry)
         }
         None
     }
 }
-
-
 
 impl Handler<RemoveSession> for CookieManager {
     type Result = bool;

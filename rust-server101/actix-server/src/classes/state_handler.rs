@@ -4,7 +4,7 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use mongodb::{bson::{oid::ObjectId, doc}, Client, error};
 use core::panic;
-use std::{time::{Duration, Instant}};
+use std::time::{Duration, Instant};
 
 use super::{
     job_scheduler::{JobsScheduler, ScheduledTask, CancelTask}, 

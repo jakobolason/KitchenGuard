@@ -2,9 +2,8 @@ use actix_web::{web, HttpResponse, http};
 use actix_session::Session;
 use std::fs;
 use log::error;
-use actix_web::{body::MessageBody, middleware::Next, dev::{ServiceRequest, ServiceResponse}, Error};
 use crate::classes::{
-    cookie_manager::{CreateNewCookie, ValidateSession}, shared_struct::{AppState, LoggedInformation, LoginInformation},
+    cookie_manager::{CreateNewCookie, ValidateSession}, shared_struct::{AppState, LoginInformation},
     web_handler::WebHandler,
 };
 

@@ -1,14 +1,11 @@
-use actix::prelude::*;
-use ring::{digest, pbkdf2};
+use ring::pbkdf2;
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use mongodb::{bson::doc, Client,};
 
 use super::shared_struct::LoggedInformation;
 
-pub struct WebHandler {
-    
-}
+pub struct WebHandler;
 
 impl WebHandler {
     // given a valid cookie, html with information from state server
