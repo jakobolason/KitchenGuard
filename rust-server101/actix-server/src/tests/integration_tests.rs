@@ -6,8 +6,8 @@ mod tests {
     use tokio;
     use actix::prelude::*;
     use mongodb::{bson::{oid::ObjectId, doc}, options::UpdateOptions, Client,};
-    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
-    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
+    use crate::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
+    use crate::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
     use std::sync::{Arc, Mutex};
     use std::collections::VecDeque;
 

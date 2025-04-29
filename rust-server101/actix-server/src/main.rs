@@ -11,17 +11,19 @@ use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 
 // controls endpoint logic
-mod routes {
-    pub mod api;
-    pub mod browser;
-}
+pub mod routes; 
+// {
+//     pub mod api;
+//     pub mod browser;
+// }
 // implementation of business logic
-mod classes {
-    pub mod job_scheduler;
-    pub mod state_handler;
-    pub mod shared_struct;
-    pub mod cookie_manager;
-}
+pub mod classes;
+// {
+//     pub mod job_scheduler;
+//     pub mod state_handler;
+//     pub mod shared_struct;
+//     pub mod cookie_manager;
+// }
 use crate::classes::{
     job_scheduler::{JobsScheduler, ScheduledTask, StartChecking},
     state_handler::{StateHandler, SetJobScheduler},

@@ -58,27 +58,6 @@ impl WebHandler {
             &stored_hash,
         ).is_ok()
     }
-
-    pub fn hash_password(password: &str, salt: &[u8]) -> String {
-        // Configure PBKDF2 parameters
-        let n_iter = NonZeroU32::new(100_000).unwrap();
-        let alg = pbkdf2::PBKDF2_HMAC_SHA256;
-        
-        // Output buffer for the hash
-        let mut hash = [0u8; digest::SHA256_OUTPUT_LEN];
-        
-        pbkdf2::derive(
-            alg,
-            n_iter,
-            salt,
-            password.as_bytes(),
-            &mut hash,
-        );
-        
-        // Convert to hex string
-        HEXLOWER.encode(&hash)
-    }
-
     
 }
 
