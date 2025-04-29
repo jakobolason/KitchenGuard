@@ -5,10 +5,10 @@
 mod tests {
     use tokio;
     use actix::prelude::*;
-    use mongodb::{bson::{oid::ObjectId, doc}, options::UpdateOptions, Client,};
-    use crate::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
-    use crate::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
-    use std::sync::{Arc, Mutex};
+    use mongodb::{bson::{oid::ObjectId, doc}, Client,};
+    use kitchen_guard_server::classes::*;
+    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
+    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
     use std::collections::VecDeque;
 
     #[tokio::test]
@@ -71,7 +71,7 @@ mod tests {
             
             // Start job scheduler actor and link to state handler
             let job_scheduler = JobsScheduler {
-                tasks: Arc::new(Mutex::new(VecDeque::<ScheduledTask>::new())),
+                tasks: VecDeque::<ScheduledTask>::new(),
                 state_handler: state_handler.clone(),
             }.start();
             
@@ -186,8 +186,27 @@ mod tests {
 
     }
 
-    // #[test]
-    // fn test_to_remove_alarm {
+    #[tokio::test]
+    async fn test_browser_responses() {
+        let local = tokio::task::LocalSet::new();
+        local.run_until(async {
+            let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".into());
+            let db_client = Client::with_uri_str(uri).await.expect("failed to connect");
 
-    // }
+            let web_handler = web_handler::WebHandler::new(
+                cookie_manager::CookieManager::new(24), db_client.clone()).start();
+            // setup a basic user
+            let username = "TESTNAME";
+            let password = "123";
+            let _ = StateHandler::create_user(username, password, db_client);
+            
+            let cookie = web_handler.send(shared_struct::LoginInformation { username: username.to_string(), password: password.to_string() }).await.unwrap();
+            assert!(cookie.is_some());
+            let cookie_value = cookie.unwrap();
+            assert!(!cookie_value.is_empty());
+
+            
+
+        }).await;
+    }
 }

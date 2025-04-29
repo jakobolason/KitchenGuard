@@ -14,11 +14,10 @@ pub struct WebHandler {
 
 impl WebHandler {
     pub fn new(cookie_manager: CookieManager, db_client: Client) -> WebHandler {
-        WebHandler { cookie_manager: cookie_manager, db_client: db_client }
+        WebHandler { cookie_manager, db_client }
     }
 
-    // given a valid cookie, html with information from state server
-    // should be provided
+    // given a valid cookie, information from db should be fetched
     pub fn get_info(_res_id: String) {
 
     }
@@ -110,4 +109,10 @@ impl Handler<ValidateSession> for WebHandler {
     fn handle(&mut self, validate_session: ValidateSession, _ctx: &mut Self::Context) -> Self::Result {
         self.cookie_manager.validate_session(validate_session.cookie)
     } 
+}
+
+#[cfg(test)]
+mod tests {
+    // use super::*;
+
 }
