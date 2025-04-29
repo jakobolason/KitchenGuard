@@ -3,6 +3,7 @@ use actix_web::{
 };
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix::Actor;
+use classes::web_handler::{self, WebHandler};
 use env_logger::Env;
 use actix_cors::Cors;
 // use model::User;
@@ -48,9 +49,11 @@ async fn main() -> std::io::Result<()> {
     
     // Start job scheduler actor and link to state handler
     let job_scheduler = JobsScheduler {
-        tasks: Arc::new(Mutex::new(VecDeque::<ScheduledTask>::new())),
+        tasks: VecDeque::<ScheduledTask>::new(),
         state_handler: state_handler.clone(),
     }.start();
+    let web_handler = WebHandler::new(
+        CookieManager::new(24), db_client.clone()).start();
     
     // Update state handler with job scheduler reference
     state_handler.do_send(SetJobScheduler {
@@ -59,8 +62,6 @@ async fn main() -> std::io::Result<()> {
     // Start the scheduler's checking of tasks overdue
     job_scheduler.do_send(StartChecking);
 
-    let cookie_manager = CookieManager::new(12).start(); // 12 hour sessions
-
     let secret_key = Key::generate();
 
     log::info!("Finished setting up state and scheduler! Now setting AppState... ");
@@ -68,7 +69,7 @@ async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState {
         state_handler: state_handler.clone(),
         job_scheduler: job_scheduler.clone(),
-        cookie_manager: cookie_manager.clone(),
+        web_handler: web_handler.clone(),
         db_client: db_client.clone(),
     });
 

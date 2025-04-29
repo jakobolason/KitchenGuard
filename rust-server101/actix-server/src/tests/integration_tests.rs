@@ -12,7 +12,7 @@ mod tests {
     use std::collections::VecDeque;
 
     #[tokio::test]
-    async fn test_all_actors() {
+    async fn test_api() {
         let local = tokio::task::LocalSet::new();
         local.run_until(async {
             let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".into());

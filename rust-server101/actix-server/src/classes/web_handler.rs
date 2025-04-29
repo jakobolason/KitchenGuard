@@ -1,13 +1,22 @@
+use actix::{Actor, Handler, Context, ActorFutureExt, ResponseActFuture, WrapFuture};
 use ring::pbkdf2;
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use mongodb::{bson::doc, Client,};
+use log::error;
 
-use super::shared_struct::LoggedInformation;
+use super::{cookie_manager::CookieManager, shared_struct::{LoggedInformation, LoginInformation, ValidateSession}};
 
-pub struct WebHandler;
+pub struct WebHandler {
+    cookie_manager: CookieManager,
+    db_client: Client,
+}
 
 impl WebHandler {
+    pub fn new(cookie_manager: CookieManager, db_client: Client) -> WebHandler {
+        WebHandler { cookie_manager: cookie_manager, db_client: db_client }
+    }
+
     // given a valid cookie, html with information from state server
     // should be provided
     pub fn get_info(_res_id: String) {
@@ -58,4 +67,47 @@ impl WebHandler {
     
 }
 
+impl Actor for WebHandler {
+    type Context = Context<Self>;
+}
 
+impl Handler<LoginInformation> for WebHandler {
+    type Result = ResponseActFuture<Self, Option<String>>;
+
+    fn handle(&mut self, info: LoginInformation, _ctx: &mut Self::Context) -> Self::Result {
+        let db_client = self.db_client.clone();
+        
+        // Create a future that will have access to self when resolved
+        Box::pin(
+            async move {
+                WebHandler::check_login(
+                    info.username.clone(), 
+                    info.password.clone(), 
+                    db_client
+                ).await
+            }
+            .into_actor(self)  // Convert the future into an actor future
+            .map(|result, actor, _ctx| {
+                // This closure will have access to the actor (self)
+                match result {
+                    Ok(vec) => {
+                        Some(actor.cookie_manager.create_new_cookie(vec))
+                    },
+                    Err(e) => {
+                        error!("Login check failed: {}", e);
+                        None
+                    }
+                }
+            })
+        )
+    }
+}
+
+// This is a weird workaround instead of not sending directly, but makes since architecturally
+impl Handler<ValidateSession> for WebHandler {
+    type Result = Option<Vec<String>>;
+
+    fn handle(&mut self, validate_session: ValidateSession, _ctx: &mut Self::Context) -> Self::Result {
+        self.cookie_manager.validate_session(validate_session.cookie)
+    } 
+}

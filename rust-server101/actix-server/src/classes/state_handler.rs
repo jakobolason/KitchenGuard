@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use actix_web::HttpResponse;
 use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
@@ -341,7 +342,7 @@ impl StateHandler {
 }
 
 impl Handler<LoginInformation> for StateHandler {
-    type Result = Result<bool, std::io::Error>;
+    type Result = Option<String>;
 
     fn handle(&mut self, data: LoginInformation, _ctx: &mut Self::Context ) -> Self::Result {
         println!("creating user");
@@ -349,7 +350,7 @@ impl Handler<LoginInformation> for StateHandler {
         actix::spawn(async move {
             StateHandler::create_user(&data.username, &data.password, db_client).await;
         });
-        Ok(true)
+        Some("OK".to_string())
     }
 }
 

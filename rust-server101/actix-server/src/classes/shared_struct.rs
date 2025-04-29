@@ -1,18 +1,22 @@
 use mongodb::Client;
-use super::job_scheduler::JobsScheduler;
-use super::state_handler::StateHandler;
-use super::cookie_manager::CookieManager;
+use super::{
+    job_scheduler::JobsScheduler,
+    state_handler::StateHandler,
+    web_handler::WebHandler,
+};
+
 
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
+use actix_web::HttpResponse;
 
 pub struct AppState {
     pub state_handler: actix::Addr<StateHandler>,
     pub job_scheduler: actix::Addr<JobsScheduler>,
-    pub cookie_manager: actix::Addr<CookieManager>,
+    pub web_handler: actix::Addr<WebHandler>,
     pub db_client: Client,
 }
 
@@ -47,8 +51,14 @@ pub struct LoggedInformation {
 
 // What the user queries the server with
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Result<bool, std::io::Error>")]
+#[rtype(result = "Option<String>")]
 pub struct LoginInformation {
     pub username: String,
     pub password: String,
+}
+
+#[derive(Message)]
+#[rtype(result = "Option<Vec<String>>")]
+pub struct ValidateSession {
+    pub cookie: String
 }

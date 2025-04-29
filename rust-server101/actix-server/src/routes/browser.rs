@@ -2,11 +2,7 @@ use actix_web::{web, HttpResponse, http};
 use actix_session::Session;
 use std::fs;
 use log::error;
-use crate::classes::{
-    cookie_manager::{CreateNewCookie, ValidateSession}, shared_struct::{AppState, LoginInformation},
-    web_handler::WebHandler,
-};
-
+use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))
@@ -21,33 +17,21 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
 async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>, session: Session) -> HttpResponse {
     println!("username: {:?}", info.username);
     println!("passwd: {:?}", info.password);
-    let list_of_uids = WebHandler::check_login(info.username.clone(), info.password.clone(), app_state.db_client.clone()).await;
-    match list_of_uids {
-        Ok(vec) => {
-            match app_state.cookie_manager.send(CreateNewCookie {res_uids: vec}).await {
-                Ok(cookie) => {
-                    // sets proper headers, such that user gets the new cookie and goes to '/dashboard'
-                    // Store the cookie in the session
-                    if let Err(e) = session.insert("cookie", cookie.clone()) {
-                        error!("Failed to insert cookie into session: {}", e);
-                        return HttpResponse::InternalServerError().body("Failed to create session");
-                    }
-
-                    // Redirect to dashboard
-                    HttpResponse::SeeOther()
-                        .append_header(("Location", "/dashboard"))
-                        .body("Login successful")
-                }
-                Err(e) => {
-                    error!("Failed to create cookie: {}", e);
-                    HttpResponse::InternalServerError().body("Failed to create session cookie")
-                }
+    match app_state.web_handler.send(info.into_inner()).await {
+        Ok(cookie) => {
+            // sets proper headers, such that user gets the new cookie and goes to '/dashboard'
+            // Store the cookie in the session
+            if let Err(e) = session.insert("cookie", cookie.clone()) {
+                error!("Failed to insert cookie into session: {}", e);
+                return HttpResponse::InternalServerError().body("Failed to create session");
             }
-        },
-        Err(e) => {
-            error!("Login check failed: {}", e);
-            HttpResponse::InternalServerError().body("Internal server error")
+
+            // Redirect to dashboard
+            HttpResponse::SeeOther()
+                .append_header(("Location", "/dashboard"))
+                .body("Login successful")
         }
+        Err(_) => HttpResponse::InternalServerError().body("Internal server error")
     }
 }
 
@@ -72,7 +56,7 @@ async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResp
     if let Some(cookie) = session.get::<String>("cookie").unwrap() {
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
-        match app_state.cookie_manager.send(ValidateSession { token: cookie}).await {
+        match app_state.web_handler.send(ValidateSession { cookie}).await {
             Ok(Some(uids)) => HttpResponse::Ok().body(format!("welcome to your dashboard, you can use these: {:?}", uids)),
             Ok(None) => HttpResponse::ServiceUnavailable().into(),
             Err(_) => HttpResponse::BadRequest().body("You are not allowed here")

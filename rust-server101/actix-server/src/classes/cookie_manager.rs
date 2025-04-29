@@ -1,28 +1,10 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use actix::{Message, Actor, Context, Handler};
 use rand::{distr::Alphanumeric, Rng};
 
 pub struct CookieEntry {
     pub res_ids: Vec<String>,
     pub lifetime: Instant
-}
-#[derive(Message)]
-#[rtype(result="String")]
-pub struct CreateNewCookie {
-    pub res_uids: Vec<String>,
-}
-
-#[derive(Message)]
-#[rtype(result = "Option<Vec<String>>")]
-pub struct ValidateSession {
-    pub token: String,
-}
-
-#[derive(Message)]
-#[rtype(result = "bool")]
-pub struct RemoveSession {
-    pub token: String,
 }
 
 pub struct CookieManager {
@@ -73,42 +55,21 @@ impl CookieManager {
             .map(char::from)
             .collect()
     }
-}
 
-
-impl Actor for CookieManager {
-    type Context = Context<Self>;
-    fn started(&mut self, _ctx: &mut Self::Context) {
-        println!("Statehandler actor started!");
-    }
-}
-
-impl Handler<CreateNewCookie> for CookieManager {
-    type Result = String;
-
-    fn handle(&mut self, list: CreateNewCookie, _ctx: &mut Self::Context) -> Self::Result {
+    pub fn create_new_cookie(&mut self, res_uids: Vec<String>) -> String {
         let new_cookie = CookieManager::generate_cookie();
-        self.cookies.insert(new_cookie.clone(), CookieEntry { res_ids: list.res_uids, lifetime:  Instant::now() + self.session_duration});
+        self.cookies.insert(new_cookie.clone(), CookieEntry { res_ids: res_uids, lifetime:  Instant::now() + self.session_duration});
         new_cookie
     }
-}
 
-impl Handler<ValidateSession> for CookieManager {
-    type Result = Option<Vec<String>>;
-    
-    fn handle(&mut self, msg: ValidateSession, _: &mut Context<Self>) -> Self::Result {
-        
-        if let Some(entry) = CookieManager::get_res_ids(&mut self.cookies, msg.token) {
+    pub fn validate_session(&mut self, cookie: String) -> Option<Vec<String>> {
+        if let Some(entry) = CookieManager::get_res_ids(&mut self.cookies, cookie) {
             return Some(entry)
         }
         None
     }
-}
 
-impl Handler<RemoveSession> for CookieManager {
-    type Result = bool;
-    
-    fn handle(&mut self, msg: RemoveSession, _: &mut Context<Self>) -> Self::Result {
-        self.cookies.remove(&msg.token).is_some()
+    pub fn remove_session(&mut self, cookie: String) -> bool {
+        self.cookies.remove(&cookie).is_some()
     }
 }
