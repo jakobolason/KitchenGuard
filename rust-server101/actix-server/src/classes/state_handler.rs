@@ -1,11 +1,11 @@
-use actix::prelude::*;
-use actix_web::HttpResponse;
+use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
 use mongodb::{bson::{oid::ObjectId, doc}, Client, error};
 use core::panic;
 use std::time::{Duration, Instant};
+use std::pin::Pin;
 
 use super::{
     job_scheduler::{JobsScheduler, ScheduledTask, CancelTask}, 
@@ -72,7 +72,7 @@ pub struct StateLog {
 
 // HEUCOD event standard, needs implementing.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "()")]
+#[rtype(result = "Result<States, std::io::ErrorKind>")]
 pub struct Event {
     pub time_stamp: String,
     pub mode: String,
@@ -114,7 +114,6 @@ impl Handler<SetJobScheduler> for StateHandler {
 
     fn handle(&mut self, scheduler: SetJobScheduler, _ctx: &mut Self::Context) {
         self.job_scheduler = scheduler.scheduler;
-        
         ()
     }
 }
@@ -329,6 +328,7 @@ impl StateHandler {
         let user_salt = username.as_bytes();
         let hashed_password =  hash_password(password, user_salt);
         let usercollection = db_client.database("users").collection::<LoggedInformation>("info");
+        println!("creating user");
         usercollection.insert_one(LoggedInformation {
             username: username.to_string(),
             password: hashed_password,
@@ -354,40 +354,31 @@ impl Handler<LoginInformation> for StateHandler {
     }
 }
 
-
 /// Handles what to do, when a sensor event comes from the Pi
+/// Returns a future that should be awaited
 impl Handler<Event> for StateHandler {
-    type Result = ();
+    type Result = ResponseFuture<Result<States, std::io::ErrorKind>>;
 
-    fn handle(&mut self, data: Event, _ctx: &mut Self::Context) {
+    fn handle(&mut self, data: Event, _ctx: &mut Self::Context) -> Self::Result {
         println!("Caught an event for res_id: {:?}", data.res_id);
         let db_client = self.db_client.clone();
-        let job_scheduler = match self.job_scheduler.clone() {
-            Some(jobber) => jobber,
-            _=> { 
-                eprint!("There was no job scheduler address available!");
-                return
-            }
-        };
+        let job_scheduler = self.job_scheduler.clone().unwrap();
         let res_id = data.res_id.to_string();
         let is_test = self.is_test.clone();
 
-        // This uses the Arbiter trait from Actix, see more here: https://actix.rs/docs/actix/arbiter
-        let fut = async move {
+        // Returns a future, that should be awaited
+        Box::pin(async move {
             // Log the event data
             let collection = db_client.database("ResidentData").collection::<Event>("ResidentLogs");
-            println!("HERE1");
             if let Err(err) = collection.insert_one(data.clone()).await {
                 println!("In error");
                 eprintln!("Failed to log event: {:?}", err);
-                return Err(format!("Failed to log event: {:?}", err));
+                return Err(std::io::ErrorKind::InvalidData);
             }
-            println!("HERE2");
             let (current_state, sensors) = match StateHandler::get_resident_data(res_id.clone(), db_client.clone()).await {
                 Ok(vals) => (vals.0, vals.1),
-                Err(_err) => panic!("couldn't get resident data"),
+                Err(_err) => return Err(std::io::ErrorKind::InvalidInput),
             };
-            println!("HERE3");
             // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
             let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data, is_test.clone());
             println!("new state found to be: {:?}", state_info);
@@ -420,19 +411,10 @@ impl Handler<Event> for StateHandler {
             let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
             if let Err(err) = state_collection.insert_one(state_log).await {
                 eprintln!("Failed to save new state: {:?}", err);
-                return Err(format!("Failed to save new state: {:?}", err));
+                return Err(std::io::ErrorKind::InvalidInput);
             };
-            Ok(())
-        }
-        .into_actor(self) // Convert the future into an actor future
-        .map(|res, _, _| {
-            if let Err(err) = res {
-                eprintln!("Error in actor future: {:?}", err);
-            }
-        });
-
-        _ctx.spawn(fut);
-        ()
+            Ok(state_info)
+        })
     }
 }
 

@@ -18,7 +18,7 @@ impl WebHandler {
     }
 
     // given a valid cookie, information from db should be fetched
-    pub fn get_info(_res_id: String) {
+    fn get_info(_res_id: String) {
 
     }
 
@@ -37,11 +37,11 @@ impl WebHandler {
                     }
                 },
                 Ok(None) => {
-                    eprintln!("No sensors found for res_id: {}", username);
+                    eprintln!("No login information found for res_id: {}", username);
                     Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no user found"))
                 }
                 Err(err) => {
-                    eprintln!("Error querying sensors: {:?}", err);
+                    eprintln!("Error querying logins: {:?}", err);
                     Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {:?}", err)))
                 }
             }

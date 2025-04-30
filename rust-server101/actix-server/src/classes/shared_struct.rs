@@ -5,7 +5,7 @@ use super::{
     web_handler::WebHandler,
 };
 
-
+use std::pin::Pin;
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
