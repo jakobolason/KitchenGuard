@@ -78,13 +78,12 @@ async fn test_save(
 
 async fn save_data(
     form: web::Json<Event>,
-    client: web::Data<Client>
+    app_state: web::Data<AppState>
                     ) -> HttpResponse 
 {
-    let collection = client.database(DB_NAME).collection("EventsTest");
-    let result = collection.insert_one(form.into_inner()).await;
+    let new_state = app_state.state_handler.send(form.into_inner()).await;
     log::info!("Save endpoint reached");
-    match result {
+    match new_state {
         Ok(_) => HttpResponse::Ok().body("user added"),
         Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
