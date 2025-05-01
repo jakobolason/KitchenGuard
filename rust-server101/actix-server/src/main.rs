@@ -1,8 +1,9 @@
 use actix_web::{
-    body::MessageBody, cookie::{time::format_description::well_known, Key}, dev::{ServiceRequest, ServiceResponse}, error, middleware::{from_fn, Logger, Next}, web, App, Error, HttpResponse, HttpServer
+    cookie::{Key, SameSite}, error, middleware::Logger, web, App, HttpResponse, HttpServer
 };
-// use actix_session::{Session, SessionMiddleware, storage::CookieSessionStore};
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix::Actor;
+use classes::web_handler::{self, WebHandler};
 use env_logger::Env;
 use actix_cors::Cors;
 // use model::User;
@@ -10,33 +11,20 @@ use mongodb::Client;
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 
+/* 
+    This introduces the binary to the classes.rs and routes.rs file, which includes the files under the folders 
+*/
 // controls endpoint logic
-mod routes {
-    pub mod api;
-    pub mod browser;
-}
+pub mod routes; 
 // implementation of business logic
-mod classes {
-    pub mod job_scheduler;
-    pub mod state_handler;
-    pub mod shared_struct;
-}
-use crate::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking};
-use crate::classes::state_handler::{StateHandler, SetJobScheduler};
-use crate::classes::shared_struct::AppState;
+pub mod classes;
 
-
-async fn my_middleware(
-    req: ServiceRequest,
-    next: Next<impl MessageBody>,
-) -> Result<ServiceResponse<impl MessageBody>, Error> {
-    // pre-processing
-    // println!("req: {:?}", req);
-    next.call(req).await
-    // post-processing
-}
-
-
+use crate::classes::{
+    job_scheduler::{JobsScheduler, ScheduledTask, StartChecking},
+    state_handler::{StateHandler, SetJobScheduler},
+    shared_struct::AppState,
+    cookie_manager::CookieManager,
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -61,9 +49,11 @@ async fn main() -> std::io::Result<()> {
     
     // Start job scheduler actor and link to state handler
     let job_scheduler = JobsScheduler {
-        tasks: Arc::new(Mutex::new(VecDeque::<ScheduledTask>::new())),
+        tasks: VecDeque::<ScheduledTask>::new(),
         state_handler: state_handler.clone(),
     }.start();
+    let web_handler = WebHandler::new(
+        CookieManager::new(24), db_client.clone()).start();
     
     // Update state handler with job scheduler reference
     state_handler.do_send(SetJobScheduler {
@@ -72,11 +62,14 @@ async fn main() -> std::io::Result<()> {
     // Start the scheduler's checking of tasks overdue
     job_scheduler.do_send(StartChecking);
 
+    let secret_key = Key::generate();
+
     log::info!("Finished setting up state and scheduler! Now setting AppState... ");
     // Create app state to share actor addresses
     let app_state = web::Data::new(AppState {
         state_handler: state_handler.clone(),
         job_scheduler: job_scheduler.clone(),
+        web_handler: web_handler.clone(),
         db_client: db_client.clone(),
     });
 
@@ -101,17 +94,14 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .wrap(Logger::default())
-            .wrap(from_fn(my_middleware))
+            .wrap(SessionMiddleware::builder(
+                CookieSessionStore::default(), secret_key.clone())
+                .cookie_http_only(false)
+                .cookie_same_site(SameSite::Strict)
+                .build()
+            )
             .app_data(app_state.clone()) // holds references to actors and db
-            // .service(
-                // web::scope("/")
-                //     .wrap(
-                //         SessionMiddleware::builder(CookieSessionStore::default(), session_key.clone())
-                //             .cookie_secure(false)
-                //             .build()
-                    // )
-                    .configure(routes::browser::browser_config) // webhandler '/'
-            // )
+            .configure(routes::browser::browser_config) // webhandler '/'
             .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {

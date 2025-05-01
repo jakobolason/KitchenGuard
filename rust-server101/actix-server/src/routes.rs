@@ -1,2 +1,2 @@
-pub mod browser;
 pub mod api;
+pub mod browser;

@@ -9,7 +9,7 @@ use super::state_handler::{StateHandler, Event};
 #[rtype(result = "()")]
 struct CheckJobs;
 
-#[derive(Debug, Message)]
+#[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]
 pub struct ScheduledTask {
   pub res_id: String,
@@ -26,7 +26,7 @@ pub struct CancelTask {
 // }
 #[derive(Clone, Debug)]
 pub struct JobsScheduler {
-  pub tasks: Arc<Mutex<VecDeque<ScheduledTask>>>,
+  pub tasks: VecDeque<ScheduledTask>,
   pub state_handler: Addr<StateHandler>,
 }
 
@@ -90,45 +90,41 @@ impl Handler<AmountOfJobs> for JobsScheduler {
 	type Result = Result<i8, std::io::Error>;
 
 	fn handle(&mut self, _data: AmountOfJobs, _ctx: &mut Self::Context) -> Self::Result { // Self is referrring to AmountOfJobs struct here
-		let tasks = self.tasks.lock().unwrap();
-		return Ok(tasks.len() as i8);
+		return Ok(self.tasks.len() as i8);
 	}
 }
 
 impl JobsScheduler {
 
-	pub fn cancel(&self, res_id: String) -> bool {
+	pub fn cancel(&mut self, res_id: String) -> bool {
 		println!("Asked to cancel a timer!");
 		// use unwrap to check integrity of tasks.lock
-		let mut tasks = self.tasks.lock().unwrap();
-		if let Some(pos) = tasks.iter().position(|t| t.res_id == res_id) {
-			tasks.remove(pos);
-			println!("successfully removed entry, remaining size: {}", tasks.len());
+		if let Some(pos) = self.tasks.iter().position(|t| t.res_id == res_id) {
+			self.tasks.remove(pos);
+			println!("successfully removed entry, remaining size: {}", self.tasks.len());
 			true
 		} else {
-			println!("failed to removed entry, remaining size: {}", tasks.len());
+			println!("failed to removed entry, remaining size: {}", self.tasks.len());
 			false
 		}
 	}
 
-	pub fn schedule(&self, msg: ScheduledTask) {
-		let mut tasks = self.tasks.lock().unwrap();
+	pub fn schedule(&mut self, msg: ScheduledTask) {
 		// use a lambda function to find the place task should be emplaced
-		let pos = tasks.iter().position(|t| t.execute_at > msg.execute_at)
-			.unwrap_or(tasks.len());
-		tasks.insert(pos, msg);
+		let pos = self.tasks.iter().position(|t| t.execute_at > msg.execute_at)
+			.unwrap_or(self.tasks.len());
+		self.tasks.insert(pos, msg);
 	}
 
-	fn check_for_jobs(&self) {
+	fn check_for_jobs(&mut self) {
 		// Check if the front timer is expired
-		let (next_task, is_empty) = {
-			let mut queue = self.tasks.lock().unwrap();
-			if queue.is_empty() {
+		let (next_task, _) = {
+			if self.tasks.is_empty() {
 				(None, true)
 			} else {
 				let now = Instant::now();
-				if queue[0].execute_at <= now {
-					(Some(queue.pop_front().unwrap()), false)
+				if self.tasks[0].execute_at <= now {
+					(Some(self.tasks.pop_front().unwrap()), false)
 				} else {
 					(None, false)
 				}
@@ -149,11 +145,6 @@ impl JobsScheduler {
 			};
 			self.state_handler.do_send(scheduler_event);
 			println!("Should have been sent to state handler now");
-		} else if is_empty { // might not be neccessary
-			return
-		}
-		else {
-			// sleep(Duration::from_secs(10));
 		}
 	}
 }
@@ -163,9 +154,9 @@ impl JobsScheduler {
 // ====== TESTING ======
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use super::StateHandler;
-	use mongodb::Client;
+	// use super::*;
+	// use super::StateHandler;
+	// use mongodb::Client;
 
 	#[test]
 	fn test_job_scheduler_initialization() {

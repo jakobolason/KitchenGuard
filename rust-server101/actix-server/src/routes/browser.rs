@@ -1,15 +1,42 @@
 use actix_web::{web, HttpResponse, http};
+use actix_session::Session;
 use std::fs;
 use log::error;
+use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
-    cfg.route("", web::get().to(|| async { HttpResponse::Ok().body("Browser UI") }))
-            .route("/dashboard", web::get().to(dashboard))
-            .route("/settings", web::get().to(settings));
+    cfg.route("/", web::get().to(front_page))
+        .route("/index", web::get().to(front_page))
+        .route("/dashboard", web::get().to(dashboard))
+        .route("/settings", web::get().to(settings))
+        .route("/login", web::post().to(login));
 }
 
-async fn dashboard() -> HttpResponse {
-    match fs::read_to_string("../../WebHandler/index.html") { // files are retrived from base dir
+
+// login page, which has 2 fields, and then you submit the fields and give them as a request
+async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>, session: Session) -> HttpResponse {
+    println!("username: {:?}", info.username);
+    println!("passwd: {:?}", info.password);
+    match app_state.web_handler.send(info.into_inner()).await {
+        Ok(cookie) => {
+            // sets proper headers, such that user gets the new cookie and goes to '/dashboard'
+            // Store the cookie in the session
+            if let Err(e) = session.insert("cookie", cookie.clone()) {
+                error!("Failed to insert cookie into session: {}", e);
+                return HttpResponse::InternalServerError().body("Failed to create session");
+            }
+
+            // Redirect to dashboard
+            HttpResponse::SeeOther()
+                .append_header(("Location", "/dashboard"))
+                .body("Login successful")
+        }
+        Err(_) => HttpResponse::InternalServerError().body("Internal server error")
+    }
+}
+
+async fn front_page() -> HttpResponse {
+    match fs::read_to_string("./src/templates/index.html") { // files are retrived from base dir
         Ok(contents) => {
             HttpResponse::Ok()
                 .content_type(http::header::ContentType::html())
@@ -20,6 +47,24 @@ async fn dashboard() -> HttpResponse {
             HttpResponse::InternalServerError()
                 .body("Error reading dashboard template")
         }
+    }
+}
+
+async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResponse {
+    println!("IN DASHBOARD, session:");
+    // deprecated once middleware is setup
+    if let Some(cookie) = session.get::<String>("cookie").unwrap() {
+        println!("accessed with cookie: {}", cookie);
+        // check this cookie for session valid
+        match app_state.web_handler.send(ValidateSession { cookie}).await {
+            Ok(Some(uids)) => HttpResponse::Ok().body(format!("welcome to your dashboard, you can use these: {:?}", uids)),
+            Ok(None) => HttpResponse::ServiceUnavailable().into(),
+            Err(_) => HttpResponse::BadRequest().body("You are not allowed here")
+        }
+    } else {
+        println!("no cookie found..");
+        // User is not logged in, redirect to login
+        HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
     }
 }
 

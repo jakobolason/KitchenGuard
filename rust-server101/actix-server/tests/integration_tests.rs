@@ -5,27 +5,28 @@
 mod tests {
     use tokio;
     use actix::prelude::*;
-    use mongodb::{bson::{oid::ObjectId, doc}, options::UpdateOptions, Client,};
+    use mongodb::{bson::{oid::ObjectId, doc}, Client,};
+    use kitchen_guard_server::classes::*;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
     use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
-    use std::sync::{Arc, Mutex};
     use std::collections::VecDeque;
 
     #[tokio::test]
-    async fn test_all_actors() {
+    async fn test_api() {
         let local = tokio::task::LocalSet::new();
         local.run_until(async {
             let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".into());
             let db_client = Client::with_uri_str(uri).await.expect("failed to connect");
 
+            let res_id = "test_resident_1";
              // Set up SensorLookup
             let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
             
             // Create or update sensor lookup for test_resident_1
-            let filter = doc! { "res_id": "test_resident_1" };
+            let filter = doc! { "res_id": res_id };
             let test_sensor = SensorLookup {
                 _id: ObjectId::new(), // This will be ignored in an update operation
-                res_id: "test_resident_1".to_string(),
+                res_id: res_id.to_string(),
                 kitchen_pir: "kitchen_pir_1".to_string(),
                 power_plug: "power_plug_1".to_string(),
                 other_pir: vec!["living_pir_1".to_string(), "bedroom_pir_1".to_string()],
@@ -46,10 +47,10 @@ mod tests {
             let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
             
             // Create or update state log for test_resident_1
-            let filter = doc! { "res_id": "test_resident_1" };
+            let filter = doc! { "res_id": res_id };
             let test_state = StateLog {
                 _id: ObjectId::new(),
-                res_id: "test_resident_1".to_string(),
+                res_id: res_id.to_string(),
                 timestamp: chrono::Utc::now(),
                 state: States::Standby, // Use your initial state
                 context: "Initial test state".to_string(),
@@ -71,7 +72,7 @@ mod tests {
             
             // Start job scheduler actor and link to state handler
             let job_scheduler = JobsScheduler {
-                tasks: Arc::new(Mutex::new(VecDeque::<ScheduledTask>::new())),
+                tasks: VecDeque::<ScheduledTask>::new(),
                 state_handler: state_handler.clone(),
             }.start();
             
@@ -87,7 +88,7 @@ mod tests {
                 mode: "true".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
-                res_id: "test_resident_1".to_string(),
+                res_id: res_id.to_string(),
                 device_model: "kitchen_pir_1".to_string(),
                 device_vendor: "".to_string(),
                 gateway_id: 1,
@@ -99,14 +100,14 @@ mod tests {
                 mode: "Off".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
-                res_id: "test_resident_1".to_string(),
+                res_id: res_id.to_string(),
                 device_model: "power_plug_1".to_string(),
                 device_vendor: "".to_string(),
                 gateway_id: 1,
                 id: "".to_string(),
             };
             let _ = state_handler.send(stove_off).await;
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await;// make sure scheduler is up and running
+            // tokio::time::sleep(std::time::Duration::from_secs(3)).await;// make sure scheduler is up and running
 
             // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
             let stove_on = Event {
@@ -114,7 +115,7 @@ mod tests {
                 mode: "On".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
-                res_id: "test_resident_1".to_string(),
+                res_id: res_id.to_string(),
                 device_model: "power_plug_1".to_string(),
                 device_vendor: "".to_string(),
                 gateway_id: 1,
@@ -123,14 +124,14 @@ mod tests {
             let _ = state_handler.send(stove_on).await;
             
             println!("Send stove");
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
+            // tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
     
             let leaving_kitchen = Event {
                 time_stamp: "2023-01-01T00:00:00Z".to_string(),
                 mode: "false".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
-                res_id: "test_resident_1".to_string(),
+                res_id: res_id.to_string(),
                 device_model: "kitchen_pir_1".to_string(),
                 device_vendor: "".to_string(),
                 gateway_id: 1,
@@ -138,7 +139,7 @@ mod tests {
             };
             let _ = state_handler.send(leaving_kitchen.clone()).await;
             println!("Send leaving kitchen");
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await; // the actors are quite slow
+            // tokio::time::sleep(std::time::Duration::from_secs(1)).await; // the actors are quite slow
     
             // now the job scheduler should have 1 job scheduled.
             let jobs_amount = job_scheduler.send(AmountOfJobs).await.unwrap();
@@ -147,7 +148,7 @@ mod tests {
             }
             // now send a message saying resident walked into kitchen again, so there should be no scheduled jobs
             let _ = state_handler.send(enter_kitchen).await;
-            tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
+            // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
 
             let new_jobs_amount = job_scheduler.send(AmountOfJobs).await.unwrap();
             
@@ -157,12 +158,12 @@ mod tests {
             // now test db for the correct state
             let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
             match state_collection
-                .find_one(doc! {"res_id": "test_resident_1"})
+                .find_one(doc! {"res_id": res_id})
                 .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching "test_resident_1"
                 .await
             {
                 Ok(Some(document)) => assert_eq!(document.state, States::Attended),
-                Ok(None) => panic!("No document found for res_id: test_resident_1"),
+                Ok(None) => panic!("No document found for res_id:res_id "),
                 Err(err) => panic!("Error querying the database: {:?}", err),
             };
             // make user activate alarm
@@ -170,24 +171,40 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(15)).await;// the alarm is only 10secs when testing
             // now we should be alarmed
             match state_collection
-                .find_one(doc! {"res_id": "test_resident_1"})
-                .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching "test_resident_1"
+                .find_one(doc! {"res_id": res_id})
+                .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching res_id
                 .await
             {
                 Ok(Some(document)) => assert_eq!(document.state, States::Alarmed),
-                Ok(None) => panic!("No document found for res_id: test_resident_1"),
+                Ok(None) => panic!("No document found for res_id:res_id"),
                 Err(err) => panic!("Error querying the database: {:?}", err),
             };
-
         }).await;
-
-        
-        
-
     }
 
-    // #[test]
-    // fn test_to_remove_alarm {
-
-    // }
+    #[tokio::test]
+    async fn test_browser_responses() {
+        let local = tokio::task::LocalSet::new();
+        local.run_until(async {
+            let uri = std::env::var("MONGODB_URI").unwrap_or_else(|_| "mongodb://localhost:27017".into());
+            let db_client = Client::with_uri_str(uri).await.expect("failed to connect");
+            println!("Hello");
+            let web_handler = web_handler::WebHandler::new(
+                cookie_manager::CookieManager::new(24), db_client.clone()
+            ).start();
+            // setup a basic user
+            let username = "test_resident_1";
+            let password = "123";
+            let _ = StateHandler::create_user(username, password, db_client).await;
+            println!("created user");
+            // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
+            
+            let cookie = web_handler.send(
+                shared_struct::LoginInformation { username: username.to_string(), password: password.to_string() }
+            ).await.unwrap();
+            // assert!(cookie.is_some());
+            let cookie_value = cookie.unwrap();
+            assert!(!cookie_value.is_empty());
+        }).await;
+    }
 }
