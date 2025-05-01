@@ -35,6 +35,11 @@ jobs:
     - name: Build
       run: cargo build --verbose
       working-directory: rust-server101/actix-server
-    - name: Run tests
-      run: cargo test --verbose
+    
+    - name: Run web_server_tests
+      run: cargo test --test web_server_tests
       working-directory: rust-server101/actix-server
+    - name: Run integration_tests
+      run: cargo test --test integration_tests
+      working-directory: rust-server101/actix-server
+
