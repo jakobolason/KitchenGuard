@@ -91,7 +91,7 @@ impl Handler<AmountOfJobs> for JobsScheduler {
 
 impl JobsScheduler {
 
-	pub fn cancel(&mut self, res_id: String) -> bool {
+	fn cancel(&mut self, res_id: String) -> bool {
 		println!("Asked to cancel a timer!");
 		// use unwrap to check integrity of tasks.lock
 		if let Some(pos) = self.tasks.iter().position(|t| t.res_id == res_id) {
@@ -104,7 +104,7 @@ impl JobsScheduler {
 		}
 	}
 
-	pub fn schedule(&mut self, msg: ScheduledTask) {
+	fn schedule(&mut self, msg: ScheduledTask) {
 		// use a lambda function to find the place task should be emplaced
 		let pos = self.tasks.iter().position(|t| t.execute_at > msg.execute_at)
 			.unwrap_or(self.tasks.len());

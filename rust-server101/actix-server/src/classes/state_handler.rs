@@ -119,63 +119,12 @@ impl Handler<SetJobScheduler> for StateHandler {
 }
 
 impl StateHandler {
-// Private functions
-    // sends topic to turn off stove
-//     fn turn_off_stove() {
-//         // Pre: state in [Unattended, Alarmed, CriticallyAlarmed]
-//         // Post: stove is off
 
-//     }
-//     // sends topic to LED's and buzzer sound
-//     fn begin_alarm() {
-//         // Pre: state in [Unattended]
-//         // Post: timer started for CriticallyAlarmed & LED turned on
-
-//     }
-//     // sends topic to powerplug to turn off, and
-//     fn critical_alarm() {
-//         // Pre: state in [Alarmed]
-//         // Post: timer started to notify relatives & stove turned off
-
-//     }
-//     // stop alarm after elderly has returned to kitchen
-//     fn stop_alarm() {
-//         // Pre: state in [Alarmed, CriticallyAlarmed] & user is in kitchen
-//         // Post: state should be changed, LED turned off
-
-//     }
-//     // get database information on PIR sensor data
-//     fn check_users_room() {
-//         // Pre: none
-//         // Post: 
-
-//     }
 //     // somehow notify them
 //     fn notify_relatives(res_id: String) {
 
 //     }
-//     // make server listen to a topic
-//     fn sub(topic: String) {
 
-//     }
-//     // publish a topic(used in alarm e.g.)
-//     fn publish(topic: String) {
-        
-//     }
-//     // This handles db connection and querying and response handling
-//     fn db_query() { // don't know if hashmap is the best here
-
-//     }
-//     // check users given credentials
-//     // NOTE: Should maybe return both access token and a list of strings
-// //           for elder_uids
-//     fn check_credentials(user: String, pwd: String) {
-
-//     }
-//     // start a thread, that makes callbacks when 20 minutes ha spassed
-    // fn start_clock() {
-
-    // }
 
     fn alarm_duration_from_state(new_state: States, is_test: bool) -> Instant {
         if is_test {println!("we are in tests");}

@@ -19,7 +19,7 @@ impl PiCommunicator {
     async fn _send_to_pi(pi_ip: String, new_state: States) {
         // let pi_ip = self.ips.get(&res_id);
         let ip = pi_ip;
-        let url = format!("http://{}/request", ip);
+        let url = format!("http://{}/state_listener", ip);
         let client = reqwest::Client::new();
         match client.post(&url)
             .json(&new_state)
