@@ -1,12 +1,13 @@
-use actix::{Actor, Handler, Context, ActorFutureExt, ResponseActFuture, WrapFuture};
+use actix::{Actor, Handler, Context, ActorFutureExt, ResponseActFuture, WrapFuture, ResponseFuture};
 use ring::pbkdf2;
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use mongodb::{bson::doc, Client,};
 use log::error;
+use futures_util::StreamExt;
 
-use super::{cookie_manager::CookieManager, shared_struct::{LoggedInformation, LoginInformation, ValidateSession}};
-
+use super::{cookie_manager::CookieManager, shared_struct::{LoggedInformation, LoginInformation, ValidateSession, ResUidFetcher}};
+use super::state_handler::Event;
 pub struct WebHandler {
     cookie_manager: CookieManager,
     db_client: Client,
@@ -17,10 +18,6 @@ impl WebHandler {
         WebHandler { cookie_manager, db_client }
     }
 
-    // given a valid cookie, information from db should be fetched
-    fn get_info(_res_id: String) {
-
-    }
 
     pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::Error> {
         // checks the db for username
@@ -110,6 +107,42 @@ impl Handler<ValidateSession> for WebHandler {
         self.cookie_manager.validate_session(validate_session.cookie)
     } 
 }
+
+// Specify the expected result from handling this message
+impl Handler<ResUidFetcher> for WebHandler {
+    type Result = ResponseFuture<Option<Vec<Event>>>;
+
+    fn handle(&mut self, msg: ResUidFetcher, _ctx: &mut Self::Context) -> Self::Result {
+        let db_client = self.db_client
+            .database("ResidentData")
+            .collection::<Event>("ResidentLogs");
+
+        Box::pin(async move {
+            match db_client
+                .find(doc! {"res_uid": &msg.res_uid})
+                .await
+            {
+                Ok(mut cursor) => {
+                    let mut result = Vec::new();
+
+                    while let Some(doc) = cursor.next().await {
+                        match doc {
+                            Ok(d) => result.push(d),
+                            Err(e) => eprintln!("Error reading doc: {:?}", e),
+                        }
+                    }
+
+                    Some(result)
+                },
+                Err(err) => {
+                    eprintln!("Error querying database: {:?}", err);
+                    None
+                }
+            }
+        })
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
