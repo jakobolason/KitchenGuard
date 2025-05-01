@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use tokio;
-    use actix::prelude::*;
+    use actix::{fut::future::result, prelude::*};
     use mongodb::{bson::{oid::ObjectId, doc}, Client,};
     use kitchen_guard_server::classes::*;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
@@ -205,6 +205,13 @@ mod tests {
             // assert!(cookie.is_some());
             let cookie_value = cookie.unwrap();
             assert!(!cookie_value.is_empty());
+
+            let result = web_handler.send(
+                shared_struct::ResUidFetcher { res_uid: username.to_string() }
+            ).await.unwrap();
+            let result_value = result.unwrap();
+            assert!(result_value.len()>0);
+
         }).await;
     }
 }
