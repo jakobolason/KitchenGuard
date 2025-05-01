@@ -211,6 +211,7 @@ mod tests {
             ).await.unwrap();
             let result_value = result.unwrap();
             println!("Result: {:?}", result_value);
+            assert!(!result_value.is_empty());
 
         }).await;
     }
