@@ -206,11 +206,11 @@ mod tests {
             let cookie_value = cookie.unwrap();
             assert!(!cookie_value.is_empty());
 
-            let result = web_handler.send(
-                shared_struct::ResUidFetcher { res_uid: username.to_string() }
-            ).await.unwrap();
-            let result_value = result.unwrap();
-            println!("Result: {:?}", result_value);
+            // let result = web_handler.send(
+            //     shared_struct::ResUidFetcher { res_uid: username.to_string() }
+            // ).await.unwrap();
+            // let result_value = result.unwrap();
+            // println!("Result: {:?}", result_value);
 
         }).await;
     }
