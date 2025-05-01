@@ -5,13 +5,12 @@ use super::{
     web_handler::WebHandler,
 };
 
-use std::pin::Pin;
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
-use actix_web::HttpResponse;
+use std::time::Instant;
 
 pub struct AppState {
     pub state_handler: actix::Addr<StateHandler>,
@@ -61,4 +60,11 @@ pub struct LoginInformation {
 #[rtype(result = "Option<Vec<String>>")]
 pub struct ValidateSession {
     pub cookie: String
+}
+
+#[derive(Debug, Message, Clone)]
+#[rtype(result = "()")]
+pub struct ScheduledTask {
+  pub res_id: String,
+  pub execute_at: Instant,
 }

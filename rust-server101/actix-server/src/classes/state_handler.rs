@@ -8,8 +8,9 @@ use std::time::{Duration, Instant};
 use std::pin::Pin;
 
 use super::{
-    job_scheduler::{JobsScheduler, ScheduledTask, CancelTask}, 
-    shared_struct::{LoggedInformation, LoginInformation, hash_password}
+    job_scheduler::{JobsScheduler, CancelTask}, 
+    shared_struct::{LoggedInformation, LoginInformation, ScheduledTask, hash_password},
+    pi_communicator::PiCommunicator,
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -84,7 +85,6 @@ pub struct Event {
     pub gateway_id: u32,
     pub id: String,
 }
-
 
 // ============= Setup of StateHandler =============
 #[derive(Clone)]
@@ -355,6 +355,7 @@ impl Handler<LoginInformation> for StateHandler {
 }
 
 /// Handles what to do, when a sensor event comes from the Pi
+/// It does way too much in one function, but the actor framework 
 /// Returns a future that should be awaited
 impl Handler<Event> for StateHandler {
     type Result = ResponseFuture<Result<States, std::io::ErrorKind>>;
@@ -413,6 +414,9 @@ impl Handler<Event> for StateHandler {
                 eprintln!("Failed to save new state: {:?}", err);
                 return Err(std::io::ErrorKind::InvalidInput);
             };
+            // This isn't optimal, and would've been nice to be able to put in the requester's flow instead of here
+            // send new state_info to pi communicator
+            PiCommunicator::send_new_state(res_id, state_info.clone(), db_client.clone()).await;
             Ok(state_info)
         })
     }

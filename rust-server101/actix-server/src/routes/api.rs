@@ -4,6 +4,7 @@ use mongodb::Client;
 
 use crate::classes::{state_handler::{Event}, shared_struct::LoginInformation};
 use crate::classes::shared_struct::AppState;
+use crate::classes::pi_communicator::PiCommunicator;
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(

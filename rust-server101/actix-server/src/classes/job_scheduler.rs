@@ -1,20 +1,15 @@
 use actix::prelude::*;
-use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::collections::VecDeque;
 
 use super::state_handler::{StateHandler, Event};
+use super::shared_struct::ScheduledTask;
 
 #[derive(Message)]
 #[rtype(result = "()")]
 struct CheckJobs;
 
-#[derive(Debug, Message, Clone)]
-#[rtype(result = "()")]
-pub struct ScheduledTask {
-  pub res_id: String,
-  pub execute_at: Instant,
-}
+
 #[derive(Debug, Message)]
 #[rtype(result = "()")]
 pub struct CancelTask {

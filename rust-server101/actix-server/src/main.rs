@@ -20,9 +20,9 @@ pub mod routes;
 pub mod classes;
 
 use crate::classes::{
-    job_scheduler::{JobsScheduler, ScheduledTask, StartChecking},
+    job_scheduler::{JobsScheduler, StartChecking},
     state_handler::{StateHandler, SetJobScheduler},
-    shared_struct::AppState,
+    shared_struct::{AppState, ScheduledTask},
     cookie_manager::CookieManager,
 };
 

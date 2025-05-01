@@ -25,7 +25,6 @@ async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>
                 error!("Failed to insert cookie into session: {}", e);
                 return HttpResponse::InternalServerError().body("Failed to create session");
             }
-
             // Redirect to dashboard
             HttpResponse::SeeOther()
                 .append_header(("Location", "/dashboard"))

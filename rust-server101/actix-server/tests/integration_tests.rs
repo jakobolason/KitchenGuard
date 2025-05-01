@@ -7,8 +7,9 @@ mod tests {
     use actix::prelude::*;
     use mongodb::{bson::{oid::ObjectId, doc}, Client,};
     use kitchen_guard_server::classes::*;
-    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
+    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
     use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
+    use kitchen_guard_server::classes::shared_struct::ScheduledTask;
     use std::collections::VecDeque;
 
     #[tokio::test]
