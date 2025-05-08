@@ -2,7 +2,7 @@ use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{oid::ObjectId, doc}, Client, error};
+use mongodb::{bson::{oid::ObjectId, doc}, Client, error, options::{FindOneAndUpdateOptions, ReturnDocument}};
 use core::panic;
 use std::time::{Duration, Instant};
 use std::env;
@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{JobsScheduler, CancelTask}, 
-    shared_struct::{LoggedInformation, CreateUser, ScheduledTask, hash_password, sms_service},
+    shared_struct::{LoggedInformation, IpCollection, InitInformation, CreateUser, ScheduledTask, hash_password, sms_service},
     pi_communicator::PiCommunicator,
 };
 
@@ -56,7 +56,6 @@ pub struct SensorLookup {
     pub power_plug: String,
     pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
     pub led: Vec<String>,
-    pub speakers: Vec<String>, 
 }
 
 // For when an alarm is sounded
@@ -154,8 +153,9 @@ impl StateHandler {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(20 * 60) },
-            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(20 * 3) },
+            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(5) },
+            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(5) },
+            States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(5)},
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
@@ -171,7 +171,7 @@ impl StateHandler {
                                             || *current_state == States::Unattended 
             {
             // if event is elderly moving into kitchen, then turn off alarm
-            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "true" { // occupancy: true
+            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "True" { // occupancy: true
                 if *current_state == States::Unattended || *current_state == States::Alarmed {
                     scheduled_task = TaskValue {
                         type_of_task: TypeOfTask::Cancellation,
@@ -216,7 +216,7 @@ impl StateHandler {
             }
         // In attended, we check both kitchen PIR status and power plug status
         } else if *current_state == States::Attended {
-            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "false" { // occupancy: false
+            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "False" { // occupancy: false
                 println!("resident is out of kitchen!");
                 // then start 20min's timer in jobscheduler
                 scheduled_task = TaskValue {
@@ -229,7 +229,7 @@ impl StateHandler {
                 };
                 States::Unattended
                 // If elderly turns off the stove
-            } else if data.device_model == list_of_sensors.power_plug && data.mode == "Off" { // power: Off
+            } else if data.device_model == list_of_sensors.power_plug && data.mode == "OFF" { // power: Off
                 States::Standby
             } else {
                 // else do nothing, could be other room PIR saying somethin
@@ -237,7 +237,8 @@ impl StateHandler {
             }
         // If power plug gets turned on
         } else if *current_state == States::Standby {
-            if data.device_model == list_of_sensors.power_plug && data.mode == "On" {
+            println!("we are in standby!!!");
+            if data.device_model == list_of_sensors.power_plug && data.mode == "ON" {
                 States::Attended
             } else {
                 current_state.clone()
@@ -284,7 +285,6 @@ impl StateHandler {
                     power_plug: String::new(),
                     other_pir: Vec::new(),
                     led: Vec::new(),
-                    speakers: Vec::new(),
                 }
             }
             Err(err) => {
@@ -312,7 +312,65 @@ impl StateHandler {
             eprintln!("Failed to insert user: {:?}", e);
         }).ok()
     }
+
+    pub async fn create_or_update_resident(data: InitInformation, db_client: Client) -> Result<Option<SensorLookup>, mongodb::error::Error> {
+        let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+        
+        let filter = doc! { "res_id": data.res_id.clone()};
+        let update = doc! {
+            "$set": {
+                "kitchen_pir": data.kitchen_pir,
+                "power_plug": data.power_plug,
+                "other_pir": data.other_pir,
+                "led": data.led,
+            }
+        };
+        
+        let options = FindOneAndUpdateOptions::builder()
+            .upsert(true)
+            .return_document(ReturnDocument::After)
+            .build();
+        
+        sensor_collection.find_one_and_update(filter.clone(), update.clone()).with_options(options.clone()).await
+
+        // update database with ip address for future use
+        // let ip_update = doc! {
+        //     "$set": {
+        //         "_id": ObjectId::new(),
+        //         "res_ip": data.ip_addr,
+        //         "res_id": data.res_id.clone()
+        //     }
+        // };
+        // let ip_collection = db_client.database("ResidentData").collection::<IpCollection>("ip_address");
+        // ip_collection.find_one_and_update(filter, ip_update).with_options(options).await
+    }
     
+}
+
+impl Handler<InitInformation> for StateHandler {
+    type Result = ();
+
+    fn handle(&mut self, data: InitInformation, _ctx: &mut Self::Context ) -> Self::Result {
+        println!("creating resident");
+        let db_client = self.db_client.clone();
+        actix::spawn(async move {
+            let _ = StateHandler::create_or_update_resident(data.clone(), db_client.clone()).await;
+            let state_log = StateLog {
+                _id: ObjectId::new(),
+                res_id: data.res_id.clone(),
+                timestamp: chrono::Utc::now(),
+                state: States::Standby,
+                context: format!("{:?}", data),
+            };
+            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+            if let Err(err) = state_collection.insert_one(state_log).await {
+                eprintln!("Failed to save new state: {:?}", err);
+                return Err(std::io::ErrorKind::InvalidInput);
+            };
+            PiCommunicator::send_new_state(data.res_id.clone(), States::Standby, db_client.clone()).await;
+            Ok(())
+        });
+    }
 }
 
 impl Handler<CreateUser> for StateHandler {
@@ -323,6 +381,7 @@ impl Handler<CreateUser> for StateHandler {
         let db_client = self.db_client.clone();
         actix::spawn(async move {
             StateHandler::create_user(&data.username, &data.password, &data.phone_number, db_client).await;
+            
         });
         Some("OK".to_string())
     }
@@ -357,6 +416,9 @@ impl Handler<Event> for StateHandler {
             // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
             let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data, is_test.clone());
             println!("new state found to be: {:?}", state_info);
+            if state_info == current_state {
+                return Ok(state_info)
+            }
             // Save the new state
             let state_log = StateLog {
                 _id: ObjectId::new(),
@@ -423,7 +485,7 @@ impl Handler<Event> for StateHandler {
                     }
                 };
                 for info in results {
-                    StateHandler::notify_relatives(info.phone_number, &res_id).await;
+                    // StateHandler::notify_relatives(info.phone_number, &res_id).await;
                 }
                 
             }
@@ -447,7 +509,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -477,7 +538,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -508,7 +568,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -538,7 +597,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),

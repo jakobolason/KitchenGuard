@@ -1,4 +1,4 @@
-use mongodb::Client;
+use mongodb::{bson::oid::ObjectId, Client};
 use super::{
     job_scheduler::JobsScheduler,
     state_handler::StateHandler,
@@ -10,6 +10,7 @@ use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
+use crate::classes::state_handler::Event;
 use std::time::Instant;
 
 pub static ResidentData: &str = "ResidentData";
@@ -23,6 +24,12 @@ pub struct AppState {
     pub job_scheduler: actix::Addr<JobsScheduler>,
     pub web_handler: actix::Addr<WebHandler>,
     pub db_client: Client,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "Option<Vec<Event>>")]
+pub struct ResUidFetcher {
+    pub res_uid: String,
 }
 
 pub fn hash_password(password: &str, salt: &[u8]) -> String {
@@ -69,6 +76,17 @@ pub struct ValidateSession {
     pub cookie: String
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
+pub struct InitInformation {
+    pub res_id: String,
+    pub kitchen_pir: String,
+    pub power_plug: String,
+    pub other_pir: Vec<String>,
+    pub led: Vec<String>,
+}
+
+
 #[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]
 pub struct ScheduledTask {
@@ -82,4 +100,11 @@ pub struct CreateUser {
     pub username: String,
     pub password: String,
     pub phone_number: String,
+}
+
+#[derive(Deserialize)]
+pub struct IpCollection {
+    _id: ObjectId,
+    res_ip: String,
+    res_id: String,
 }
