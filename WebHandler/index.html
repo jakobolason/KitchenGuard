@@ -1,43 +1,111 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Login</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KitchenGuard - Login</title>
+    <title>KitchenGuard - Forside</title>
     <link href="stylesheet.css" rel="stylesheet">
 </head>
 <body>
-    <div class="centered-div">        
-        <!-- <nav>
-            <a href="/">Home</a>
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-            <a href="/api/test">API Test</a>
-        </nav> -->
-        
-        <div>
-            <br>
-            <br>
-            <br>
-            <br>
-            <h1>Login</h1>
-            <br>
+    <!-- Drop down menu -->
+    <nav class="DropDownMenu">
+        <button class="DropDownButton">
+            <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.thenounproject.com%2Fpng%2F1123247-200.png&f=1&nofb=1&ipt=01f476a25d20356b4901c217bd2fe9329571477b13b9006da797367ca4d2ddd4&ipo=images", style="width: 40; height:40px;">
+        </button>
 
-            <!-- <p>This is a static page to test server routing.</p> -->
-        </div>
+        <!-- Drop down menu buttons -->
+        <nav class="DropDownMenuContent">
+            <a href="index.html">Forside</a>
+            <a href="stats.html">Statistik</a>
+            <a href="om.html">Om</a>
+        </nav>
+    </nav>
 
-        <div>
-            <form action="/login" method="post">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
-                <br>
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
-                <br>
-                <button type="submit" class="login-button">Submit</button>
-            </form>
+    <!-- Page header -->
+    <div class="colored-box">
+        <div class="centered-div">
+            <strong style="margin-bottom: 1%; margin-top: 1%;"><h1>KitchenGuard</h1></strong>
         </div>
     </div>
+
+    <!-- Logo and header -->
+    <div class="centered-div" style="z-index: 1;">
+        <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn.wallpapersafari.com%2F10%2F47%2FwEziqy.png&f=1&nofb=1&ipt=80e9bd4a6cdffd906dc72abfa19a0ed9e0cf919525e105ab0d91128dca031515"
+        style="width: 100%; height: auto; position: relative; mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%); -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) -180%, rgba(0, 0, 0, 0) 100%);">
+        <img src="logo2.png" alt="" style="width: 20%; position: absolute;">
+    </div>
+
+    <!-- multiple elements div -->
+    <div class="centered-div">
+        <div class="colored-box">
+            <!-- Split elements div -->
+            <div style="width: 100%;">
+                <!-- Left element -->
+                <div style="width: 40%; float: left;">
+                    <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.rnafacilitiesmanagement.com%2Fwp-content%2Fuploads%2F2020%2F06%2Fsecurity-guards-scaled.jpeg&f=1&nofb=1&ipt=b40305d68d4a55f57adc859b0cbed90cf63d166e7002e29b8a81aac0510988e4" style="width: 100%; height: 100%; float: left;">
+                </div>
+    
+                <!-- Right element -->
+                <div style="width: 60%; float: right;">
+                    <br>
+                    <br>
+                    <!-- Text div -->
+                    <div style="margin-left: 5%; margin-right: 5%; margin-bottom: 1%; text-align: justify;">
+                        <p>
+                            Dette er dit KitchenGuard-systems informationsside, som giver dig relevante oplysninger om driften af opsætning.
+                            Din partner i at skabe et sikkert og intelligent køkkenmiljø.
+                            Med KitchenGuard får du adgang til avancerede funktioner, der hjælper dig med at overvåge og optimere dit køkken.
+                            Uanset om det handler om sikkerhed, statistik eller tilpasning, er KitchenGuard her for at gøre din hverdag lettere.
+                            Oplev en ny standard for køkkenstyring med vores brugervenlige og innovative løsninger.
+                            KitchenGuard er designet til at give dig ro i sindet og en problemfri oplevelse i dit køkken.
+                        </p>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <p>
+                            Klik på <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.thenounproject.com%2Fpng%2F1123247-200.png&f=1&nofb=1&ipt=01f476a25d20356b4901c217bd2fe9329571477b13b9006da797367ca4d2ddd4&ipo=images", style="width: 20; height:20px;"> oppe i højre hjørne for at se flere muligheder.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+
+    <div class="colored-box">
+        <div style="margin-left: 5%; margin-right: 5%;">
+            <br>
+            <p>
+                <h2>Kontakt</h2>
+            </p>
+            <br>
+            <p><strong>Mail:</strong> kitchenguard@systems.com</p>
+            <p><strong>Tlf:</strong> +45 00 00 00 00</p>
+        </div>
+        <br>
+        <br>
+    </div>
+
 </body>
 </html>

@@ -5,6 +5,7 @@ use super::{
     web_handler::WebHandler,
 };
 
+use std::pin::Pin;
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
@@ -25,12 +26,20 @@ pub static info: &str = "info";
 pub static pi_listener: &str = "state_listener";
 pub static sms_service: &str = "https://api.twilio.com/2010-04-01/Accounts/";
 
+use actix_web::HttpResponse;
+use crate::classes::state_handler::Event;
 
 pub struct AppState {
     pub state_handler: actix::Addr<StateHandler>,
     pub job_scheduler: actix::Addr<JobsScheduler>,
     pub web_handler: actix::Addr<WebHandler>,
     pub db_client: Client,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "Option<Vec<Event>>")]
+pub struct ResUidFetcher {
+    pub res_uid: String,
 }
 
 pub fn hash_password(password: &str, salt: &[u8]) -> String {
