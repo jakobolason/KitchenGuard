@@ -6,6 +6,7 @@ use mongodb::{bson::{oid::ObjectId, doc}, Client, error};
 use core::panic;
 use std::time::{Duration, Instant};
 use std::env;
+use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{JobsScheduler, CancelTask}, 
@@ -389,7 +390,43 @@ impl Handler<Event> for StateHandler {
             };
             // This isn't optimal, and would've been nice to be able to put in the requester's flow instead of here
             // send new state_info to pi communicator
-            PiCommunicator::send_new_state(res_id, state_info.clone(), db_client.clone()).await;
+            PiCommunicator::send_new_state(res_id.clone(), state_info.clone(), db_client.clone()).await;
+            // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
+            if state_info == States::CriticallyAlarmed && current_state != States::CriticallyAlarmed {
+                let collection = db_client.database("users").collection::<LoggedInformation>("info");
+                let filter = doc! {
+                    "res_uids": {
+                        "$in": [res_id.clone()]
+                    }
+                };
+                
+                // Collect ALL relatives that has has this res_id
+                // might be annoying, but fuck it
+                let cursor = collection.find(filter).await;
+                let results = match cursor {
+                    Ok(mut cursor) => {
+                        let mut results = Vec::new();
+                        while let Some(item) = cursor.next().await {
+                            match item {
+                                Ok(logged_info) => results.push(logged_info),
+                                Err(err) => {
+                                    eprintln!("Error processing cursor item: {:?}", err);
+                                    return Err(std::io::ErrorKind::InvalidInput);
+                                }
+                            }
+                        }
+                        results
+                    },
+                    Err(err) => {
+                        eprintln!("Error querying user information: {:?}", err);
+                        return Err(std::io::ErrorKind::InvalidInput);
+                    }
+                };
+                for info in results {
+                    StateHandler::notify_relatives(info.phone_number, &res_id).await;
+                }
+                
+            }
             Ok(state_info)
         })
     }

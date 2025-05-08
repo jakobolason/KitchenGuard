@@ -1689,6 +1689,7 @@ dependencies = [
  "chrono",
  "data-encoding",
  "env_logger",
+ "futures-util",
  "log",
  "mongodb",
  "rand 0.9.1",
