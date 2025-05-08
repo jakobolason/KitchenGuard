@@ -118,8 +118,10 @@ impl Handler<ResUidFetcher> for WebHandler {
             .collection::<Event>("ResidentLogs");
 
         Box::pin(async move {
+            // Use the db_client to find documents matching the res_uid
+            println!("Fetching logs for res_uid: {:?}", msg.res_uid);
             match db_client
-                .find(doc! {"res_uid": &msg.res_uid})
+                .find(doc! {"res_id": &msg.res_uid})
                 .await
             {
                 Ok(mut cursor) => {
@@ -127,12 +129,20 @@ impl Handler<ResUidFetcher> for WebHandler {
 
                     while let Some(doc) = cursor.next().await {
                         match doc {
-                            Ok(d) => result.push(d),
+                            Ok(d) => {
+                            println!("Found document: {:?}", d);
+                            result.push(d)
+                        },
                             Err(e) => eprintln!("Error reading doc: {:?}", e),
                         }
                     }
-
+                    // Check if the result is empty
+                    if result.is_empty() {
+                        println!("No documents found for res_uid: {:?}", msg.res_uid);
+                    }
+                    // Return the result
                     Some(result)
+
                 },
                 Err(err) => {
                     eprintln!("Error querying database: {:?}", err);
