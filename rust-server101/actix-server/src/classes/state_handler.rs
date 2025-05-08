@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 use mongodb::{bson::{oid::ObjectId, doc}, Client, error};
 use core::panic;
 use std::time::{Duration, Instant};
-use std::pin::Pin;
+use std::env;
 
 use super::{
     job_scheduler::{JobsScheduler, CancelTask}, 
-    shared_struct::{LoggedInformation, LoginInformation, ScheduledTask, hash_password},
+    shared_struct::{LoggedInformation, CreateUser, ScheduledTask, hash_password, sms_service},
     pi_communicator::PiCommunicator,
 };
 
@@ -119,11 +119,34 @@ impl Handler<SetJobScheduler> for StateHandler {
 }
 
 impl StateHandler {
+    async fn notify_relatives(to_number: String, res_id: &str) {
+        let client = reqwest::Client::new();
+        let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
+        let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
+        let from_number = env::var("FROM_NUMBER").unwrap_or_default();
+        let message = format!("Hello from server!, resident {} is in critical mode!", res_id);
+        let url = format!("{}{}/Message.json", sms_service, account_sid);
+        let params = [
+            ("To", to_number),
+            ("From", from_number),
+            ("Body", message),
+        ];
 
-//     // somehow notify them
-//     fn notify_relatives(res_id: String) {
+        let response = client.post(&url)
+            .basic_auth(account_sid, Some(auth_token))
+            .form(&params)
+            .send()
+            .await;
 
-//     }
+        match response {
+            Ok(resp) => {
+                println!("Response: {:?}", resp.text().await.unwrap());
+            }
+            Err(e) => {
+                eprintln!("Error: {:?}", e);
+            }
+        }
+    }
 
 
     fn alarm_duration_from_state(new_state: States, is_test: bool) -> Instant {
@@ -273,7 +296,7 @@ impl StateHandler {
     }
 
     
-    pub async fn create_user(username: &str, password: &str, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
+    pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
         let user_salt = username.as_bytes();
         let hashed_password =  hash_password(password, user_salt);
         let usercollection = db_client.database("users").collection::<LoggedInformation>("info");
@@ -283,6 +306,7 @@ impl StateHandler {
             password: hashed_password,
             salt: user_salt.to_vec(),
             res_ids: Vec::new(), // idk how to handle this best
+            phone_number: phone_number.to_string(),
         }).await.map_err(|e| {
             eprintln!("Failed to insert user: {:?}", e);
         }).ok()
@@ -290,14 +314,14 @@ impl StateHandler {
     
 }
 
-impl Handler<LoginInformation> for StateHandler {
+impl Handler<CreateUser> for StateHandler {
     type Result = Option<String>;
 
-    fn handle(&mut self, data: LoginInformation, _ctx: &mut Self::Context ) -> Self::Result {
+    fn handle(&mut self, data: CreateUser, _ctx: &mut Self::Context ) -> Self::Result {
         println!("creating user");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
-            StateHandler::create_user(&data.username, &data.password, db_client).await;
+            StateHandler::create_user(&data.username, &data.password, &data.phone_number, db_client).await;
         });
         Some("OK".to_string())
     }

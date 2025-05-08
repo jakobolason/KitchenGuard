@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::{state_handler::{Event}, shared_struct::LoginInformation};
+use crate::classes::{state_handler::{Event}, shared_struct::CreateUser};
 use crate::classes::shared_struct::AppState;
 use crate::classes::pi_communicator::PiCommunicator;
 
@@ -21,7 +21,7 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
 const DB_NAME: &str = "test";
 const COLL_NAME: &str = "users";
 
-async fn create_user(data: web::Json<LoginInformation>, app_state: web::Data<AppState>) -> HttpResponse {
+async fn create_user(data: web::Json<CreateUser>, app_state: web::Data<AppState>) -> HttpResponse {
     println!("creating user!");
     match app_state.state_handler.send(data.into_inner()).await {
         Ok(_) => HttpResponse::Ok().body("OK"),

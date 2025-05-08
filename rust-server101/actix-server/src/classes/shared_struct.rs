@@ -12,6 +12,12 @@ use serde::{Deserialize, Serialize};
 use actix::Message;
 use std::time::Instant;
 
+pub static ResidentData: &str = "ResidentData";
+pub static States: &str = "States";
+
+pub static sms_service: &str = "https://api.twilio.com/2010-04-01/Accounts/";
+
+
 pub struct AppState {
     pub state_handler: actix::Addr<StateHandler>,
     pub job_scheduler: actix::Addr<JobsScheduler>,
@@ -46,6 +52,7 @@ pub struct LoggedInformation {
     pub password: String,
     pub salt: Vec<u8>,
     pub res_ids: Vec<String>,
+    pub phone_number: String,
 }
 
 // What the user queries the server with
@@ -67,4 +74,12 @@ pub struct ValidateSession {
 pub struct ScheduledTask {
   pub res_id: String,
   pub execute_at: Instant,
+}
+
+#[derive(Message, Deserialize)]
+#[rtype(result = "Option<String>")]
+pub struct CreateUser {
+    pub username: String,
+    pub password: String,
+    pub phone_number: String,
 }
