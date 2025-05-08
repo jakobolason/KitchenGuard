@@ -1,25 +1,25 @@
 from time import sleep
 from Cep2Controller import Cep2Controller
-from Cep2Model import Cep2Model, Cep2ZigbeeDevice
 from threading import Thread
 from paho.mqtt.client import Client as MqttClient, MQTTMessage
 from paho.mqtt import publish, subscribe
 import json
-import re
 import requests
-
-from Cep2Model import Cep2Model
 import environment
+import re
 
 class Heartbeat:
 	
+	# Initialization variables
 	def __init__(self):
 		self.PIR_status = "error"
 		self.LED_status = "error"
 		self.PowerPlug_status = "error"
 		self.Bridge_status = "ok"
 		self.PI_status = "ok"
-		
+		self.startup_Check = False
+	
+	# Start the heartbeat operation
 	def heartbeat(self):
 		sub_thread = Thread(target = self.heartbeat_subscriber)
 		interview_thread = Thread(target = self.heartbeat_interview)
@@ -30,22 +30,24 @@ class Heartbeat:
 		interview_thread.join()
 		sub_thread.join()
 
-
+	# The heatbeat logic
 	def heartbeat_subscriber(self):
-
-		
+		# Keeps control of how many interviews we have done
 		received_messages = 0
 		target_message_count = len(environment.DEVICES)
 
+		# When the interview message comes from each of the sensors
 		def on_message(client, userdata, msg):
 			nonlocal received_messages
+			# Try to get the information from the interviews (this happens when the interview is "ok")
 			try:
 				payload = msg.payload
 				payload_data = json.loads(payload)
 				hex_name = payload_data['data']['id']
 				ID = environment.SENSOR_DICT[hex_name]
 				status = payload_data['status']
-				
+			
+			# If the interview failed go to this and extract the information
 			except (KeyError, json.JSONDecodeError) as e:
 				payload = msg.payload.decode("utf-8")
 				payload_data = json.loads(payload)
@@ -54,8 +56,9 @@ class Heartbeat:
 					hex_name = match.group(0)
 				ID = environment.SENSOR_DICT[hex_name]
 				status = payload_data['status']		
-
-			if (ID == "PIR"):
+			
+			# Set the status of the different sensors
+			if (ID == "kitchen_pir"):
 				self.PIR_status = status
 			elif (ID == "LED"):
 				self.LED_status = status
@@ -64,27 +67,31 @@ class Heartbeat:
 			
 			print(f"topic = {msg.topic}, ID = {ID}, Status = {status}")
 			
+			# Up the count of the messages recived
 			received_messages += 1	
+			
+			# If we have recived all interviews
 			if received_messages >= target_message_count:
 				print("✅ Received all messages. Stopping loop...")
 				client.loop_stop()	
 				client.disconnect()
 				print("Interview finished")
-
+		
+		# Setup
 		client = MqttClient()
 		client.on_message = on_message
 		client.connect(environment.MQTT_BROKER_HOST, environment.MQTT_BROKER_PORT)
 		client.subscribe(environment.INTERVIEW_RESPONSE_TOPIC)
 		client.loop_start()
 
-		# ✅ Actively wait until all messages are received
+		# Wait until all messages are received (all interviews completed)
 		time_waited = 0
 		while received_messages < target_message_count and time_waited <= 120:
 			print("Waiting for a sensor to be ok")
 			sleep(0.5)
 			time_waited += 0.1
 
-		
+		# Setup the payload to the server about the interviews
 		event = {
 			"PIR": self.PIR_status,
 			"LED": self.LED_status,
@@ -93,10 +100,13 @@ class Heartbeat:
 			"PI": self.PI_status
 		}
 		
+		# Send the payload
 		response = requests.post(environment.HEALTH_CHECK_ENDPOINT, json=event)
 		print("Response sent to webserver")
+		self.startup_Check = True
 
-
+	
+	# Setup the interviews
 	def heartbeat_interview(self):
 
 		def on_connect(client, userdata, flags, rc):
