@@ -61,7 +61,7 @@ body {
 }
 
 .statTable {
-    overflow: scroll;
+    /* overflow: scroll; */
     display: grid;
     place-items: center;
     height: 30vh;
@@ -84,4 +84,40 @@ body {
     align-items: center; /* Centers the canvas vertically if needed */
     width: 100%; /* Full width of the parent */
     height: auto; /* Adjust height as needed */
+}
+
+.centered-div {
+    clear: both;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.colored-box {
+    background-color: #FABA5F;
+}
+
+input[type=text], input[type=password] {
+    width: 100%;
+    padding: 2% 5%;
+    margin: 1% 0;
+    display: inline-block;
+    border: 1% solid #FABA5F;
+    box-sizing: border-box;
+}
+
+.login-button {
+    background-color: #fa8128;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+  
+.login-button:hover {
+    opacity: 0.8;
 }
