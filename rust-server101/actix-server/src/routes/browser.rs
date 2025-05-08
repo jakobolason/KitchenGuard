@@ -43,9 +43,9 @@ async fn front_page() -> HttpResponse {
                 .body(contents)
         },
         Err(e) => {
-            error!("Failed to read dashboard template: {}", e);
+            error!("Failed to read frontpage template: {}", e);
             HttpResponse::InternalServerError()
-                .body("Error reading dashboard template")
+                .body("Error reading frontpage template")
         }
     }
 }
@@ -57,7 +57,20 @@ async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResp
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
-            Ok(Some(uids)) => HttpResponse::Ok().body(format!("welcome to your dashboard, you can use these: {:?}", uids)),
+            Ok(Some(uids)) => {
+                match fs::read_to_string("./src/templates/forside.html") { // files are retrived from base dir
+                    Ok(contents) => {
+                        HttpResponse::Ok()
+                            .content_type(http::header::ContentType::html())
+                            .body(contents)
+                    },
+                    Err(e) => {
+                        error!("Failed to read frontpage template: {}", e);
+                        HttpResponse::InternalServerError()
+                            .body("Error reading frontpage template")
+                    }
+                }
+            },
             Ok(None) => HttpResponse::ServiceUnavailable().into(),
             Err(_) => HttpResponse::BadRequest().body("You are not allowed here")
         }

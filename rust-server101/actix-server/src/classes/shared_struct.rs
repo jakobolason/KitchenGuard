@@ -95,6 +95,13 @@ pub struct InitInformation {
     pub led: Vec<String>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
+pub struct InitState {
+    pub info: InitInformation,
+    pub ip_addr: String,
+}
+
 
 #[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]

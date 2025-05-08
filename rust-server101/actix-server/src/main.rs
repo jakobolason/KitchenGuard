@@ -105,7 +105,7 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::browser::browser_config) // webhandler '/'
 
             // Serve static files like stylesheet.css and logo2.png
-            .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true))
+            // .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true))
 
             .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs

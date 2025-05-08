@@ -360,7 +360,7 @@ impl Handler<InitInformation> for StateHandler {
                 _id: ObjectId::new(),
                 res_id: data.res_id.clone(),
                 timestamp: chrono::Utc::now(),
-                state: States::Standby,
+                state: States::Alarmed,
                 context: format!("{:?}", data),
             };
             let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
@@ -368,7 +368,7 @@ impl Handler<InitInformation> for StateHandler {
                 eprintln!("Failed to save new state: {:?}", err);
                 return Err(std::io::ErrorKind::InvalidInput);
             };
-            PiCommunicator::send_new_state(data.res_id.clone(), States::Standby, db_client.clone()).await;
+            PiCommunicator::send_new_state(data.res_id.clone(), States::Alarmed, db_client.clone()).await;
             Ok(())
         });
     }
