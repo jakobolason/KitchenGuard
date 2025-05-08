@@ -2,14 +2,13 @@ use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use chrono::DateTime;
 // use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{oid::ObjectId, doc}, Client, error};
+use mongodb::{bson::{oid::ObjectId, doc}, Client, error, options::{FindOneAndUpdateOptions, ReturnDocument}};
 use core::panic;
 use std::time::{Duration, Instant};
-use std::pin::Pin;
 
 use super::{
     job_scheduler::{JobsScheduler, ScheduledTask, CancelTask}, 
-    shared_struct::{LoggedInformation, LoginInformation, hash_password}
+    shared_struct::{LoggedInformation, LoginInformation, InitInformation, hash_password}
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -54,7 +53,6 @@ pub struct SensorLookup {
     pub power_plug: String,
     pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
     pub led: Vec<String>,
-    pub speakers: Vec<String>, 
 }
 
 // For when an alarm is sounded
@@ -311,7 +309,6 @@ impl StateHandler {
                     power_plug: String::new(),
                     other_pir: Vec::new(),
                     led: Vec::new(),
-                    speakers: Vec::new(),
                 }
             }
             Err(err) => {
@@ -339,23 +336,25 @@ impl StateHandler {
         }).ok()
     }
 
-    pub async fn create_resident(data: InitInformation, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
-        let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
-            res_id: data.res_id,
-            kitchen_pir: data.kitchen_pir,
-            power_plug: data.power_plug,
-            other_pir: data.other_pir,
-            led: data.led,
+    pub async fn create_or_update_resident(data: InitInformation, db_client: Client) -> Result<Option<SensorLookup>, mongodb::error::Error> {
+        let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+        
+        let filter = doc! { "res_id": data.res_id };
+        let update = doc! {
+            "$set": {
+                "kitchen_pir": data.kitchen_pir,
+                "power_plug": data.power_plug,
+                "other_pir": data.other_pir,
+                "led": data.led,
+            }
         };
         
-        let sesnorcollection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
-        println!("creating resident");
-        sensorcollection.insert_one(
-            list_of_sensors
-        ).await.map_err(|e| {
-            eprintln!("Failed to insert resident: {:?}", e);
-        }).ok()
+        let options = FindOneAndUpdateOptions::builder()
+            .upsert(true)
+            .return_document(ReturnDocument::After)
+            .build();
+        
+        sensor_collection.find_one_and_update(filter, update).with_options(options).await
     }
     
 }
@@ -367,7 +366,20 @@ impl Handler<InitInformation> for StateHandler {
         println!("creating resident");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
-            StateHandler::create_resident(data, db_client).await;
+            let _ = StateHandler::create_or_update_resident(data.clone(), db_client.clone()).await;
+            let state_log = StateLog {
+                _id: ObjectId::new(),
+                res_id: data.res_id.clone(),
+                timestamp: chrono::Utc::now(),
+                state: States::Standby,
+                context: format!("{:?}", data),
+            };
+            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+            if let Err(err) = state_collection.insert_one(state_log).await {
+                eprintln!("Failed to save new state: {:?}", err);
+                return Err(std::io::ErrorKind::InvalidInput);
+            };
+            Ok(())
         });
     }
 }
@@ -464,7 +476,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -494,7 +505,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -525,7 +535,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -555,7 +564,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),

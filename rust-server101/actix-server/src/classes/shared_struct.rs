@@ -5,13 +5,11 @@ use super::{
     web_handler::WebHandler,
 };
 
-use std::pin::Pin;
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
-use actix_web::HttpResponse;
 use crate::classes::state_handler::Event;
 
 pub struct AppState {
@@ -68,4 +66,14 @@ pub struct LoginInformation {
 #[rtype(result = "Option<Vec<String>>")]
 pub struct ValidateSession {
     pub cookie: String
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
+pub struct InitInformation {
+    pub res_id: String,
+    pub kitchen_pir: String,
+    pub power_plug: String,
+    pub other_pir: Vec<String>,
+    pub led: Vec<String>,
 }

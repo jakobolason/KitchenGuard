@@ -2,8 +2,8 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::{state_handler::{Event}, shared_struct::LoginInformation};
-use crate::classes::shared_struct::AppState;
+use crate::classes::{state_handler::Event, shared_struct::LoginInformation};
+use crate::classes::shared_struct::{AppState, InitInformation};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -29,21 +29,11 @@ async fn create_user(data: web::Json<LoginInformation>, app_state: web::Data<App
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct InitInformation {
-    pub res_id: res_id.clone(),
-    pub kitchen_pir: String::new(),
-    pub power_plug: String::new(),
-    pub other_pir: Vec::new(),
-    pub led: Vec::new(),
-    pub speakers: Vec::new(),
-}
+
 async fn initialization(data: web::Json<InitInformation>, app_state: web::Data<AppState>) -> HttpResponse {
     println!("Initialization of pi!");
-    app_state.state_handler.do_send(data.into_inner()).await {
-        Ok(_) => HttpResponse::Ok().body("OK"),
-        Err(_) => HttpResponse::BadRequest().finish()
-    }
+    app_state.state_handler.do_send(data.into_inner());
+    HttpResponse::Ok().body("OK")
 }
 
 async fn log_event(data: web::Json<Event>, app_state: web::Data<AppState>) -> HttpResponse {

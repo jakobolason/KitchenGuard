@@ -1,2 +1,3 @@
 rust-server101/actix-server/target/
 mongod – genvej.lnk
+rust-server101/actix-server/src/.env

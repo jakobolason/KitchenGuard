@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use tokio;
-    use actix::{fut::future::result, prelude::*};
+    use actix::prelude::*;
     use mongodb::{bson::{oid::ObjectId, doc}, Client,};
     use kitchen_guard_server::classes::*;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
@@ -34,7 +34,6 @@ mod tests {
                 power_plug: "power_plug_1".to_string(),
                 other_pir: vec!["living_pir_1".to_string(), "bedroom_pir_1".to_string()],
                 led: vec!["led_1".to_string(), "led_2".to_string()],
-                speakers: vec!["speaker_1".to_string(), "speaker_2".to_string()],
             };
             
             // Convert to document for upsert operation

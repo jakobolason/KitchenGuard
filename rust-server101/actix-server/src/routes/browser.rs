@@ -94,7 +94,6 @@ async fn get_res_info(session: Session, app_state: web::Data<AppState>, res_uid_
                     let res_info = app_state.web_handler.send(resident_request).await;
                     match res_info {
                         Ok(_info) => HttpResponse::Ok().body(format!("Resident info for UID: {}", uid)),
-                        Ok(None) => HttpResponse::NotFound().body("Resident not found"),
                         Err(_) => HttpResponse::InternalServerError().body("Failed to fetch resident information")
                     }
                 
