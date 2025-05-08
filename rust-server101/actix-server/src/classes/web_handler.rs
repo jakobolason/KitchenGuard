@@ -119,7 +119,7 @@ impl Handler<ResUidFetcher> for WebHandler {
 
         Box::pin(async move {
             // Use the db_client to find documents matching the res_uid
-            println!("Fetching logs for res_uid: {:?}", msg.res_uid);
+            println!("Fetching logs for res_id: {:?}", msg.res_uid);
             match db_client
                 .find(doc! {"res_id": &msg.res_uid})
                 .await
@@ -138,7 +138,7 @@ impl Handler<ResUidFetcher> for WebHandler {
                     }
                     // Check if the result is empty
                     if result.is_empty() {
-                        println!("No documents found for res_uid: {:?}", msg.res_uid);
+                        println!("No documents found for res_id: {:?}", msg.res_uid);
                     }
                     // Return the result
                     Some(result)
