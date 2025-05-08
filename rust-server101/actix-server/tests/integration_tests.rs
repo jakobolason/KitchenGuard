@@ -200,7 +200,6 @@ mod tests {
             // setup a basic user
             let username = "test_resident_1";
             let password = "123";
-            
             let _ = StateHandler::create_user(username, password, "12345678", db_client).await;
             println!("created user");
             // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow

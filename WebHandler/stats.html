@@ -33,7 +33,7 @@
 
         <!-- Drop down menu buttons -->
         <nav class="DropDownMenuContent">
-            <a href="index.html">Forside</a>
+            <a href="forside.html">Forside</a>
             <a href="stats.html">Statistik</a>
             <a href="om.html">Om</a>
         </nav>
@@ -61,7 +61,7 @@
 
     <script>
         async function fetchStats() {
-            var response = await fetch("data.json");
+            var response = await fetch("/get_res_info");
             var data = await response.json();
 
             return data;
