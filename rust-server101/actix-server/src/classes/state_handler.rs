@@ -11,7 +11,7 @@ use futures_util::StreamExt;
 use super::{
     job_scheduler::{JobsScheduler, CancelTask}, 
     shared_struct::{LoggedInformation, CreateUser, ScheduledTask, hash_password, sms_service, 
-                    ResidentData, States, SensorLookup, users, info},
+                    resident_data, states, sensor_lookup, users, info},
     pi_communicator::PiCommunicator,
 };
 
@@ -57,7 +57,6 @@ pub struct SensorLookup {
     pub power_plug: String,
     pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
     pub led: Vec<String>,
-    pub speakers: Vec<String>, 
 }
 
 // For when an alarm is sounded
@@ -253,7 +252,7 @@ impl StateHandler {
 
     async fn get_resident_data(res_id: String, db_client: Client) -> error::Result<(States, SensorLookup)> {
         // Fetch the current state
-        let state_collection = db_client.database(ResidentData).collection::<StateLog>(States);
+        let state_collection = db_client.database(resident_data).collection::<StateLog>(states);
         let current_state = match state_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching res_id
@@ -270,7 +269,7 @@ impl StateHandler {
         };
 
         // Fetch the list of sensors
-        let sensor_collection = db_client.database(ResidentData).collection::<SensorLookup>(SensorLookup);
+        let sensor_collection = db_client.database(resident_data).collection::<SensorLookup>(sensor_lookup);
         let sensors = match sensor_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1})
@@ -285,7 +284,6 @@ impl StateHandler {
                     power_plug: String::new(),
                     other_pir: Vec::new(),
                     led: Vec::new(),
-                    speakers: Vec::new(),
                 }
             }
             Err(err) => {
@@ -447,7 +445,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -477,7 +474,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -508,7 +504,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
@@ -538,7 +533,6 @@ mod tests {
             power_plug: "power_plug_1".to_string(),
             other_pir: vec![],
             led: vec![],
-            speakers: vec![],
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),

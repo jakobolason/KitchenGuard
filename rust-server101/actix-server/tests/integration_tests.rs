@@ -7,8 +7,9 @@ mod tests {
     use actix::{fut::future::result, prelude::*};
     use mongodb::{bson::{oid::ObjectId, doc}, Client,};
     use kitchen_guard_server::classes::*;
-    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
+    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
     use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
+    use kitchen_guard_server::classes::shared_struct::ScheduledTask;
     use serial_test::serial;
     use std::collections::VecDeque;
 
@@ -34,7 +35,6 @@ mod tests {
                 power_plug: "power_plug_1".to_string(),
                 other_pir: vec!["living_pir_1".to_string(), "bedroom_pir_1".to_string()],
                 led: vec!["led_1".to_string(), "led_2".to_string()],
-                speakers: vec!["speaker_1".to_string(), "speaker_2".to_string()],
             };
             
             // Convert to document for upsert operation
@@ -200,7 +200,7 @@ mod tests {
             // setup a basic user
             let username = "test_resident_1";
             let password = "123";
-            let _ = StateHandler::create_user(username, password, db_client).await;
+            let _ = StateHandler::create_user(username, password, "12345678", db_client).await;
             println!("created user");
             // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
             

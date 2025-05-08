@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 use actix::Message;
 use std::time::Instant;
 /// This holds the collections holding information for residents
-pub static ResidentData: &str = "ResidentData";
-pub static States: &str = "States";
-pub static SensorLookup: &str = "SensorLookup";
+pub static resident_data: &str = "ResidentData";
+pub static states: &str = "States";
+pub static sensor_lookup: &str = "SensorLookup";
 pub static ip_addresses: &str = "ip_addresses";
 
 /// This holds information on users/relatives, and their login information
