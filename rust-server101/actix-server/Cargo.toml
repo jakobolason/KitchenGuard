@@ -19,3 +19,4 @@ ring = "0.17.14"
 data-encoding = "2.9.0" 
 rand = { version = "0.9.1", features = ["std"] }
 futures-util = "0.3.31"
+serial_test = "3.2.0"

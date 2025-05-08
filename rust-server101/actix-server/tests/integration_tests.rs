@@ -9,9 +9,12 @@ mod tests {
     use kitchen_guard_server::classes::*;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
     use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
+    use serial_test::serial;
     use std::collections::VecDeque;
 
     #[tokio::test]
+    #[serial]
+    /// This test checks the functionality of the API by simulating a series of events and verifying the expected outcomes.
     async fn test_api() {
         let local = tokio::task::LocalSet::new();
         local.run_until(async {
@@ -183,6 +186,8 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
+    /// This test checks the functionality of the API by simulating a series of events and verifying the expected outcomes.
     async fn test_browser_responses() {
         let local = tokio::task::LocalSet::new();
         local.run_until(async {
