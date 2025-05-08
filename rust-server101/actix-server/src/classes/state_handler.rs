@@ -181,8 +181,8 @@ impl StateHandler {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(20 * 60) },
-            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(20 * 3) },
+            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(10) },
+            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(10) },
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
@@ -338,7 +338,38 @@ impl StateHandler {
             eprintln!("Failed to insert user: {:?}", e);
         }).ok()
     }
+
+    pub async fn create_resident(data: InitInformation, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
+        let list_of_sensors = SensorLookup {
+            _id: ObjectId::new(),
+            res_id: data.res_id,
+            kitchen_pir: data.kitchen_pir,
+            power_plug: data.power_plug,
+            other_pir: data.other_pir,
+            led: data.led,
+        };
+        
+        let sesnorcollection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+        println!("creating resident");
+        sensorcollection.insert_one(
+            list_of_sensors
+        ).await.map_err(|e| {
+            eprintln!("Failed to insert resident: {:?}", e);
+        }).ok()
+    }
     
+}
+
+impl Handler<InitInformation> for StateHandler {
+    type Result = ();
+
+    fn handle(&mut self, data: InitInformation, _ctx: &mut Self::Context ) -> Self::Result {
+        println!("creating resident");
+        let db_client = self.db_client.clone();
+        actix::spawn(async move {
+            StateHandler::create_resident(data, db_client).await;
+        });
+    }
 }
 
 impl Handler<LoginInformation> for StateHandler {

@@ -14,6 +14,7 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
             .route("/health_check", web::post().to(health_check))
             .route("/event", web::post().to(log_event))
             .route("/create_user", web::post().to(create_user))
+            .route("/initialization", web::post().to(initialization))
     );
 }
 
@@ -23,6 +24,23 @@ const COLL_NAME: &str = "users";
 async fn create_user(data: web::Json<LoginInformation>, app_state: web::Data<AppState>) -> HttpResponse {
     println!("creating user!");
     match app_state.state_handler.send(data.into_inner()).await {
+        Ok(_) => HttpResponse::Ok().body("OK"),
+        Err(_) => HttpResponse::BadRequest().finish()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct InitInformation {
+    pub res_id: res_id.clone(),
+    pub kitchen_pir: String::new(),
+    pub power_plug: String::new(),
+    pub other_pir: Vec::new(),
+    pub led: Vec::new(),
+    pub speakers: Vec::new(),
+}
+async fn initialization(data: web::Json<InitInformation>, app_state: web::Data<AppState>) -> HttpResponse {
+    println!("Initialization of pi!");
+    app_state.state_handler.do_send(data.into_inner()).await {
         Ok(_) => HttpResponse::Ok().body("OK"),
         Err(_) => HttpResponse::BadRequest().finish()
     }
