@@ -1,5 +1,4 @@
 use actix::prelude::*;
-use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::collections::VecDeque;
 

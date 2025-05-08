@@ -2,8 +2,8 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::{state_handler::{Event}, shared_struct::LoginInformation};
-use crate::classes::shared_struct::AppState;
+use crate::classes::{state_handler::Event, shared_struct::LoginInformation};
+use crate::classes::shared_struct::{AppState, InitInformation};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -14,6 +14,7 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
             .route("/health_check", web::post().to(health_check))
             .route("/event", web::post().to(log_event))
             .route("/create_user", web::post().to(create_user))
+            .route("/initialization", web::post().to(initialization))
     );
 }
 
@@ -26,6 +27,13 @@ async fn create_user(data: web::Json<LoginInformation>, app_state: web::Data<App
         Ok(_) => HttpResponse::Ok().body("OK"),
         Err(_) => HttpResponse::BadRequest().finish()
     }
+}
+
+
+async fn initialization(data: web::Json<InitInformation>, app_state: web::Data<AppState>) -> HttpResponse {
+    println!("Initialization of pi!");
+    app_state.state_handler.do_send(data.into_inner());
+    HttpResponse::Ok().body("OK")
 }
 
 async fn log_event(data: web::Json<Event>, app_state: web::Data<AppState>) -> HttpResponse {
@@ -88,6 +96,7 @@ async fn save_data(
         Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
 }
+
 
 
 

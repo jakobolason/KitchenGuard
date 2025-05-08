@@ -5,19 +5,24 @@ use super::{
     web_handler::WebHandler,
 };
 
-use std::pin::Pin;
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
-use actix_web::HttpResponse;
+use crate::classes::state_handler::Event;
 
 pub struct AppState {
     pub state_handler: actix::Addr<StateHandler>,
     pub job_scheduler: actix::Addr<JobsScheduler>,
     pub web_handler: actix::Addr<WebHandler>,
     pub db_client: Client,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "Option<Vec<Event>>")]
+pub struct ResUidFetcher {
+    pub res_uid: String,
 }
 
 pub fn hash_password(password: &str, salt: &[u8]) -> String {
@@ -61,4 +66,14 @@ pub struct LoginInformation {
 #[rtype(result = "Option<Vec<String>>")]
 pub struct ValidateSession {
     pub cookie: String
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
+pub struct InitInformation {
+    pub res_id: String,
+    pub kitchen_pir: String,
+    pub power_plug: String,
+    pub other_pir: Vec<String>,
+    pub led: Vec<String>,
 }

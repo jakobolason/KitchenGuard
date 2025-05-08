@@ -9,9 +9,12 @@ mod tests {
     use kitchen_guard_server::classes::*;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
     use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
+    use serial_test::serial;
     use std::collections::VecDeque;
 
     #[tokio::test]
+    #[serial]
+    /// This test checks the functionality of the API by simulating a series of events and verifying the expected outcomes.
     async fn test_api() {
         let local = tokio::task::LocalSet::new();
         local.run_until(async {
@@ -31,7 +34,6 @@ mod tests {
                 power_plug: "power_plug_1".to_string(),
                 other_pir: vec!["living_pir_1".to_string(), "bedroom_pir_1".to_string()],
                 led: vec!["led_1".to_string(), "led_2".to_string()],
-                speakers: vec!["speaker_1".to_string(), "speaker_2".to_string()],
             };
             
             // Convert to document for upsert operation
@@ -183,6 +185,8 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
+    /// This test checks the functionality of the API by simulating a series of events and verifying the expected outcomes.
     async fn test_browser_responses() {
         let local = tokio::task::LocalSet::new();
         local.run_until(async {
@@ -205,6 +209,14 @@ mod tests {
             // assert!(cookie.is_some());
             let cookie_value = cookie.unwrap();
             assert!(!cookie_value.is_empty());
+
+            let result = web_handler.send(
+                shared_struct::ResUidFetcher { res_uid: username.to_string() }
+            ).await.unwrap();
+            let result_value = result.unwrap();
+            println!("Result: {:?}", result_value);
+            assert!(!result_value.is_empty());
+
         }).await;
     }
 }

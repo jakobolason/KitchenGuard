@@ -1,5 +1,8 @@
 # KitchenGuard
 
+### Final Report
+V1: https://typst.app/project/wnPjCdwsDE2JzoOI5y6mFW
+
 ### Jira SCRUM
 https://ceproject2-2025.atlassian.net/jira/software/projects/SCRUM/settings/access?cloudId=3ee34273-c6f5-41ca-97a5-efe1cf515662
 
