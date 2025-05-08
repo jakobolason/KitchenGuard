@@ -11,10 +11,18 @@ use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
 use std::time::Instant;
-
+/// This holds the collections holding information for residents
 pub static ResidentData: &str = "ResidentData";
 pub static States: &str = "States";
+pub static SensorLookup: &str = "SensorLookup";
+pub static ip_addresses: &str = "ip_addresses";
 
+/// This holds information on users/relatives, and their login information
+pub static users: &str = "users";
+pub static info: &str = "info";
+
+/// The endpoint configured on the Pi
+pub static pi_listener: &str = "state_listener";
 pub static sms_service: &str = "https://api.twilio.com/2010-04-01/Accounts/";
 
 

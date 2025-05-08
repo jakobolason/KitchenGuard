@@ -10,7 +10,8 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{JobsScheduler, CancelTask}, 
-    shared_struct::{LoggedInformation, CreateUser, ScheduledTask, hash_password, sms_service},
+    shared_struct::{LoggedInformation, CreateUser, ScheduledTask, hash_password, sms_service, 
+                    ResidentData, States, SensorLookup, users, info},
     pi_communicator::PiCommunicator,
 };
 
@@ -252,7 +253,7 @@ impl StateHandler {
 
     async fn get_resident_data(res_id: String, db_client: Client) -> error::Result<(States, SensorLookup)> {
         // Fetch the current state
-        let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+        let state_collection = db_client.database(ResidentData).collection::<StateLog>(States);
         let current_state = match state_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching res_id
@@ -269,7 +270,7 @@ impl StateHandler {
         };
 
         // Fetch the list of sensors
-        let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+        let sensor_collection = db_client.database(ResidentData).collection::<SensorLookup>(SensorLookup);
         let sensors = match sensor_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1})
@@ -300,7 +301,7 @@ impl StateHandler {
     pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
         let user_salt = username.as_bytes();
         let hashed_password =  hash_password(password, user_salt);
-        let usercollection = db_client.database("users").collection::<LoggedInformation>("info");
+        let usercollection = db_client.database(users).collection::<LoggedInformation>(info);
         println!("creating user");
         usercollection.insert_one(LoggedInformation {
             username: username.to_string(),
@@ -422,10 +423,9 @@ impl Handler<Event> for StateHandler {
                         return Err(std::io::ErrorKind::InvalidInput);
                     }
                 };
-                for info in results {
-                    StateHandler::notify_relatives(info.phone_number, &res_id).await;
+                for relative in results {
+                    StateHandler::notify_relatives(relative.phone_number, &res_id).await;
                 }
-                
             }
             Ok(state_info)
         })
