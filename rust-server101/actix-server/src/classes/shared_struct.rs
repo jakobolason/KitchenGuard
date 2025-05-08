@@ -1,20 +1,22 @@
-use mongodb::Client;
+use mongodb::{bson::oid::ObjectId, Client};
 use super::{
     job_scheduler::JobsScheduler,
     state_handler::StateHandler,
     web_handler::WebHandler,
 };
 
+use std::pin::Pin;
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
+use crate::classes::state_handler::Event;
 use std::time::Instant;
 /// This holds the collections holding information for residents
-pub static ResidentData: &str = "ResidentData";
-pub static States: &str = "States";
-pub static SensorLookup: &str = "SensorLookup";
+pub static resident_data: &str = "ResidentData";
+pub static states: &str = "States";
+pub static sensor_lookup: &str = "SensorLookup";
 pub static ip_addresses: &str = "ip_addresses";
 
 /// This holds information on users/relatives, and their login information
@@ -31,6 +33,12 @@ pub struct AppState {
     pub job_scheduler: actix::Addr<JobsScheduler>,
     pub web_handler: actix::Addr<WebHandler>,
     pub db_client: Client,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "Option<Vec<Event>>")]
+pub struct ResUidFetcher {
+    pub res_uid: String,
 }
 
 pub fn hash_password(password: &str, salt: &[u8]) -> String {
@@ -77,6 +85,17 @@ pub struct ValidateSession {
     pub cookie: String
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
+pub struct InitInformation {
+    pub res_id: String,
+    pub kitchen_pir: String,
+    pub power_plug: String,
+    pub other_pir: Vec<String>,
+    pub led: Vec<String>,
+}
+
+
 #[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]
 pub struct ScheduledTask {
@@ -90,4 +109,11 @@ pub struct CreateUser {
     pub username: String,
     pub password: String,
     pub phone_number: String,
+}
+
+#[derive(Deserialize)]
+pub struct IpCollection {
+    _id: ObjectId,
+    res_ip: String,
+    res_id: String,
 }
