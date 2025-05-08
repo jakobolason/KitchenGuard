@@ -6,6 +6,7 @@ use actix::Actor;
 use classes::web_handler::{self, WebHandler};
 use env_logger::Env;
 use actix_cors::Cors;
+use actix_files;
 // use model::User;
 use mongodb::Client;
 use std::sync::{Arc, Mutex};
@@ -102,6 +103,10 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(app_state.clone()) // holds references to actors and db
             .configure(routes::browser::browser_config) // webhandler '/'
+
+            // Serve static files like stylesheet.css and logo2.png
+            .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true))
+
             .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {

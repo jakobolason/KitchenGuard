@@ -25,6 +25,7 @@ body {
     border: none;
     cursor: pointer;
     padding: 10px;
+    z-index: 1000;
 }
 
 .DropDownMenuContent {
@@ -34,7 +35,7 @@ body {
     background-color: white;
     box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
     min-width: 13.5%;
-    z-index: 1;
+    z-index: 1000;
 }
 
 .DropDownMenuContent a {
@@ -44,6 +45,7 @@ body {
     text-decoration: none;
     display: block;
     text-align: left;
+    z-index: 1000;
 }
 
 .DropDownMenuContent a:hover {
