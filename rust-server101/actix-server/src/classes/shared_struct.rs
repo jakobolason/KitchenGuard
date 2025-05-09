@@ -5,7 +5,6 @@ use super::{
     web_handler::WebHandler,
 };
 
-use std::pin::Pin;
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
@@ -14,18 +13,18 @@ use actix::Message;
 use crate::classes::state_handler::Event;
 use std::time::Instant;
 /// This holds the collections holding information for residents
-pub static resident_data: &str = "ResidentData";
-pub static states: &str = "States";
-pub static sensor_lookup: &str = "SensorLookup";
-pub static ip_addresses: &str = "ip_addresses";
+pub static RESIDENT_DATA: &str = "ResidentData";
+pub static STATES: &str = "States";
+pub static SENSOR_LOOKUP: &str = "SensorLookup";
+pub static IP_ADDRESSES: &str = "ip_addresses";
 
 /// This holds information on users/relatives, and their login information
-pub static users: &str = "users";
-pub static info: &str = "info";
+pub static USERS: &str = "users";
+pub static INFO: &str = "info";
 
 /// The endpoint configured on the Pi
-pub static pi_listener: &str = "state_listener";
-pub static sms_service: &str = "https://api.twilio.com/2010-04-01/Accounts/";
+pub static PI_LISTENER: &str = "state_listener";
+pub static SMS_SERVICE: &str = "https://api.twilio.com/2010-04-01/Accounts/";
 
 
 pub struct AppState {

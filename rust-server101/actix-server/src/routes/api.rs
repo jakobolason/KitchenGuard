@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
 use crate::classes::{state_handler::Event, shared_struct::CreateUser};
-use crate::classes::shared_struct::{AppState, InitInformation};
+use crate::classes::shared_struct::{AppState, InitInformation, InitState};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -29,7 +29,8 @@ async fn create_user(data: web::Json<CreateUser>, app_state: web::Data<AppState>
     }
 }
 
-
+/// A pi sending to this endpoint (re)starts a resident's state with 'Standby' and captures the ip address
+/// If the res_id already existed in db, then it will simply overwrite it (unsafe)
 async fn initialization(
     req: actix_web::HttpRequest,
     data: web::Json<InitInformation>,
@@ -37,11 +38,12 @@ async fn initialization(
 ) -> HttpResponse {
     if let Some(peer_addr) = req.peer_addr() {
         println!("Initialization of pi from IP: {}", peer_addr.ip());
+        app_state.state_handler.do_send(InitState { info: data.into_inner(), ip_addr: peer_addr.ip().to_string() });
+        HttpResponse::Ok().body("OK")
     } else {
         println!("Could not determine the IP address of the client.");
+        HttpResponse::BadRequest().body("The ip addres wasn't present")
     }
-    app_state.state_handler.do_send(data.into_inner());
-    HttpResponse::Ok().body("OK")
 }
 
 async fn log_event(data: web::Json<Event>, app_state: web::Data<AppState>) -> HttpResponse {

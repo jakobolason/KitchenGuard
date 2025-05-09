@@ -10,8 +10,8 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{JobsScheduler, CancelTask}, 
-    shared_struct::{LoggedInformation, CreateUser, ScheduledTask, IpCollection, InitInformation, hash_password, sms_service, 
-                    resident_data, states, sensor_lookup, users, info},
+    shared_struct::{LoggedInformation, CreateUser, ScheduledTask, IpCollection, InitState, hash_password, SMS_SERVICE, 
+                    RESIDENT_DATA, STATES, SENSOR_LOOKUP, USERS, INFO},
     pi_communicator::PiCommunicator,
 };
 
@@ -126,7 +126,7 @@ impl StateHandler {
         let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
         let from_number = env::var("FROM_NUMBER").unwrap_or_default();
         let message = format!("Hello from server!, resident {} is in critical mode!", res_id);
-        let url = format!("{}{}/Message.json", sms_service, account_sid);
+        let url = format!("{}{}/Message.json", SMS_SERVICE, account_sid);
         let params = [
             ("To", to_number),
             ("From", from_number),
@@ -254,7 +254,7 @@ impl StateHandler {
 
     async fn get_resident_data(res_id: String, db_client: Client) -> error::Result<(States, SensorLookup)> {
         // Fetch the current state
-        let state_collection = db_client.database(resident_data).collection::<StateLog>(states);
+        let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
         let current_state = match state_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching res_id
@@ -271,7 +271,7 @@ impl StateHandler {
         };
 
         // Fetch the list of sensors
-        let sensor_collection = db_client.database(resident_data).collection::<SensorLookup>(sensor_lookup);
+        let sensor_collection = db_client.database(RESIDENT_DATA).collection::<SensorLookup>(SENSOR_LOOKUP);
         let sensors = match sensor_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1})
@@ -301,7 +301,7 @@ impl StateHandler {
     pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
         let user_salt = username.as_bytes();
         let hashed_password =  hash_password(password, user_salt);
-        let usercollection = db_client.database(users).collection::<LoggedInformation>(info);
+        let usercollection = db_client.database(USERS).collection::<LoggedInformation>(INFO);
         println!("creating user");
         usercollection.insert_one(LoggedInformation {
             username: username.to_string(),
@@ -314,16 +314,16 @@ impl StateHandler {
         }).ok()
     }
 
-    pub async fn create_or_update_resident(data: InitInformation, db_client: Client) -> Result<Option<SensorLookup>, mongodb::error::Error> {
+    pub async fn create_or_update_resident(data: InitState, db_client: Client) -> Result<Option<IpCollection>, mongodb::error::Error> {
         let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
         
-        let filter = doc! { "res_id": data.res_id.clone()};
+        let filter = doc! { "res_id": data.info.res_id.clone()};
         let update = doc! {
             "$set": {
-                "kitchen_pir": data.kitchen_pir,
-                "power_plug": data.power_plug,
-                "other_pir": data.other_pir,
-                "led": data.led,
+                "kitchen_pir": data.info.kitchen_pir,
+                "power_plug": data.info.power_plug,
+                "other_pir": data.info.other_pir,
+                "led": data.info.led,
             }
         };
         
@@ -332,43 +332,44 @@ impl StateHandler {
             .return_document(ReturnDocument::After)
             .build();
         
-        sensor_collection.find_one_and_update(filter.clone(), update.clone()).with_options(options.clone()).await
+        sensor_collection.find_one_and_update(filter.clone(), update.clone()).with_options(options.clone()).await;
 
         // update database with ip address for future use
-        // let ip_update = doc! {
-        //     "$set": {
-        //         "_id": ObjectId::new(),
-        //         "res_ip": data.ip_addr,
-        //         "res_id": data.res_id.clone()
-        //     }
-        // };
-        // let ip_collection = db_client.database("ResidentData").collection::<IpCollection>("ip_address");
-        // ip_collection.find_one_and_update(filter, ip_update).with_options(options).await
+        let ip_update = doc! {
+            "$set": {
+                "_id": ObjectId::new(),
+                "res_ip": data.ip_addr,
+                "res_id": data.info.res_id.clone()
+            }
+        };
+        let ip_collection = db_client.database("ResidentData").collection::<IpCollection>("ip_address");
+        ip_collection.find_one_and_update(filter, ip_update).with_options(options).await
     }
     
 }
 
-impl Handler<InitInformation> for StateHandler {
+impl Handler<InitState> for StateHandler {
     type Result = ();
 
-    fn handle(&mut self, data: InitInformation, _ctx: &mut Self::Context ) -> Self::Result {
+    fn handle(&mut self, data: InitState, _ctx: &mut Self::Context ) -> Self::Result {
         println!("creating resident");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
             let _ = StateHandler::create_or_update_resident(data.clone(), db_client.clone()).await;
             let state_log = StateLog {
                 _id: ObjectId::new(),
-                res_id: data.res_id.clone(),
+                res_id: data.info.res_id.clone(),
                 timestamp: chrono::Utc::now(),
-                state: States::Alarmed,
+                state: States::Standby,
                 context: format!("{:?}", data),
             };
-            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+            let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
             if let Err(err) = state_collection.insert_one(state_log).await {
                 eprintln!("Failed to save new state: {:?}", err);
                 return Err(std::io::ErrorKind::InvalidInput);
             };
-            PiCommunicator::send_new_state(data.res_id.clone(), States::Alarmed, db_client.clone()).await;
+
+            PiCommunicator::send_new_state(data.info.res_id.clone(), States::Standby, db_client.clone()).await;
             Ok(())
         });
     }
@@ -456,7 +457,7 @@ impl Handler<Event> for StateHandler {
             PiCommunicator::send_new_state(res_id.clone(), state_info.clone(), db_client.clone()).await;
             // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
             if state_info == States::CriticallyAlarmed && current_state != States::CriticallyAlarmed {
-                let collection = db_client.database("users").collection::<LoggedInformation>("info");
+                let collection = db_client.database("USERS").collection::<LoggedInformation>("INFO");
                 let filter = doc! {
                     "res_uids": {
                         "$in": [res_id.clone()]
