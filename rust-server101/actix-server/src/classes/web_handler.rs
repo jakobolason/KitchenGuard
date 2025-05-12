@@ -21,7 +21,7 @@ impl WebHandler {
         WebHandler { cookie_manager, db_client }
     }
 
-    pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::Error> {
+    async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::Error> {
         // checks the db for username
         let users = db_client.database(USERS).collection::<LoggedInformation>(INFO);
         match users
@@ -96,7 +96,6 @@ impl WebHandler {
             }
         }
     }
-    
 }
 
 impl Actor for WebHandler {

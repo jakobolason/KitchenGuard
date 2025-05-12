@@ -1,11 +1,13 @@
 use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{self, doc, oid::ObjectId, Document}, error, options::{FindOneAndUpdateOptions, ReturnDocument}, Client};
+use mongodb::{bson::{self, doc, oid::ObjectId, }, error, Client};
 use core::panic;
 use std::time::{Duration, Instant};
 use std::env;
 use futures_util::StreamExt;
+
+use crate::classes::shared_struct::RESIDENT_LOGS;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
@@ -289,7 +291,7 @@ impl StateHandler {
         let user_salt = username.as_bytes().to_vec();
         let hashed_password = hash_password(password, &user_salt);
         println!("creating user");
-        /// The binary type is used, since it is more appropriate for storing bytes in mongodb
+        // The binary type is used, since it is more appropriate for storing bytes in mongodb
         let salt_binary = bson::Binary {
             subtype: bson::spec::BinarySubtype::Generic,
             bytes: user_salt.clone(),
@@ -307,7 +309,7 @@ impl StateHandler {
     }
 
     // uses the T type, to allow for different collections to be found
-    pub async fn create_or_update_entry<T>(identifier: &str, search_query: &str, data: bson::Document, database: &str, collection: &str, db_client: Client) 
+    async fn create_or_update_entry<T>(identifier: &str, search_query: &str, data: bson::Document, database: &str, collection: &str, db_client: Client) 
     -> Result<Option<T>, mongodb::error::Error> 
     where 
     T: std::marker::Send + Sync + serde::de::DeserializeOwned + serde::Serialize + std::fmt::Debug + 'static
@@ -334,6 +336,137 @@ impl StateHandler {
         };
         
         StateHandler::create_or_update_entry("username", username, update, USERS, INFO, db_client).await
+    }
+
+    async fn initialize_new_pi(data: InitState, db_client: Client) -> Result<(), std::io::ErrorKind> {
+        let update = doc! {
+            "$set": {
+                "kitchen_pir": data.info.kitchen_pir.clone(),
+                "power_plug": data.info.power_plug.clone(),
+                "other_pir": data.info.other_pir.clone(),
+                "led": data.info.led.clone(),
+            }
+        };
+        let _ = StateHandler::create_or_update_entry::<SensorLookup>("res_id", &data.info.res_id.clone(), update, RESIDENT_DATA, SENSOR_LOOKUP, db_client.clone()).await;
+        // update database with ip address for future use
+        let ip_update = doc! {
+            "$set": {
+                "_id": ObjectId::new(),
+                "res_ip": data.ip_addr.clone(),
+                "res_id": data.info.res_id.clone()
+            }
+        };
+        let _ = StateHandler::create_or_update_entry::<IpCollection>("res_id", &data.info.res_id.clone(), ip_update, RESIDENT_DATA, IP_ADDRESSES, db_client.clone()).await;
+        let state_log = StateLog {
+            _id: ObjectId::new(),
+            res_id: data.info.res_id.clone(),
+            timestamp: chrono::Utc::now(),
+            state: States::Standby,
+            context: format!("{:?}", data.clone()),
+        };
+        let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
+        if let Err(err) = state_collection.insert_one(state_log).await {
+            eprintln!("Failed to save new state: {:?}", err);
+            return Err(std::io::ErrorKind::InvalidInput);
+        };
+
+        PiCommunicator::send_new_state(data.info.res_id.clone(), States::Standby, db_client.clone()).await;
+        Ok(())
+    }
+
+    async fn handle_new_event(
+        data: Event, 
+        is_test: bool, 
+        job_scheduler: Addr<JobsScheduler>, 
+        db_client: Client) 
+        -> Result<States, std::io::ErrorKind> 
+    {
+        let res_id = data.res_id.to_string();
+        // Log the event data
+        let collection = db_client.database(RESIDENT_DATA).collection::<Event>(RESIDENT_LOGS);
+        if let Err(err) = collection.insert_one(data.clone()).await {
+            eprintln!("Failed to log event: {:?}", err);
+            return Err(std::io::ErrorKind::InvalidData);
+        }
+        let (current_state, sensors) = match StateHandler::get_resident_data(res_id.clone(), db_client.clone()).await {
+            Ok(vals) => (vals.0, vals.1),
+            Err(_err) => return Err(std::io::ErrorKind::InvalidInput),
+        };
+        // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
+        let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data, is_test.clone());
+        println!("new state found to be: {:?}", state_info);
+        if state_info == current_state {
+            return Ok(state_info)
+        }
+        // Save the new state
+        let state_log = StateLog {
+            _id: ObjectId::new(),
+            res_id: res_id.clone(),
+            timestamp: chrono::Utc::now(),
+            state: state_info.clone(),
+            context: format!("{:?}", data),
+        };
+        // if any job scheduling task -- either new task(20 minutes) or a cancellation
+        if task_type.type_of_task != TypeOfTask::None {
+            let task_el = task_type;
+            if task_el.type_of_task == TypeOfTask::NewTask {
+                println!("Sending task to scheduler!");
+               match task_el.scheduled_task {
+                    Some(task) => job_scheduler.do_send(task),
+                    _=> eprint!("Tried to queue task, but was missing it")
+                }
+            } else if task_el.type_of_task == TypeOfTask::Cancellation {
+                let res_id = task_el.res_id;
+                job_scheduler.do_send(CancelTask {
+                    res_id,
+                });
+            } else {
+                // do nothing i guess
+            }
+        }
+        let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
+        if let Err(err) = state_collection.insert_one(state_log).await {
+            eprintln!("Failed to save new state: {:?}", err);
+            return Err(std::io::ErrorKind::InvalidInput);
+        };
+        // This isn't optimal, and would've been nice to be able to put in the requester's flow instead of here
+        // send new state_info to pi communicator
+        PiCommunicator::send_new_state(res_id.clone(), state_info.clone(), db_client.clone()).await;
+        // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
+        if state_info == States::CriticallyAlarmed && current_state != States::CriticallyAlarmed {
+            let collection = db_client.database(USERS).collection::<LoggedInformation>(INFO);
+            let filter = doc! {
+                "res_uids": {
+                    "$in": [res_id.clone()]
+                }
+            };
+            
+            // Collect ALL relatives that has has this res_id
+            let cursor = collection.find(filter).await;
+            let results = match cursor {
+                Ok(mut cursor) => {
+                    let mut results = Vec::new();
+                    while let Some(item) = cursor.next().await {
+                        match item {
+                            Ok(logged_info) => results.push(logged_info),
+                            Err(err) => {
+                                eprintln!("Error processing cursor item: {:?}", err);
+                                return Err(std::io::ErrorKind::InvalidInput);
+                            }
+                        }
+                    }
+                    results
+                },
+                Err(err) => {
+                    eprintln!("Error querying user information: {:?}", err);
+                    return Err(std::io::ErrorKind::InvalidInput);
+                }
+            };
+            for _info in results {
+                // StateHandler::notify_relatives(info.phone_number, &res_id).await;
+            }
+        }
+        Ok(state_info)
     }
 }
 
@@ -365,39 +498,7 @@ impl Handler<InitState> for StateHandler {
         println!("creating resident");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
-            let update = doc! {
-                "$set": {
-                    "kitchen_pir": data.info.kitchen_pir.clone(),
-                    "power_plug": data.info.power_plug.clone(),
-                    "other_pir": data.info.other_pir.clone(),
-                    "led": data.info.led.clone(),
-                }
-            };
-            let _ = StateHandler::create_or_update_entry::<SensorLookup>("res_id", &data.info.res_id.clone(), update, RESIDENT_DATA, SENSOR_LOOKUP, db_client.clone()).await;
-            // update database with ip address for future use
-            let ip_update = doc! {
-                "$set": {
-                    "_id": ObjectId::new(),
-                    "res_ip": data.ip_addr.clone(),
-                    "res_id": data.info.res_id.clone()
-                }
-            };
-            let _ = StateHandler::create_or_update_entry::<IpCollection>("res_id", &data.info.res_id.clone(), ip_update, RESIDENT_DATA, IP_ADDRESSES, db_client.clone()).await;
-            let state_log = StateLog {
-                _id: ObjectId::new(),
-                res_id: data.info.res_id.clone(),
-                timestamp: chrono::Utc::now(),
-                state: States::Standby,
-                context: format!("{:?}", data.clone()),
-            };
-            let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
-            if let Err(err) = state_collection.insert_one(state_log).await {
-                eprintln!("Failed to save new state: {:?}", err);
-                return Err(std::io::ErrorKind::InvalidInput);
-            };
-
-            PiCommunicator::send_new_state(data.info.res_id.clone(), States::Standby, db_client.clone()).await;
-            Ok(())
+            StateHandler::initialize_new_pi(data, db_client)
         });
     }
 }
@@ -426,98 +527,11 @@ impl Handler<Event> for StateHandler {
         println!("Caught an event for res_id: {:?}", data.res_id);
         let db_client = self.db_client.clone();
         let job_scheduler = self.job_scheduler.clone().unwrap();
-        let res_id = data.res_id.to_string();
         let is_test = self.is_test.clone();
 
         // Returns a future, that should be awaited
         Box::pin(async move {
-            // Log the event data
-            let collection = db_client.database("ResidentData").collection::<Event>("ResidentLogs");
-            if let Err(err) = collection.insert_one(data.clone()).await {
-                println!("In error");
-                eprintln!("Failed to log event: {:?}", err);
-                return Err(std::io::ErrorKind::InvalidData);
-            }
-            let (current_state, sensors) = match StateHandler::get_resident_data(res_id.clone(), db_client.clone()).await {
-                Ok(vals) => (vals.0, vals.1),
-                Err(_err) => return Err(std::io::ErrorKind::InvalidInput),
-            };
-            // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
-            let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data, is_test.clone());
-            println!("new state found to be: {:?}", state_info);
-            if state_info == current_state {
-                return Ok(state_info)
-            }
-            // Save the new state
-            let state_log = StateLog {
-                _id: ObjectId::new(),
-                res_id: res_id.clone(),
-                timestamp: chrono::Utc::now(),
-                state: state_info.clone(),
-                context: format!("{:?}", data),
-            };
-            // if any job scheduling task -- either new task(20 minutes) or a cancellation
-            if task_type.type_of_task != TypeOfTask::None {
-                let task_el = task_type;
-                if task_el.type_of_task == TypeOfTask::NewTask {
-                    println!("Sending task to scheduler!");
-                   match task_el.scheduled_task {
-                        Some(task) => job_scheduler.do_send(task),
-                        _=> eprint!("Tried to queue task, but was missing it")
-                    }
-                } else if task_el.type_of_task == TypeOfTask::Cancellation {
-                    let res_id = task_el.res_id;
-                    job_scheduler.do_send(CancelTask {
-                        res_id,
-                    });
-                } else {
-                    // do nothing i guess
-                }
-            }
-            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
-            if let Err(err) = state_collection.insert_one(state_log).await {
-                eprintln!("Failed to save new state: {:?}", err);
-                return Err(std::io::ErrorKind::InvalidInput);
-            };
-            // This isn't optimal, and would've been nice to be able to put in the requester's flow instead of here
-            // send new state_info to pi communicator
-            PiCommunicator::send_new_state(res_id.clone(), state_info.clone(), db_client.clone()).await;
-            // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
-            if state_info == States::CriticallyAlarmed && current_state != States::CriticallyAlarmed {
-                let collection = db_client.database("USERS").collection::<LoggedInformation>("INFO");
-                let filter = doc! {
-                    "res_uids": {
-                        "$in": [res_id.clone()]
-                    }
-                };
-                
-                // Collect ALL relatives that has has this res_id
-                // might be annoying, but fuck it
-                let cursor = collection.find(filter).await;
-                let results = match cursor {
-                    Ok(mut cursor) => {
-                        let mut results = Vec::new();
-                        while let Some(item) = cursor.next().await {
-                            match item {
-                                Ok(logged_info) => results.push(logged_info),
-                                Err(err) => {
-                                    eprintln!("Error processing cursor item: {:?}", err);
-                                    return Err(std::io::ErrorKind::InvalidInput);
-                                }
-                            }
-                        }
-                        results
-                    },
-                    Err(err) => {
-                        eprintln!("Error querying user information: {:?}", err);
-                        return Err(std::io::ErrorKind::InvalidInput);
-                    }
-                };
-                for _info in results {
-                    // StateHandler::notify_relatives(info.phone_number, &res_id).await;
-                }
-            }
-            Ok(state_info)
+            StateHandler::handle_new_event(data, is_test, job_scheduler, db_client).await
         })
     }
 }
