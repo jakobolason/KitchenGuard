@@ -8,7 +8,6 @@ from time import sleep
 from typing import Any, Callable, List, Optional
 from paho.mqtt.client import Client as MqttClient, MQTTMessage
 from paho.mqtt import publish, subscribe
-import environment
 
 
 class Cep2Zigbee2mqttMessageType(Enum):
@@ -148,10 +147,9 @@ class Cep2Zigbee2mqttClient:
         self.__on_message_clbk = on_message_clbk
         self.__port = port
         self.__stop_worker = Event()
-        self.__subscriber_thread = Thread(target=self.__worker, daemon=True)
+        self.__subscriber_thread = Thread(target=self.__worker,
+                                          daemon=True)
         self.__topics = topics
-        
-        print("Host: ", self.__host, " Port: ", self.__port)
 
     def connect(self) -> None:
         """ Connects to the MQTT broker specified in the initializer. This is a blocking function.
@@ -199,7 +197,7 @@ class Cep2Zigbee2mqttClient:
         def health_check_subscriber():
             message = subscribe.simple(hostname=self.__host,
                                        port=self.__port,
-                                       topics=environment.BRIDGE_HEALTH_RESPONSE_TOPIC)
+                                       topics="zigbee2mqtt/bridge/response/health_check")
 
             if message:
                 # Decode and parse JSON payload.
@@ -221,7 +219,7 @@ class Cep2Zigbee2mqttClient:
         # Publish the health_check request.
         publish.single(hostname=self.__host,
                        port=self.__port,
-                       topic=environment.BRIDGE_HEALTH_REQUEST_TOPIC)
+                       topic="zigbee2mqtt/bridge/request/health_check")
         # Wait until the response is received. If it is not received within 5 seconds, then return
         # the default state: "fail".
         health_response_received.wait(timeout=5)
@@ -294,14 +292,3 @@ class Cep2Zigbee2mqttClient:
                 if message:
                     self.__on_message_clbk(Cep2Zigbee2mqttMessage.parse(message.topic,
                                                                         message.payload.decode("utf-8")))
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-

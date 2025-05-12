@@ -1,14 +1,15 @@
 use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use chrono::DateTime;
-// use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{oid::ObjectId, doc}, Client, error, options::{FindOneAndUpdateOptions, ReturnDocument}};
+use mongodb::{bson::{self, doc, oid::ObjectId, Document}, error, options::{FindOneAndUpdateOptions, ReturnDocument}, Client};
 use core::panic;
 use std::time::{Duration, Instant};
+use std::env;
+use futures_util::StreamExt;
 
 use super::{
-    job_scheduler::{JobsScheduler, ScheduledTask, CancelTask}, 
-    shared_struct::{LoggedInformation, LoginInformation, InitInformation, hash_password}
+    job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
+    shared_struct::{hash_password, SensorLookup, CreateUser, InitState, IpCollection, LoggedInformation, ScheduledTask, INFO, IP_ADDRESSES, RESIDENT_DATA, SENSOR_LOOKUP, SMS_SERVICE, STATES, USERS}
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -44,16 +45,7 @@ pub enum States {
     CriticallyAlarmed
 }
 
-// holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct SensorLookup {
-    pub _id: ObjectId,
-    pub res_id: String,
-    pub kitchen_pir: String,
-    pub power_plug: String,
-    pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
-    pub led: Vec<String>,
-}
+
 
 // For when an alarm is sounded
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -82,7 +74,6 @@ pub struct Event {
     pub gateway_id: u32,
     pub id: String,
 }
-
 
 // ============= Setup of StateHandler =============
 #[derive(Clone)]
@@ -117,70 +108,43 @@ impl Handler<SetJobScheduler> for StateHandler {
 }
 
 impl StateHandler {
-// Private functions
-    // sends topic to turn off stove
-//     fn turn_off_stove() {
-//         // Pre: state in [Unattended, Alarmed, CriticallyAlarmed]
-//         // Post: stove is off
+    async fn notify_relatives(to_number: String, res_id: &str) {
+        let client = reqwest::Client::new();
+        let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
+        let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
+        let from_number = env::var("FROM_NUMBER").unwrap_or_default();
+        let message = format!("Hello from server!, resident {} is in critical mode!", res_id);
+        let url = format!("{}{}/Message.json", SMS_SERVICE, account_sid);
+        let params = [
+            ("To", to_number),
+            ("From", from_number),
+            ("Body", message),
+        ];
 
-//     }
-//     // sends topic to LED's and buzzer sound
-//     fn begin_alarm() {
-//         // Pre: state in [Unattended]
-//         // Post: timer started for CriticallyAlarmed & LED turned on
+        let response = client.post(&url)
+            .basic_auth(account_sid, Some(auth_token))
+            .form(&params)
+            .send()
+            .await;
 
-//     }
-//     // sends topic to powerplug to turn off, and
-//     fn critical_alarm() {
-//         // Pre: state in [Alarmed]
-//         // Post: timer started to notify relatives & stove turned off
+        match response {
+            Ok(resp) => {
+                println!("Response: {:?}", resp.text().await.unwrap());
+            }
+            Err(e) => {
+                eprintln!("Error: {:?}", e);
+            }
+        }
+    }
 
-//     }
-//     // stop alarm after elderly has returned to kitchen
-//     fn stop_alarm() {
-//         // Pre: state in [Alarmed, CriticallyAlarmed] & user is in kitchen
-//         // Post: state should be changed, LED turned off
-
-//     }
-//     // get database information on PIR sensor data
-//     fn check_users_room() {
-//         // Pre: none
-//         // Post: 
-
-//     }
-//     // somehow notify them
-//     fn notify_relatives(res_id: String) {
-
-//     }
-//     // make server listen to a topic
-//     fn sub(topic: String) {
-
-//     }
-//     // publish a topic(used in alarm e.g.)
-//     fn publish(topic: String) {
-        
-//     }
-//     // This handles db connection and querying and response handling
-//     fn db_query() { // don't know if hashmap is the best here
-
-//     }
-//     // check users given credentials
-//     // NOTE: Should maybe return both access token and a list of strings
-// //           for elder_uids
-//     fn check_credentials(user: String, pwd: String) {
-
-//     }
-//     // start a thread, that makes callbacks when 20 minutes ha spassed
-    // fn start_clock() {
-
-    // }
 
     fn alarm_duration_from_state(new_state: States, is_test: bool) -> Instant {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(10) },
-            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(10) },
+            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(60*20) },
+            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(60*3) },
+            States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(60*7)},
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
@@ -196,7 +160,7 @@ impl StateHandler {
                                             || *current_state == States::Unattended 
             {
             // if event is elderly moving into kitchen, then turn off alarm
-            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "true" { // occupancy: true
+            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "True" { // occupancy: true
                 if *current_state == States::Unattended || *current_state == States::Alarmed {
                     scheduled_task = TaskValue {
                         type_of_task: TypeOfTask::Cancellation,
@@ -241,7 +205,7 @@ impl StateHandler {
             }
         // In attended, we check both kitchen PIR status and power plug status
         } else if *current_state == States::Attended {
-            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "false" { // occupancy: false
+            if data.device_model == list_of_sensors.kitchen_pir && data.mode == "False" { // occupancy: false
                 println!("resident is out of kitchen!");
                 // then start 20min's timer in jobscheduler
                 scheduled_task = TaskValue {
@@ -254,7 +218,7 @@ impl StateHandler {
                 };
                 States::Unattended
                 // If elderly turns off the stove
-            } else if data.device_model == list_of_sensors.power_plug && data.mode == "Off" { // power: Off
+            } else if data.device_model == list_of_sensors.power_plug && data.mode == "OFF" { // power: Off
                 States::Standby
             } else {
                 // else do nothing, could be other room PIR saying somethin
@@ -262,7 +226,8 @@ impl StateHandler {
             }
         // If power plug gets turned on
         } else if *current_state == States::Standby {
-            if data.device_model == list_of_sensors.power_plug && data.mode == "On" {
+            println!("we are in standby!!!");
+            if data.device_model == list_of_sensors.power_plug && data.mode == "ON" {
                 States::Attended
             } else {
                 current_state.clone()
@@ -277,7 +242,7 @@ impl StateHandler {
 
     async fn get_resident_data(res_id: String, db_client: Client) -> error::Result<(States, SensorLookup)> {
         // Fetch the current state
-        let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+        let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
         let current_state = match state_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching res_id
@@ -294,7 +259,7 @@ impl StateHandler {
         };
 
         // Fetch the list of sensors
-        let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+        let sensor_collection = db_client.database(RESIDENT_DATA).collection::<SensorLookup>(SENSOR_LOOKUP);
         let sensors = match sensor_collection
             .find_one(doc! {"res_id": &res_id})
             .sort(doc!{"_id": -1})
@@ -303,7 +268,6 @@ impl StateHandler {
             Ok(None) => {
                 eprintln!("No sensors found for res_id: {}", res_id);
                 SensorLookup {
-                    _id: ObjectId::new(),
                     res_id: res_id.clone(),
                     kitchen_pir: String::new(),
                     power_plug: String::new(),
@@ -321,83 +285,139 @@ impl StateHandler {
     }
 
     
-    pub async fn create_user(username: &str, password: &str, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
-        let user_salt = username.as_bytes();
-        let hashed_password =  hash_password(password, user_salt);
-        let usercollection = db_client.database("users").collection::<LoggedInformation>("info");
+    pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Result<Option<LoggedInformation>, mongodb::error::Error> {
+        let user_salt = username.as_bytes().to_vec();
+        let hashed_password = hash_password(password, &user_salt);
         println!("creating user");
-        usercollection.insert_one(LoggedInformation {
-            username: username.to_string(),
-            password: hashed_password,
-            salt: user_salt.to_vec(),
-            res_ids: Vec::new(), // idk how to handle this best
-        }).await.map_err(|e| {
-            eprintln!("Failed to insert user: {:?}", e);
-        }).ok()
+        /// The binary type is used, since it is more appropriate for storing bytes in mongodb
+        let salt_binary = bson::Binary {
+            subtype: bson::spec::BinarySubtype::Generic,
+            bytes: user_salt.clone(),
+        };
+        let user_fields = doc! {
+            "$set": {
+                "username": username,
+                "password": hashed_password,
+                "salt": salt_binary,
+                "res_ids": Vec::<String>::new(),
+                "phone_number": phone_number.to_string(),
+            }
+        };
+        StateHandler::create_or_update_entry::<LoggedInformation>("username", username, user_fields, USERS, INFO, db_client.clone()).await
     }
 
-    pub async fn create_or_update_resident(data: InitInformation, db_client: Client) -> Result<Option<SensorLookup>, mongodb::error::Error> {
-        let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
-        
-        let filter = doc! { "res_id": data.res_id };
+    // uses the T type, to allow for different collections to be found
+    pub async fn create_or_update_entry<T>(identifier: &str, search_query: &str, data: bson::Document, database: &str, collection: &str, db_client: Client) 
+    -> Result<Option<T>, mongodb::error::Error> 
+    where 
+    T: std::marker::Send + Sync + serde::de::DeserializeOwned + serde::Serialize + std::fmt::Debug + 'static
+    {
+        let sensor_collection = db_client.database(database).collection::<T>(collection);
+        let filter = doc! { identifier: search_query};
+
+        let res = sensor_collection
+            .find_one_and_update(filter, data)
+            .upsert(true)
+            .return_document(mongodb::options::ReturnDocument::After)
+            .await;
+        res
+    }
+
+    /// Allows a user to see information on a resident
+    pub async fn add_res_to_user(res_id: &str, username: &str, db_client: Client) -> Result<Option<LoggedInformation>, mongodb::error::Error> {
+        println!("Adding residents to user!");
+
         let update = doc! {
-            "$set": {
-                "kitchen_pir": data.kitchen_pir,
-                "power_plug": data.power_plug,
-                "other_pir": data.other_pir,
-                "led": data.led,
+            "$addToSet": {
+                "res_ids": res_id.to_string()
             }
         };
         
-        let options = FindOneAndUpdateOptions::builder()
-            .upsert(true)
-            .return_document(ReturnDocument::After)
-            .build();
-        
-        sensor_collection.find_one_and_update(filter, update).with_options(options).await
+        StateHandler::create_or_update_entry("username", username, update, USERS, INFO, db_client).await
     }
-    
 }
 
-impl Handler<InitInformation> for StateHandler {
+/// There is no endpoint for this function, since it will only be used for testing
+// impl Handler<AddRelative> for StateHandler {
+//     type Result = ();
+
+//     fn handle(&mut self, data: AddRelative, _ctx: &mut Self::Context) -> Self::Result {
+//         let res_id_to_add = data.res_id;
+//         let username = data.username;
+//         println!("Adding res_id: {} to user {}", res_id_to_add, username);
+//         let db_client = self.db_client.clone();
+//         // spawn a new thread to handle db interaction (which is async, and Handler doesn't allow for async operation)
+//         actix::spawn(async move {
+//             if let Err(err) = StateHandler::add_res_to_user(&res_id_to_add, &username, db_client).await {
+//                 eprintln!("Failed to add res_id to user, error: {:?}", err);
+//             }
+//         });
+//         ()
+//     }
+// }
+
+/// When starting up the resident's system, we need to initialise some state (we start in standby), and set the ip address which
+/// we send updates to. (unsafe because there is no authentication here)
+impl Handler<InitState> for StateHandler {
     type Result = ();
 
-    fn handle(&mut self, data: InitInformation, _ctx: &mut Self::Context ) -> Self::Result {
+    fn handle(&mut self, data: InitState, _ctx: &mut Self::Context ) -> Self::Result {
         println!("creating resident");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
-            let _ = StateHandler::create_or_update_resident(data.clone(), db_client.clone()).await;
+            let update = doc! {
+                "$set": {
+                    "kitchen_pir": data.info.kitchen_pir.clone(),
+                    "power_plug": data.info.power_plug.clone(),
+                    "other_pir": data.info.other_pir.clone(),
+                    "led": data.info.led.clone(),
+                }
+            };
+            let _ = StateHandler::create_or_update_entry::<SensorLookup>("res_id", &data.info.res_id.clone(), update, RESIDENT_DATA, SENSOR_LOOKUP, db_client.clone()).await;
+            // update database with ip address for future use
+            let ip_update = doc! {
+                "$set": {
+                    "_id": ObjectId::new(),
+                    "res_ip": data.ip_addr.clone(),
+                    "res_id": data.info.res_id.clone()
+                }
+            };
+            let _ = StateHandler::create_or_update_entry::<IpCollection>("res_id", &data.info.res_id.clone(), ip_update, RESIDENT_DATA, IP_ADDRESSES, db_client.clone()).await;
             let state_log = StateLog {
                 _id: ObjectId::new(),
-                res_id: data.res_id.clone(),
+                res_id: data.info.res_id.clone(),
                 timestamp: chrono::Utc::now(),
                 state: States::Standby,
-                context: format!("{:?}", data),
+                context: format!("{:?}", data.clone()),
             };
-            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+            let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
             if let Err(err) = state_collection.insert_one(state_log).await {
                 eprintln!("Failed to save new state: {:?}", err);
                 return Err(std::io::ErrorKind::InvalidInput);
             };
+
+            PiCommunicator::send_new_state(data.info.res_id.clone(), States::Standby, db_client.clone()).await;
             Ok(())
         });
     }
 }
 
-impl Handler<LoginInformation> for StateHandler {
+impl Handler<CreateUser> for StateHandler {
     type Result = Option<String>;
 
-    fn handle(&mut self, data: LoginInformation, _ctx: &mut Self::Context ) -> Self::Result {
+    fn handle(&mut self, data: CreateUser, _ctx: &mut Self::Context ) -> Self::Result {
         println!("creating user");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
-            StateHandler::create_user(&data.username, &data.password, db_client).await;
+            StateHandler::create_user(&data.username, &data.password, &data.phone_number, db_client).await;
+            
         });
         Some("OK".to_string())
     }
 }
 
 /// Handles what to do, when a sensor event comes from the Pi
+/// It does way too much in one function, but the actor framework 
 /// Returns a future that should be awaited
 impl Handler<Event> for StateHandler {
     type Result = ResponseFuture<Result<States, std::io::ErrorKind>>;
@@ -425,6 +445,9 @@ impl Handler<Event> for StateHandler {
             // Determine the new state, !! TODO: should also return if any instruction to job scheduler exists
             let (state_info, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data, is_test.clone());
             println!("new state found to be: {:?}", state_info);
+            if state_info == current_state {
+                return Ok(state_info)
+            }
             // Save the new state
             let state_log = StateLog {
                 _id: ObjectId::new(),
@@ -456,6 +479,44 @@ impl Handler<Event> for StateHandler {
                 eprintln!("Failed to save new state: {:?}", err);
                 return Err(std::io::ErrorKind::InvalidInput);
             };
+            // This isn't optimal, and would've been nice to be able to put in the requester's flow instead of here
+            // send new state_info to pi communicator
+            PiCommunicator::send_new_state(res_id.clone(), state_info.clone(), db_client.clone()).await;
+            // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
+            if state_info == States::CriticallyAlarmed && current_state != States::CriticallyAlarmed {
+                let collection = db_client.database("USERS").collection::<LoggedInformation>("INFO");
+                let filter = doc! {
+                    "res_uids": {
+                        "$in": [res_id.clone()]
+                    }
+                };
+                
+                // Collect ALL relatives that has has this res_id
+                // might be annoying, but fuck it
+                let cursor = collection.find(filter).await;
+                let results = match cursor {
+                    Ok(mut cursor) => {
+                        let mut results = Vec::new();
+                        while let Some(item) = cursor.next().await {
+                            match item {
+                                Ok(logged_info) => results.push(logged_info),
+                                Err(err) => {
+                                    eprintln!("Error processing cursor item: {:?}", err);
+                                    return Err(std::io::ErrorKind::InvalidInput);
+                                }
+                            }
+                        }
+                        results
+                    },
+                    Err(err) => {
+                        eprintln!("Error querying user information: {:?}", err);
+                        return Err(std::io::ErrorKind::InvalidInput);
+                    }
+                };
+                for _info in results {
+                    // StateHandler::notify_relatives(info.phone_number, &res_id).await;
+                }
+            }
             Ok(state_info)
         })
     }
@@ -470,7 +531,6 @@ mod tests {
     fn test_determine_new_state_critically_alarmed_to_standby() {
         let current_state = States::CriticallyAlarmed;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -479,7 +539,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "true".to_string(),
+            mode: "True".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),
@@ -499,7 +559,6 @@ mod tests {
     fn test_determine_new_state_attended_to_unattended() {
         let current_state = States::Attended;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -508,7 +567,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "false".to_string(),
+            mode: "False".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),
@@ -529,7 +588,6 @@ mod tests {
     fn test_determine_new_state_standby_to_attended() {
         let current_state = States::Standby;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -538,7 +596,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "On".to_string(),
+            mode: "ON".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),
@@ -558,7 +616,6 @@ mod tests {
     fn test_determine_new_state_no_change() {
         let current_state = States::Attended;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -567,7 +624,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "true".to_string(),
+            mode: "True".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),

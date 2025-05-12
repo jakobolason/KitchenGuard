@@ -10,8 +10,6 @@ import time
 import environment
 import requests
 
-import paho.mqtt.client as mqtt
-import threading
 
 def scheduler(my_heartbeat):
     while True:

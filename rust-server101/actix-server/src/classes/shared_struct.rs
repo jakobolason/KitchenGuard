@@ -1,4 +1,4 @@
-use mongodb::Client;
+use mongodb::{bson::{oid::ObjectId, Binary}, Client};
 use super::{
     job_scheduler::JobsScheduler,
     state_handler::StateHandler,
@@ -11,19 +11,21 @@ use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
 use crate::classes::state_handler::Event;
+use std::time::Instant;
+/// This holds the collections holding information for residents
+pub static RESIDENT_DATA: &str = "ResidentData";
+pub static RESIDENT_LOGS: &str = "ResidentLogs";
+pub static STATES: &str = "States";
+pub static SENSOR_LOOKUP: &str = "SensorLookup";
+pub static IP_ADDRESSES: &str = "ip_addresses";
 
-pub struct AppState {
-    pub state_handler: actix::Addr<StateHandler>,
-    pub job_scheduler: actix::Addr<JobsScheduler>,
-    pub web_handler: actix::Addr<WebHandler>,
-    pub db_client: Client,
-}
+/// This holds information on users/relatives, and their login information
+pub static USERS: &str = "users";
+pub static INFO: &str = "info";
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Option<Vec<Event>>")]
-pub struct ResUidFetcher {
-    pub res_uid: String,
-}
+/// The endpoint configured on the Pi
+pub static PI_LISTENER: &str = "state_listener";
+pub static SMS_SERVICE: &str = "https://api.twilio.com/2010-04-01/Accounts/";
 
 pub fn hash_password(password: &str, salt: &[u8]) -> String {
     // Configure PBKDF2 parameters
@@ -45,13 +47,27 @@ pub fn hash_password(password: &str, salt: &[u8]) -> String {
     HEXLOWER.encode(&hash)
 }
 
+pub struct AppState {
+    pub state_handler: actix::Addr<StateHandler>,
+    pub job_scheduler: actix::Addr<JobsScheduler>,
+    pub web_handler: actix::Addr<WebHandler>,
+    pub db_client: Client,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "Option<Vec<Event>>")]
+pub struct ResIdFetcher {
+    pub res_id: String,
+}
+
 // For saving login informatino in db
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoggedInformation {
     pub username: String,
     pub password: String,
-    pub salt: Vec<u8>,
+    pub salt: Binary,
     pub res_ids: Vec<String>,
+    pub phone_number: String,
 }
 
 // What the user queries the server with
@@ -68,12 +84,49 @@ pub struct ValidateSession {
     pub cookie: String
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "()")]
-pub struct InitInformation {
+
+// holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct SensorLookup {
     pub res_id: String,
     pub kitchen_pir: String,
     pub power_plug: String,
-    pub other_pir: Vec<String>,
+    pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
     pub led: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
+pub struct InitState {
+    pub info: SensorLookup,
+    pub ip_addr: String,
+}
+
+
+#[derive(Debug, Message, Clone)]
+#[rtype(result = "()")]
+pub struct ScheduledTask {
+  pub res_id: String,
+  pub execute_at: Instant,
+}
+
+#[derive(Message, Deserialize)]
+#[rtype(result = "Option<String>")]
+pub struct CreateUser {
+    pub username: String,
+    pub password: String,
+    pub phone_number: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct IpCollection {
+    _id: ObjectId,
+    res_ip: String,
+    res_id: String,
+}
+#[derive(Message, Deserialize)]
+#[rtype(result = "()")]
+pub struct AddRelative {
+    pub res_id: String,
+    pub username: String,
 }

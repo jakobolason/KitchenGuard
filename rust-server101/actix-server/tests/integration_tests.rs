@@ -7,9 +7,10 @@ mod tests {
     use actix::prelude::*;
     use mongodb::{bson::{oid::ObjectId, doc}, Client,};
     use kitchen_guard_server::classes::*;
-    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, ScheduledTask, StartChecking, AmountOfJobs};
-    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States, SensorLookup};
+    use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
+    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States};
     use serial_test::serial;
+    use kitchen_guard_server::classes::shared_struct::{ScheduledTask, SensorLookup};
     use std::collections::VecDeque;
 
     #[tokio::test]
@@ -28,7 +29,6 @@ mod tests {
             // Create or update sensor lookup for test_resident_1
             let filter = doc! { "res_id": res_id };
             let test_sensor = SensorLookup {
-                _id: ObjectId::new(), // This will be ignored in an update operation
                 res_id: res_id.to_string(),
                 kitchen_pir: "kitchen_pir_1".to_string(),
                 power_plug: "power_plug_1".to_string(),
@@ -87,7 +87,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
             let enter_kitchen = Event { // to make sure we're in Attended mode
                 time_stamp: "2023-01-01T00:00:00Z".to_string(),
-                mode: "true".to_string(),
+                mode: "True".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
                 res_id: res_id.to_string(),
@@ -99,7 +99,7 @@ mod tests {
             let _ = state_handler.send(enter_kitchen.clone()).await;
             let stove_off = Event {
                 time_stamp: "2023-01-01T00:00:00Z".to_string(),
-                mode: "Off".to_string(),
+                mode: "OFF".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
                 res_id: res_id.to_string(),
@@ -114,7 +114,7 @@ mod tests {
             // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
             let stove_on = Event {
                 time_stamp: "2023-01-01T00:00:00Z".to_string(),
-                mode: "On".to_string(),
+                mode: "ON".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
                 res_id: res_id.to_string(),
@@ -130,7 +130,7 @@ mod tests {
     
             let leaving_kitchen = Event {
                 time_stamp: "2023-01-01T00:00:00Z".to_string(),
-                mode: "false".to_string(),
+                mode: "False".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
                 res_id: res_id.to_string(),
@@ -197,9 +197,12 @@ mod tests {
                 cookie_manager::CookieManager::new(24), db_client.clone()
             ).start();
             // setup a basic user
-            let username = "test_resident_1";
+            let username = "test_relative_1";
             let password = "123";
-            let _ = StateHandler::create_user(username, password, db_client).await;
+            let phone_number = "12345678";
+            let res_id = "test_resident_1";
+            let _ = StateHandler::create_user(username, password, phone_number, db_client.clone()).await;
+            let _ = StateHandler::add_res_to_user(&res_id, &username, db_client.clone()).await;
             println!("created user");
             // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
             
@@ -210,8 +213,72 @@ mod tests {
             let cookie_value = cookie.unwrap();
             assert!(!cookie_value.is_empty());
 
+
+            // Make sure that there are events for the resident id given
+            // Start state handler actor
+            let state_handler: Addr<StateHandler> = StateHandler {
+                db_client: db_client.clone(),
+                job_scheduler: None,
+                is_test: true
+            }.start();
+            
+            // Start job scheduler actor and link to state handler
+            let job_scheduler = JobsScheduler {
+                tasks: VecDeque::<ScheduledTask>::new(),
+                state_handler: state_handler.clone(),
+            }.start();
+            
+            // Update state handler with job scheduler reference
+            let _ = state_handler.send(SetJobScheduler {
+                scheduler: Some(job_scheduler.clone()),
+            }).await;
+            // Start the scheduler's checking of tasks overdue
+            let _ = job_scheduler.send(StartChecking).await;
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
+            let enter_kitchen = Event { // to make sure we're in Attended mode
+                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                mode: "True".to_string(),
+                event_data: "".to_string(),
+                event_type_enum: "".to_string(),
+                res_id: res_id.to_string(),
+                device_model: "kitchen_pir_1".to_string(),
+                device_vendor: "".to_string(),
+                gateway_id: 1,
+                id: "".to_string(),
+            };
+            let _ = state_handler.send(enter_kitchen.clone()).await;
+            let stove_off = Event {
+                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                mode: "OFF".to_string(),
+                event_data: "".to_string(),
+                event_type_enum: "".to_string(),
+                res_id: res_id.to_string(),
+                device_model: "power_plug_1".to_string(),
+                device_vendor: "".to_string(),
+                gateway_id: 1,
+                id: "".to_string(),
+            };
+            let _ = state_handler.send(stove_off).await;
+            // tokio::time::sleep(std::time::Duration::from_secs(3)).await;// make sure scheduler is up and running
+
+            // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
+            let stove_on = Event {
+                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                mode: "ON".to_string(),
+                event_data: "".to_string(),
+                event_type_enum: "".to_string(),
+                res_id: res_id.to_string(),
+                device_model: "power_plug_1".to_string(),
+                device_vendor: "".to_string(),
+                gateway_id: 1,
+                id: "".to_string(),
+            };
+            let _ = state_handler.send(stove_on).await;
+            
+            println!("Send stove");
+
             let result = web_handler.send(
-                shared_struct::ResUidFetcher { res_uid: username.to_string() }
+                shared_struct::ResIdFetcher { res_id: res_id.to_string() }
             ).await.unwrap();
             let result_value = result.unwrap();
             println!("Result: {:?}", result_value);

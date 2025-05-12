@@ -3,9 +3,12 @@ from Cep2Zigbee2mqttClient import (Cep2Zigbee2mqttClient,
 import requests
 import json
 import datetime
-import environment
 
 class Cep2Controller:
+    HTTP_HOST = "http://192.168.198.236:8080"
+    MQTT_BROKER_HOST = "localhost"
+    MQTT_BROKER_PORT = 1883
+
     """ The controller is responsible for managing events received from zigbee2mqtt and handle them.
     By handle them it can be process, store and communicate with other parts of the system. In this
     case, the class listens for zigbee2mqtt events, processes them (turn on another Zigbee device)
@@ -29,11 +32,14 @@ class Cep2Controller:
         self.__z2m_client.connect()
         print(f"Zigbee2Mqtt is {self.__z2m_client.check_health()}")
         # A new event is sent as an HTTP GET request
-        response = requests.get(environment.STATUS_ENDPOINT)
+        response = requests.get(self.HTTP_HOST + "/api/status")
         if response.status_code == 200:
             print("Status of database was a SUCCESS!")
         else:
             print("Response from request: ", response)
+            
+        #event = {"first_name": "Jakob", "last_name": "Miller", "username": "Jalle", "email": "jalle@cool.com"}
+        
         
 
     def stop(self) -> None:
@@ -45,7 +51,7 @@ class Cep2Controller:
         """ Process an event received from zigbee2mqtt. """
         
         if not message:
-            print("NO MESSAGE RECEIVED")
+            print("NO MESSAGE RECIEVED")
             return
 
         # ✅ Blacklist this topic

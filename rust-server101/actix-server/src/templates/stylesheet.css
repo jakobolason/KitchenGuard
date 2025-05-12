@@ -27,8 +27,7 @@ body {
     border: none;
     cursor: pointer;
     padding: 10px;
-    margin-top: 15%;
-    z-index: 998;
+    z-index: 1000;
 }
 
 .DropDownMenuContent {
@@ -48,6 +47,7 @@ body {
     text-decoration: none;
     display: block;
     text-align: left;
+    z-index: 1000;
 }
 
 .DropDownMenuContent a:hover {

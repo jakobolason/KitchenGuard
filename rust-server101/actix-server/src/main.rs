@@ -3,12 +3,11 @@ use actix_web::{
 };
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix::Actor;
-use classes::web_handler::{self, WebHandler};
+use classes::web_handler::WebHandler;
 use env_logger::Env;
 use actix_cors::Cors;
 // use model::User;
 use mongodb::Client;
-use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 
 /* 
@@ -20,9 +19,9 @@ pub mod routes;
 pub mod classes;
 
 use crate::classes::{
-    job_scheduler::{JobsScheduler, ScheduledTask, StartChecking},
+    job_scheduler::{JobsScheduler, StartChecking},
     state_handler::{StateHandler, SetJobScheduler},
-    shared_struct::AppState,
+    shared_struct::{AppState, ScheduledTask},
     cookie_manager::CookieManager,
 };
 
@@ -102,6 +101,10 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(app_state.clone()) // holds references to actors and db
             .configure(routes::browser::browser_config) // webhandler '/'
+
+            // Serve static files like stylesheet.css and logo2.png
+            // .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true))
+
             .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {

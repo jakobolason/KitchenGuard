@@ -6,7 +6,10 @@ use mongodb::{bson::doc, Client,};
 use log::error;
 use futures_util::StreamExt;
 
-use super::{cookie_manager::CookieManager, shared_struct::{LoggedInformation, LoginInformation, ValidateSession, ResUidFetcher}};
+use super::{
+    cookie_manager::CookieManager, 
+    shared_struct::{LoggedInformation, LoginInformation, ResIdFetcher, ValidateSession, INFO, RESIDENT_DATA, RESIDENT_LOGS, USERS}
+};
 use super::state_handler::Event;
 pub struct WebHandler {
     cookie_manager: CookieManager,
@@ -18,15 +21,14 @@ impl WebHandler {
         WebHandler { cookie_manager, db_client }
     }
 
-
     pub async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::Error> {
         // checks the db for username
-        let users = db_client.database("users").collection::<LoggedInformation>("info");
+        let users = db_client.database(USERS).collection::<LoggedInformation>(INFO);
         match users
             .find_one(doc! {"username": &username})
             .await {
                 Ok(Some(doc)) => {
-                    if WebHandler::verify_password(passwd.as_str(), &doc.salt, doc.password.as_str()) {
+                    if WebHandler::verify_password(passwd.as_str(), &doc.salt.bytes, doc.password.as_str()) {
                         Ok(doc.res_ids)
                     } else {
                         eprintln!("wrong password entered");
@@ -59,6 +61,40 @@ impl WebHandler {
             password.as_bytes(),
             &stored_hash,
         ).is_ok()
+    }
+
+    async fn get_info(res_id: &str, db_client: Client) -> Option<Vec<Event>> {
+        match db_client
+            .database(RESIDENT_DATA)
+            .collection::<Event>(RESIDENT_LOGS)
+            .find(doc! {"res_id": res_id})
+            .await
+        {
+            Ok(mut cursor) => {
+                let mut result = Vec::new();
+
+                while let Some(doc) = cursor.next().await {
+                    match doc {
+                        Ok(d) => {
+                        println!("Found document: {:?}", d);
+                        result.push(d)
+                    },
+                        Err(e) => eprintln!("Error reading doc: {:?}", e),
+                    }
+                }
+                // Check if the result is empty
+                if result.is_empty() {
+                    println!("No documents found for res_id: {:?}", res_id);
+                }
+                // Return the result
+                Some(result)
+
+            },
+            Err(err) => {
+                eprintln!("Error querying database: {:?}", err);
+                None
+            }
+        }
     }
     
 }
@@ -109,46 +145,16 @@ impl Handler<ValidateSession> for WebHandler {
 }
 
 // Specify the expected result from handling this message
-impl Handler<ResUidFetcher> for WebHandler {
+impl Handler<ResIdFetcher> for WebHandler {
     type Result = ResponseFuture<Option<Vec<Event>>>;
 
-    fn handle(&mut self, msg: ResUidFetcher, _ctx: &mut Self::Context) -> Self::Result {
-        let db_client = self.db_client
-            .database("ResidentData")
-            .collection::<Event>("ResidentLogs");
+    fn handle(&mut self, msg: ResIdFetcher, _ctx: &mut Self::Context) -> Self::Result {
+        let db_client = self.db_client.clone();
 
         Box::pin(async move {
             // Use the db_client to find documents matching the res_uid
-            println!("Fetching logs for res_id: {:?}", msg.res_uid);
-            match db_client
-                .find(doc! {"res_id": &msg.res_uid})
-                .await
-            {
-                Ok(mut cursor) => {
-                    let mut result = Vec::new();
-
-                    while let Some(doc) = cursor.next().await {
-                        match doc {
-                            Ok(d) => {
-                            println!("Found document: {:?}", d);
-                            result.push(d)
-                        },
-                            Err(e) => eprintln!("Error reading doc: {:?}", e),
-                        }
-                    }
-                    // Check if the result is empty
-                    if result.is_empty() {
-                        println!("No documents found for res_id: {:?}", msg.res_uid);
-                    }
-                    // Return the result
-                    Some(result)
-
-                },
-                Err(err) => {
-                    eprintln!("Error querying database: {:?}", err);
-                    None
-                }
-            }
+            println!("Fetching logs for res_id: {:?}", msg.res_id);
+            WebHandler::get_info(&msg.res_id, db_client).await
         })
     }
 }
