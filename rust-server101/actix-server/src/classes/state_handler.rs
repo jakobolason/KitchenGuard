@@ -11,7 +11,8 @@ use crate::classes::shared_struct::RESIDENT_LOGS;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{hash_password, SensorLookup, CreateUser, InitState, IpCollection, LoggedInformation, ScheduledTask, INFO, IP_ADDRESSES, RESIDENT_DATA, SENSOR_LOOKUP, SMS_SERVICE, STATES, USERS}
+    shared_struct::{hash_password, SensorLookup, CreateUser, InitState, IpCollection, LoggedInformation, 
+        ScheduledTask, States, Event, INFO, IP_ADDRESSES, RESIDENT_DATA, SENSOR_LOOKUP, SMS_SERVICE, STATES, USERS}
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -38,17 +39,6 @@ impl TaskValue {
     }
 }
 
-#[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
-pub enum States {
-    Standby,
-    Attended,
-    Unattended,
-    Alarmed,
-    CriticallyAlarmed
-}
-
-
-
 // For when an alarm is sounded
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct StateLog {
@@ -57,24 +47,6 @@ pub struct StateLog {
     pub timestamp: DateTime<chrono::Utc>,
     pub state: States,
     pub context: String,            // Store full system state snapshot here
-}
-
-
-// ============ Messages across Actors =============
-
-// HEUCOD event standard, needs implementing.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Result<States, std::io::ErrorKind>")]
-pub struct Event {
-    pub time_stamp: String,
-    pub mode: String,
-    pub event_data: String,
-    pub event_type_enum: String, // Or we could define an enum here
-    pub res_id: String, // changed from patient_id to res_id
-    pub device_model: String,
-    pub device_vendor: String,
-    pub gateway_id: u32,
-    pub id: String,
 }
 
 // ============= Setup of StateHandler =============

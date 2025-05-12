@@ -2,8 +2,8 @@ use actix::prelude::*;
 use std::time::{Instant, Duration};
 use std::collections::VecDeque;
 
-use super::state_handler::{StateHandler, Event};
-use super::shared_struct::ScheduledTask;
+use super::state_handler::StateHandler;
+use super::shared_struct::{ScheduledTask, Event};
 
 #[derive(Message)]
 #[rtype(result = "()")]

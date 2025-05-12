@@ -10,8 +10,9 @@ use std::num::NonZeroU32;
 use data_encoding::HEXLOWER;
 use serde::{Deserialize, Serialize};
 use actix::Message;
-use crate::classes::state_handler::Event;
 use std::time::Instant;
+
+pub static MONGODB_URI: &str = "mongodb://localhost:27017";
 /// This holds the collections holding information for residents
 pub static RESIDENT_DATA: &str = "ResidentData";
 pub static RESIDENT_LOGS: &str = "ResidentLogs";
@@ -52,6 +53,30 @@ pub struct AppState {
     pub job_scheduler: actix::Addr<JobsScheduler>,
     pub web_handler: actix::Addr<WebHandler>,
     pub db_client: Client,
+}
+
+// HEUCOD event standard, needs implementing.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "Result<States, std::io::ErrorKind>")]
+pub struct Event {
+    pub time_stamp: String,
+    pub mode: String,
+    pub event_data: String,
+    pub event_type_enum: String, // Or we could define an enum here
+    pub res_id: String, // changed from patient_id to res_id
+    pub device_model: String,
+    pub device_vendor: String,
+    pub gateway_id: u32,
+    pub id: String,
+}
+
+#[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
+pub enum States {
+    Standby,
+    Attended,
+    Unattended,
+    Alarmed,
+    CriticallyAlarmed
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]

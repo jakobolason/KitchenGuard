@@ -20,10 +20,10 @@ async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>
     println!("username: {:?}", info.username);
     println!("passwd: {:?}", info.password);
     match app_state.web_handler.send(info.into_inner()).await {
-        Ok(cookie) => {
+        Ok(Some(cookie)) => {
             // sets proper headers, such that user gets the new cookie and goes to '/dashboard'
             // Store the cookie in the session
-            if let Err(e) = session.insert("cookie", cookie.clone()) {
+            if let Err(e) = session.insert("cookie", cookie) {
                 error!("Failed to insert cookie into session: {}", e);
                 return HttpResponse::InternalServerError().body("Failed to create session");
             }
@@ -32,6 +32,7 @@ async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>
                 .append_header(("Location", "/dashboard"))
                 .body("Login successful")
         }
+        Ok(None) => HttpResponse::BadRequest().into(),
         Err(_) => HttpResponse::InternalServerError().body("Internal server error")
     }
 }

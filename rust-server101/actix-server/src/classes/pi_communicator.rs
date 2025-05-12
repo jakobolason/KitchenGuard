@@ -2,8 +2,7 @@ use reqwest;
 use mongodb::{Client, bson::doc};
 use serde::Deserialize;
 
-use super::state_handler::States;
-use super::shared_struct::{RESIDENT_DATA, IP_ADDRESSES, PI_LISTENER};
+use super::shared_struct::{States, RESIDENT_DATA, IP_ADDRESSES, PI_LISTENER};
 
 pub struct PiCommunicator;
 

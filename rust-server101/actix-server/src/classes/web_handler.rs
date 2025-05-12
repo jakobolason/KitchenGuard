@@ -8,9 +8,9 @@ use futures_util::StreamExt;
 
 use super::{
     cookie_manager::CookieManager, 
-    shared_struct::{LoggedInformation, LoginInformation, ResIdFetcher, ValidateSession, INFO, RESIDENT_DATA, RESIDENT_LOGS, USERS}
+    shared_struct::{LoggedInformation, LoginInformation, ResIdFetcher, ValidateSession, Event, 
+        INFO, RESIDENT_DATA, RESIDENT_LOGS, USERS}
 };
-use super::state_handler::Event;
 pub struct WebHandler {
     cookie_manager: CookieManager,
     db_client: Client,
@@ -21,7 +21,7 @@ impl WebHandler {
         WebHandler { cookie_manager, db_client }
     }
 
-    async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::Error> {
+    async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::ErrorKind> {
         // checks the db for username
         let users = db_client.database(USERS).collection::<LoggedInformation>(INFO);
         match users
@@ -32,16 +32,16 @@ impl WebHandler {
                         Ok(doc.res_ids)
                     } else {
                         eprintln!("wrong password entered");
-                        Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "wrong credentials"))
+                        Err(std::io::ErrorKind::PermissionDenied)
                     }
                 },
                 Ok(None) => {
                     eprintln!("No login information found for res_id: {}", username);
-                    Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no user found"))
+                    Err(std::io::ErrorKind::NotFound)
                 }
                 Err(err) => {
                     eprintln!("Error querying logins: {:?}", err);
-                    Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {:?}", err)))
+                    Err(std::io::ErrorKind::Other)
                 }
             }
     }

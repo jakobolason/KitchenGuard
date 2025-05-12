@@ -2,8 +2,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::{state_handler::Event, shared_struct::CreateUser};
-use crate::classes::shared_struct::{AppState, SensorLookup, InitState};
+use crate::classes::shared_struct::{CreateUser, AppState, SensorLookup, InitState, Event};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(

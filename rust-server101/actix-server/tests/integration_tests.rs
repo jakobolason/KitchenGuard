@@ -6,11 +6,12 @@ mod tests {
     use tokio;
     use actix::prelude::*;
     use mongodb::{bson::{oid::ObjectId, doc}, Client,};
-    use kitchen_guard_server::classes::*;
+    use kitchen_guard_server::classes::cookie_manager;
+    use kitchen_guard_server::classes::web_handler;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
-    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, Event, StateLog, States};
+    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, StateLog};
     use serial_test::serial;
-    use kitchen_guard_server::classes::shared_struct::{ScheduledTask, SensorLookup};
+    use kitchen_guard_server::classes::shared_struct::{ScheduledTask, SensorLookup, States, Event, LoginInformation, ResIdFetcher};
     use std::collections::VecDeque;
 
     #[tokio::test]
@@ -207,7 +208,7 @@ mod tests {
             // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
             
             let cookie = web_handler.send(
-                shared_struct::LoginInformation { username: username.to_string(), password: password.to_string() }
+                LoginInformation { username: username.to_string(), password: password.to_string() }
             ).await.unwrap();
             // assert!(cookie.is_some());
             let cookie_value = cookie.unwrap();
@@ -278,7 +279,7 @@ mod tests {
             println!("Send stove");
 
             let result = web_handler.send(
-                shared_struct::ResIdFetcher { res_id: res_id.to_string() }
+                ResIdFetcher { res_id: res_id.to_string() }
             ).await.unwrap();
             let result_value = result.unwrap();
             println!("Result: {:?}", result_value);
