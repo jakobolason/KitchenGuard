@@ -1,5 +1,3 @@
-from Cep2Model import Cep2Model
-from Cep2WebClient import Cep2WebClient, Cep2WebDeviceEvent
 from Cep2Zigbee2mqttClient import (Cep2Zigbee2mqttClient,
                                    Cep2Zigbee2mqttMessage, Cep2Zigbee2mqttMessageType)
 import requests
@@ -17,16 +15,15 @@ class Cep2Controller:
     and send an event to a remote HTTP server.
     """
 
-    def __init__(self, devices_model: Cep2Model) -> None:
+    def __init__(self) -> None:
         """ Class initializer. The actuator and monitor devices are loaded (filtered) only when the
         class is instantiated. If the database changes, this is not reflected.
 
         Args:
             devices_model (Cep2Model): the model that represents the data of this application
         """
-        self.__devices_model = devices_model
-        self.__z2m_client = Cep2Zigbee2mqttClient(host=self.MQTT_BROKER_HOST,
-                                                  port=self.MQTT_BROKER_PORT,
+        self.__z2m_client = Cep2Zigbee2mqttClient(host=environment.MQTT_BROKER_HOST,
+                                                  port=environment.MQTT_BROKER_PORT,
                                                   on_message_clbk=self.__zigbee2mqtt_event_received)
 
     def start(self) -> None:
@@ -51,21 +48,16 @@ class Cep2Controller:
         self.__z2m_client.disconnect()
 
     def __zigbee2mqtt_event_received(self, message: Cep2Zigbee2mqttMessage) -> None:
-        """ Process an event received from zigbee2mqtt. This function given as callback to
-        Cep2Zigbee2mqttClient, which is then called when a message from zigbee2mqtt is received.
-
-        Args:
-            message (Cep2Zigbee2mqttMessage): an object with the message received from zigbee2mqtt
-        """
- #       print("incoming message: ", message)
-        # If message is None (it wasn't parsed), then don't do anything.
+        """ Process an event received from zigbee2mqtt. """
+        
         if not message:
             print("NO MESSAGE RECIEVED")
             return
 
-        print(
-            f"zigbee2mqtt event received on topic {message.topic}: {message.event if message is not None and hasattr(message, 'event') else message.data}")
-
+        # ✅ Blacklist this topic
+        if message.topic != environment.ZIGBEE_METADATA_TOPIC and message.topic != environment.INTERVIEW_RESPONSE_TOPIC and message.topic != environment.INTERVIEW_REQUEST_TOPIC:
+            print(f"zigbee2mqtt event received on topic {message.topic}: {message.event if hasattr(message, 'event') else message.data}")
+        
         # If the message is not a device event, then don't do anything.
         if message.type_ != Cep2Zigbee2mqttMessageType.DEVICE_EVENT:
             return
@@ -77,19 +69,19 @@ class Cep2Controller:
             return
 
         # Retrieve the device ID from the topic.
-        device_id = tokens[1]
+        device = tokens[1]
         # If the device ID is known, then process the device event and send a message to the remote
         # web server.
-        device = self.__devices_model.find(device_id)
+
+
+        if device == "bridge":
+            return
 
         if device:
             data = message.event
             mode = ""
             if "occupancy" in data.keys():
-                if data["occupancy"] == True:
-                    mode = "Occupied"
-                else:
-                    mode = "Not occupied"
+                mode = data["occupancy"]
             elif "state" in data.keys():
                 mode = data["state"]
             else:
@@ -112,22 +104,20 @@ class Cep2Controller:
             # Register event in the remote web server.
             web_event = {
                 "time_stamp": daTime, 
-                "mode": mode,
+                "mode": str(mode),
                 "event_data": data_str, 
-                "event_type_enum": "17", 
-                "patient_id": 5, 
-                "device_model": device.type_, 
+                "event_type_enum": "17", # We don't use this
+                "res_id": environment.RES_ID, 
+                "device_model": device, 
                 "device_vendor": "Aqara", 
-                "gateway_id": 13, 
-                "id": device.id_
+                "gateway_id": environment.GATEWAY_ID, 
+                "id": next((k for k, v in environment.SENSOR_DICT.items() if v == device), None)
                 }
             try:
 
     
-                if device.type_ == "LED":
-                    print("Trying to save: ", web_event)
-                
-                responseSave = requests.post(self.HTTP_HOST + "/api/save", json = web_event)
+                print("Trying to save: ", web_event)
+                responseSave = requests.post(environment.DB_ENDPOINT, json = web_event)
     
                 print("Response from save function: ", responseSave)
             except ConnectionError as ex:
