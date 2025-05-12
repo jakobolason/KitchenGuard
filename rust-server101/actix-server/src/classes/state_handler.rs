@@ -1,18 +1,15 @@
 use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use chrono::DateTime;
-// use actix_web::{cookie::time::Duration, rt::task, web::Data};
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{oid::ObjectId, doc}, Client, error, options::{FindOneAndUpdateOptions, ReturnDocument}};
+use mongodb::{bson::{self, doc, oid::ObjectId, Document}, error, options::{FindOneAndUpdateOptions, ReturnDocument}, Client};
 use core::panic;
 use std::time::{Duration, Instant};
 use std::env;
 use futures_util::StreamExt;
 
 use super::{
-    job_scheduler::{JobsScheduler, CancelTask}, 
-    shared_struct::{LoggedInformation, CreateUser, ScheduledTask, IpCollection, InitState, hash_password, SMS_SERVICE, 
-                    RESIDENT_DATA, STATES, SENSOR_LOOKUP, USERS, INFO},
-    pi_communicator::PiCommunicator,
+    job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
+    shared_struct::{hash_password, SensorLookup, CreateUser, InitState, IpCollection, LoggedInformation, ScheduledTask, INFO, IP_ADDRESSES, RESIDENT_DATA, SENSOR_LOOKUP, SMS_SERVICE, STATES, USERS}
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -48,16 +45,7 @@ pub enum States {
     CriticallyAlarmed
 }
 
-// holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct SensorLookup {
-    pub _id: ObjectId,
-    pub res_id: String,
-    pub kitchen_pir: String,
-    pub power_plug: String,
-    pub other_pir: Vec<String>, // a good idea would be to index the rooms pir, speaker and LED with same index
-    pub led: Vec<String>,
-}
+
 
 // For when an alarm is sounded
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -154,9 +142,9 @@ impl StateHandler {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(5) },
-            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(5) },
-            States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(5)},
+            States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(60*20) },
+            States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(60*3) },
+            States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(60*7)},
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
@@ -280,7 +268,6 @@ impl StateHandler {
             Ok(None) => {
                 eprintln!("No sensors found for res_id: {}", res_id);
                 SensorLookup {
-                    _id: ObjectId::new(),
                     res_id: res_id.clone(),
                     kitchen_pir: String::new(),
                     power_plug: String::new(),
@@ -298,56 +285,79 @@ impl StateHandler {
     }
 
     
-    pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Option<mongodb::results::InsertOneResult> {
-        let user_salt = username.as_bytes();
-        let hashed_password =  hash_password(password, user_salt);
-        let usercollection = db_client.database(USERS).collection::<LoggedInformation>(INFO);
+    pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Result<Option<LoggedInformation>, mongodb::error::Error> {
+        let user_salt = username.as_bytes().to_vec();
+        let hashed_password = hash_password(password, &user_salt);
         println!("creating user");
-        usercollection.insert_one(LoggedInformation {
-            username: username.to_string(),
-            password: hashed_password,
-            salt: user_salt.to_vec(),
-            res_ids: Vec::new(), // idk how to handle this best
-            phone_number: phone_number.to_string(),
-        }).await.map_err(|e| {
-            eprintln!("Failed to insert user: {:?}", e);
-        }).ok()
-    }
-
-    pub async fn create_or_update_resident(data: InitState, db_client: Client) -> Result<Option<IpCollection>, mongodb::error::Error> {
-        let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
-        
-        let filter = doc! { "res_id": data.info.res_id.clone()};
-        let update = doc! {
+        /// The binary type is used, since it is more appropriate for storing bytes in mongodb
+        let salt_binary = bson::Binary {
+            subtype: bson::spec::BinarySubtype::Generic,
+            bytes: user_salt.clone(),
+        };
+        let user_fields = doc! {
             "$set": {
-                "kitchen_pir": data.info.kitchen_pir,
-                "power_plug": data.info.power_plug,
-                "other_pir": data.info.other_pir,
-                "led": data.info.led,
+                "username": username,
+                "password": hashed_password,
+                "salt": salt_binary,
+                "res_ids": Vec::<String>::new(),
+                "phone_number": phone_number.to_string(),
             }
         };
-        
-        let options = FindOneAndUpdateOptions::builder()
+        StateHandler::create_or_update_entry::<LoggedInformation>("username", username, user_fields, USERS, INFO, db_client.clone()).await
+    }
+
+    // uses the T type, to allow for different collections to be found
+    pub async fn create_or_update_entry<T>(identifier: &str, search_query: &str, data: bson::Document, database: &str, collection: &str, db_client: Client) 
+    -> Result<Option<T>, mongodb::error::Error> 
+    where 
+    T: std::marker::Send + Sync + serde::de::DeserializeOwned + serde::Serialize + std::fmt::Debug + 'static
+    {
+        let sensor_collection = db_client.database(database).collection::<T>(collection);
+        let filter = doc! { identifier: search_query};
+
+        let res = sensor_collection
+            .find_one_and_update(filter, data)
             .upsert(true)
-            .return_document(ReturnDocument::After)
-            .build();
-        
-        sensor_collection.find_one_and_update(filter.clone(), update.clone()).with_options(options.clone()).await;
+            .return_document(mongodb::options::ReturnDocument::After)
+            .await;
+        res
+    }
 
-        // update database with ip address for future use
-        let ip_update = doc! {
-            "$set": {
-                "_id": ObjectId::new(),
-                "res_ip": data.ip_addr,
-                "res_id": data.info.res_id.clone()
+    /// Allows a user to see information on a resident
+    pub async fn add_res_to_user(res_id: &str, username: &str, db_client: Client) -> Result<Option<LoggedInformation>, mongodb::error::Error> {
+        println!("Adding residents to user!");
+
+        let update = doc! {
+            "$addToSet": {
+                "res_ids": res_id.to_string()
             }
         };
-        let ip_collection = db_client.database("ResidentData").collection::<IpCollection>("ip_address");
-        ip_collection.find_one_and_update(filter, ip_update).with_options(options).await
+        
+        StateHandler::create_or_update_entry("username", username, update, USERS, INFO, db_client).await
     }
-    
 }
 
+/// There is no endpoint for this function, since it will only be used for testing
+// impl Handler<AddRelative> for StateHandler {
+//     type Result = ();
+
+//     fn handle(&mut self, data: AddRelative, _ctx: &mut Self::Context) -> Self::Result {
+//         let res_id_to_add = data.res_id;
+//         let username = data.username;
+//         println!("Adding res_id: {} to user {}", res_id_to_add, username);
+//         let db_client = self.db_client.clone();
+//         // spawn a new thread to handle db interaction (which is async, and Handler doesn't allow for async operation)
+//         actix::spawn(async move {
+//             if let Err(err) = StateHandler::add_res_to_user(&res_id_to_add, &username, db_client).await {
+//                 eprintln!("Failed to add res_id to user, error: {:?}", err);
+//             }
+//         });
+//         ()
+//     }
+// }
+
+/// When starting up the resident's system, we need to initialise some state (we start in standby), and set the ip address which
+/// we send updates to. (unsafe because there is no authentication here)
 impl Handler<InitState> for StateHandler {
     type Result = ();
 
@@ -355,13 +365,30 @@ impl Handler<InitState> for StateHandler {
         println!("creating resident");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
-            let _ = StateHandler::create_or_update_resident(data.clone(), db_client.clone()).await;
+            let update = doc! {
+                "$set": {
+                    "kitchen_pir": data.info.kitchen_pir.clone(),
+                    "power_plug": data.info.power_plug.clone(),
+                    "other_pir": data.info.other_pir.clone(),
+                    "led": data.info.led.clone(),
+                }
+            };
+            let _ = StateHandler::create_or_update_entry::<SensorLookup>("res_id", &data.info.res_id.clone(), update, RESIDENT_DATA, SENSOR_LOOKUP, db_client.clone()).await;
+            // update database with ip address for future use
+            let ip_update = doc! {
+                "$set": {
+                    "_id": ObjectId::new(),
+                    "res_ip": data.ip_addr.clone(),
+                    "res_id": data.info.res_id.clone()
+                }
+            };
+            let _ = StateHandler::create_or_update_entry::<IpCollection>("res_id", &data.info.res_id.clone(), ip_update, RESIDENT_DATA, IP_ADDRESSES, db_client.clone()).await;
             let state_log = StateLog {
                 _id: ObjectId::new(),
                 res_id: data.info.res_id.clone(),
                 timestamp: chrono::Utc::now(),
                 state: States::Standby,
-                context: format!("{:?}", data),
+                context: format!("{:?}", data.clone()),
             };
             let state_collection = db_client.database(RESIDENT_DATA).collection::<StateLog>(STATES);
             if let Err(err) = state_collection.insert_one(state_log).await {
@@ -504,7 +531,6 @@ mod tests {
     fn test_determine_new_state_critically_alarmed_to_standby() {
         let current_state = States::CriticallyAlarmed;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -513,7 +539,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "true".to_string(),
+            mode: "True".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),
@@ -533,7 +559,6 @@ mod tests {
     fn test_determine_new_state_attended_to_unattended() {
         let current_state = States::Attended;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -542,7 +567,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "false".to_string(),
+            mode: "False".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),
@@ -563,7 +588,6 @@ mod tests {
     fn test_determine_new_state_standby_to_attended() {
         let current_state = States::Standby;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -572,7 +596,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "On".to_string(),
+            mode: "ON".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),
@@ -592,7 +616,6 @@ mod tests {
     fn test_determine_new_state_no_change() {
         let current_state = States::Attended;
         let list_of_sensors = SensorLookup {
-            _id: ObjectId::new(),
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
             power_plug: "power_plug_1".to_string(),
@@ -601,7 +624,7 @@ mod tests {
         };
         let data = Event {
             time_stamp: "2023-01-01T00:00:00Z".to_string(),
-            mode: "true".to_string(),
+            mode: "True".to_string(),
             event_data: "".to_string(),
             event_type_enum: "".to_string(),
             res_id: "".to_string(),

@@ -1734,6 +1734,7 @@ dependencies = [
  "actix-rt",
  "actix-session",
  "actix-web",
+ "base64 0.22.1",
  "chrono",
  "data-encoding",
  "env_logger",

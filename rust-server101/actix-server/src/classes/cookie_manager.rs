@@ -56,9 +56,9 @@ impl CookieManager {
             .collect()
     }
 
-    pub fn create_new_cookie(&mut self, res_uids: Vec<String>) -> String {
+    pub fn create_new_cookie(&mut self, res_ids: Vec<String>) -> String {
         let new_cookie = CookieManager::generate_cookie();
-        self.cookies.insert(new_cookie.clone(), CookieEntry { res_ids: res_uids, lifetime:  Instant::now() + self.session_duration});
+        self.cookies.insert(new_cookie.clone(), CookieEntry { res_ids, lifetime:  Instant::now() + self.session_duration});
         new_cookie
     }
 

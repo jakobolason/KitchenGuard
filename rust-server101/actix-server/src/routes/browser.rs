@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, http};
 use actix_session::Session;
 use std::fs;
 use log::error;
-use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession, ResUidFetcher};
+use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession, ResIdFetcher};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))
@@ -58,7 +58,7 @@ async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResp
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
-            Ok(Some(uids)) => {
+            Ok(Some(ids)) => {
                 match fs::read_to_string("./src/templates/forside.html") { // files are retrived from base dir
                     Ok(contents) => {
                         HttpResponse::Ok()
@@ -86,33 +86,33 @@ async fn settings() -> HttpResponse {
     HttpResponse::Ok().body("Settings Page")
 }
 
-async fn get_res_info(session: Session, app_state: web::Data<AppState>, res_uid_fetcher: web::Query<ResUidFetcher>) -> HttpResponse {
+async fn get_res_info(session: Session, app_state: web::Data<AppState>, res_id_fetcher: web::Query<ResIdFetcher>) -> HttpResponse {
     println!("IN GET_RES_INFO");
     if let Some(cookie) = session.get::<String>("cookie").unwrap() {
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
-            Ok(Some(uids)) => {
+            Ok(Some(ids)) => {
 
 
-                // Check if the uid is valid
-                if uids.contains(&res_uid_fetcher.res_uid) {
-                    println!("Fetching resident info for UID: {}", res_uid_fetcher.res_uid);
+                // Check if the id is valid
+                if ids.contains(&res_id_fetcher.res_id) {
+                    println!("Fetching resident info for id: {}", res_id_fetcher.res_id);
     
-                    // Extract UID before moving the Query value
-                    let uid = res_uid_fetcher.res_uid.clone();
-                    let resident_request = res_uid_fetcher.into_inner();
+                    // Extract id before moving the Query value
+                    let id = res_id_fetcher.res_id.clone();
+                    let resident_request = res_id_fetcher.into_inner();
                     
                     // Fetch the resident information from the web_handler
                     let res_info = app_state.web_handler.send(resident_request).await;
                     match res_info {
-                        Ok(_info) => HttpResponse::Ok().body(format!("Resident info for UID: {}", uid)),
+                        Ok(_info) => HttpResponse::Ok().body(format!("Resident info for id: {}", id)),
                         Err(_) => HttpResponse::InternalServerError().body("Failed to fetch resident information")
                     }
                 
 
                 } else {
-                    HttpResponse::BadRequest().body("Invalid resident UID")
+                    HttpResponse::BadRequest().body("Invalid resident id")
                 }
             },
             Ok(None) => HttpResponse::ServiceUnavailable().into(),

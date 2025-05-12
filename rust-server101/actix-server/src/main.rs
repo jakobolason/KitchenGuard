@@ -3,13 +3,11 @@ use actix_web::{
 };
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix::Actor;
-use classes::web_handler::{self, WebHandler};
+use classes::web_handler::WebHandler;
 use env_logger::Env;
 use actix_cors::Cors;
-use actix_files;
 // use model::User;
 use mongodb::Client;
-use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 
 /* 

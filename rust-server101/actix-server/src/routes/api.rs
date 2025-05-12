@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
 use crate::classes::{state_handler::Event, shared_struct::CreateUser};
-use crate::classes::shared_struct::{AppState, InitInformation, InitState};
+use crate::classes::shared_struct::{AppState, SensorLookup, InitState};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -33,7 +33,7 @@ async fn create_user(data: web::Json<CreateUser>, app_state: web::Data<AppState>
 /// If the res_id already existed in db, then it will simply overwrite it (unsafe)
 async fn initialization(
     req: actix_web::HttpRequest,
-    data: web::Json<InitInformation>,
+    data: web::Json<SensorLookup>,
     app_state: web::Data<AppState>,
 ) -> HttpResponse {
     if let Some(peer_addr) = req.peer_addr() {
