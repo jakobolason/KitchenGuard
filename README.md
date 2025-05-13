@@ -41,3 +41,9 @@ V3: https://typst.app/project/wspwi0v4u0rPC6rRsfVS4B
 
 ### DRAW.IO with all diagram
 https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=sharing
+
+
+Dicussion toppics:
+Falty state
+Bluetooth speaker not included in health check
+Security
