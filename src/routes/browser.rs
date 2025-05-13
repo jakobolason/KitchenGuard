@@ -10,8 +10,8 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
         .route("/dashboard", web::get().to(dashboard))
         .route("/settings", web::get().to(settings))
         .route("/get_res_info", web::get().to(get_res_info))
-        .route("/login", web::post().to(login))
-        .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true));
+        .route("/login", web::post().to(login));
+        // .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true));
 }
 
 

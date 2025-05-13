@@ -61,10 +61,11 @@ pub struct HealthData {
     pub kitchen_pir: String,
     pub living_room_pir: String,
     pub bathroom_pir: String,
-    pub LED: String,
-    pub PowerPlug: String,
-    pub Bridge: String,
-    pub PI: String,
+    pub bathroom_LED: String,
+    pub living_room_LED: String,
+    pub power_plug: String,
+    pub bridge: String,
+    pub pi: String,
 }
 
 async fn health_check(form: web::Json<HealthData>) -> HttpResponse {
