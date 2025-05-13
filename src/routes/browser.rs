@@ -38,7 +38,7 @@ async fn login(info: web::Form<LoginInformation>, app_state: web::Data<AppState>
 }
 
 async fn front_page() -> HttpResponse {
-    match fs::read_to_string("./src/templates/index.html") { // files are retrived from base dir
+    match fs::read_to_string("./src/templates/forside.html") { // files are retrived from base dir
         Ok(contents) => {
             HttpResponse::Ok()
                 .content_type(http::header::ContentType::html())
