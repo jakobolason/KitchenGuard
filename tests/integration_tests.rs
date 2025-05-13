@@ -52,7 +52,6 @@ mod tests {
             // Create or update state log for test_resident_1
             let filter = doc! { "res_id": res_id };
             let test_state = StateLog {
-                _id: ObjectId::new(),
                 res_id: res_id.to_string(),
                 timestamp: chrono::Utc::now(),
                 state: States::Standby, // Use your initial state

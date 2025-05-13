@@ -41,7 +41,7 @@ async fn initialization(
         HttpResponse::Ok().body("OK")
     } else {
         println!("Could not determine the IP address of the client.");
-        HttpResponse::BadRequest().body("The ip addres wasn't present")
+        HttpResponse::BadRequest().body("The ip address wasn't present")
     }
 }
 
@@ -58,9 +58,10 @@ async fn get_status() -> HttpResponse {
 
 
 
-async fn health_check(form: web::Json<HealthData>) -> HttpResponse {
+async fn health_check(form: web::Json<HealthData>, app_state: web::Data<AppState>) -> HttpResponse {
     log::info!("Save endpoint reached");
     println!("{:?}", form);
+    app_state.state_handler.send(form.into_inner()).await.unwrap();
     HttpResponse::Ok().body("YEP")
 }
 

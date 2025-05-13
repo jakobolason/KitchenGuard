@@ -73,11 +73,13 @@ pub struct Event {
 
 #[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
 pub enum States {
+    Initialization,
     Standby,
     Attended,
     Unattended,
     Alarmed,
-    CriticallyAlarmed
+    CriticallyAlarmed,
+    Faulty,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
@@ -89,6 +91,7 @@ pub struct ResIdFetcher {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
 #[rtype(result = "()")]
 pub struct HealthData {
+    pub res_id: String,
     pub kitchen_pir: String,
     pub living_room_pir: String,
     pub bathroom_pir: String,

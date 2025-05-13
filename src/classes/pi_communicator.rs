@@ -6,12 +6,6 @@ use super::shared_struct::{States, IpCollection, RESIDENT_DATA, IP_ADDRESSES, PI
 
 pub struct PiCommunicator;
 
-#[derive(Clone, Deserialize)]
-struct IpAddressLogs {
-    pub res_id: String,
-    pub res_ip: String,
-}
-
 impl PiCommunicator {
     // send the current state to the pi with the given res_id
     async fn _send_to_pi(pi_ip: String, new_state: States) {
