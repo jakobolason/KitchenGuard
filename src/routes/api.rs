@@ -58,10 +58,13 @@ async fn get_status() -> HttpResponse {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct HealthData {
-    pub PIR: String,
+    pub kitchen_pir: String,
+    pub living_room_pir: String,
+    pub bathroom_pir: String,
     pub LED: String,
     pub PowerPlug: String,
     pub Bridge: String,
+    pub PI: String,
 }
 
 async fn health_check(form: web::Json<HealthData>) -> HttpResponse {

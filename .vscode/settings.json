@@ -1,5 +1,6 @@
 {
     "rust-analyzer.linkedProjects": [
         "./rust-server101/actix-server/Cargo.toml",
-    ]
+    ],
+    "java.search.scope": "all"
 }
