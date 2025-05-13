@@ -106,6 +106,10 @@ impl JobsScheduler {
 
 	fn schedule(&mut self, msg: ScheduledTask) {
 		// use a lambda function to find the place task should be emplaced
+		if self.tasks.iter().any(|t| t.res_id == msg.res_id) {
+			println!("Task with res_id {} already exists, skipping scheduling.", msg.res_id);
+			return;
+		}
 		let pos = self.tasks.iter().position(|t| t.execute_at > msg.execute_at)
 			.unwrap_or(self.tasks.len());
 		self.tasks.insert(pos, msg);
@@ -139,12 +143,10 @@ impl JobsScheduler {
 				id: "1".to_string(),
 			};
 			self.state_handler.do_send(scheduler_event);
-			println!("Should have been sent to state handler now");
+			println!("---!!! ALARM");
 		}
 	}
 }
-
-
 
 // ====== TESTING ======
 #[cfg(test)]
