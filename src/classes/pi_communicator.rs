@@ -2,14 +2,14 @@ use reqwest;
 use mongodb::{Client, bson::doc};
 use serde::Deserialize;
 
-use super::shared_struct::{States, RESIDENT_DATA, IP_ADDRESSES, PI_LISTENER};
+use super::shared_struct::{States, IpCollection, RESIDENT_DATA, IP_ADDRESSES, PI_LISTENER};
 
 pub struct PiCommunicator;
 
 #[derive(Clone, Deserialize)]
 struct IpAddressLogs {
-    _res_id: String,
-    res_ip: String,
+    pub res_id: String,
+    pub res_ip: String,
 }
 
 impl PiCommunicator {
@@ -38,15 +38,16 @@ impl PiCommunicator {
 
     pub async fn send_new_state(res_id: String, new_state: States, db_client: Client) {
         // query db for the residents ip-address
-        let ip_collection  = db_client.database(RESIDENT_DATA).collection::<IpAddressLogs>(IP_ADDRESSES);
+        let ip_collection  = db_client.database(RESIDENT_DATA).collection::<IpCollection>(IP_ADDRESSES);
         let ip_addr = ip_collection.find_one(doc! {"res_id": res_id}).await;
         match ip_addr {
             Ok(Some(logs)) => {
                 // now send to pi
+                println!("!!!!!Send to pi");
                 PiCommunicator::_send_to_pi(logs.res_ip, new_state).await;
             }
-            Ok(None) => println!("an error occured whilst sending new state"),
-            Err(_) => println!("an error occured whilst sending new state"),
+            Ok(None) => println!("an error occured whilst sending new state, no log"),
+            Err(err) => println!("an error occured whilst sending new state: {:?}", err),
         };
     }
 }

@@ -16,6 +16,7 @@ pub static MONGODB_URI: &str = "mongodb://localhost:27017";
 /// This holds the collections holding information for residents
 pub static RESIDENT_DATA: &str = "ResidentData";
 pub static RESIDENT_LOGS: &str = "ResidentLogs";
+pub static DEVICE_HEALTH: &str = "device_health";
 pub static STATES: &str = "States";
 pub static SENSOR_LOOKUP: &str = "SensorLookup";
 pub static IP_ADDRESSES: &str = "ip_addresses";
@@ -85,6 +86,18 @@ pub struct ResIdFetcher {
     pub res_id: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[rtype(result = "()")]
+pub struct HealthData {
+    pub kitchen_pir: String,
+    pub living_room_pir: String,
+    pub bathroom_pir: String,
+    pub bathroom_LED: String,
+    pub living_room_LED: String,
+    pub power_plug: String,
+    pub bridge: String,
+    pub pi: String,
+}
 // For saving login informatino in db
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct LoggedInformation {
@@ -146,8 +159,8 @@ pub struct CreateUser {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct IpCollection {
     _id: ObjectId,
-    res_ip: String,
-    res_id: String,
+    pub res_ip: String,
+    pub res_id: String,
 }
 #[derive(Message, Deserialize)]
 #[rtype(result = "()")]

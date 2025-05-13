@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::shared_struct::{CreateUser, AppState, SensorLookup, InitState, Event};
+use crate::classes::shared_struct::{CreateUser, AppState, SensorLookup, InitState, Event, HealthData};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -56,17 +56,7 @@ async fn get_status() -> HttpResponse {
     HttpResponse::Ok().body("API Status: OK")
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct HealthData {
-    pub kitchen_pir: String,
-    pub living_room_pir: String,
-    pub bathroom_pir: String,
-    pub bathroom_LED: String,
-    pub living_room_LED: String,
-    pub power_plug: String,
-    pub bridge: String,
-    pub pi: String,
-}
+
 
 async fn health_check(form: web::Json<HealthData>) -> HttpResponse {
     log::info!("Save endpoint reached");
