@@ -3,9 +3,10 @@
 
 #[cfg(test)]
 mod tests {
+    use kitchen_guard_server::classes::shared_struct;
     use tokio;
     use actix::prelude::*;
-    use mongodb::{bson::{oid::ObjectId, doc}, Client,};
+    use mongodb::{bson::doc, Client,};
     use kitchen_guard_server::classes::cookie_manager;
     use kitchen_guard_server::classes::web_handler;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
@@ -25,7 +26,7 @@ mod tests {
 
             let res_id = "test_resident_1";
              // Set up SensorLookup
-            let sensor_collection = db_client.database("ResidentData").collection::<SensorLookup>("SensorLookup");
+            let sensor_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<SensorLookup>(shared_struct::SENSOR_LOOKUP);
             
             // Create or update sensor lookup for test_resident_1
             let filter = doc! { "res_id": res_id };
@@ -47,7 +48,7 @@ mod tests {
                 .expect("Failed to upsert test sensor data");
             
             // Set up StateLog
-            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+            let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
             
             // Create or update state log for test_resident_1
             let filter = doc! { "res_id": res_id };
@@ -55,6 +56,7 @@ mod tests {
                 res_id: res_id.to_string(),
                 timestamp: chrono::Utc::now(),
                 state: States::Standby, // Use your initial state
+                current_room_pir: "kitchen_pir_1".to_string(),
                 context: "Initial test state".to_string(),
             };
             
@@ -158,7 +160,7 @@ mod tests {
                 assert_eq!(amount, 0)
             }
             // now test db for the correct state
-            let state_collection = db_client.database("ResidentData").collection::<StateLog>("States");
+            let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
             match state_collection
                 .find_one(doc! {"res_id": res_id})
                 .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching "test_resident_1"

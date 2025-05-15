@@ -14,11 +14,11 @@ use std::time::Instant;
 
 pub static MONGODB_URI: &str = "mongodb://localhost:27017";
 /// This holds the collections holding information for residents
-pub static RESIDENT_DATA: &str = "ResidentData";
-pub static RESIDENT_LOGS: &str = "ResidentLogs";
+pub static RESIDENT_DATA: &str = "resident_data";
+pub static RESIDENT_LOGS: &str = "resident_logs";
 pub static DEVICE_HEALTH: &str = "device_health";
 pub static STATES: &str = "States";
-pub static SENSOR_LOOKUP: &str = "SensorLookup";
+pub static SENSOR_LOOKUP: &str = "sensor_lookup";
 pub static IP_ADDRESSES: &str = "ip_addresses";
 
 /// This holds information on users/relatives, and their login information
@@ -26,7 +26,7 @@ pub static USERS: &str = "users";
 pub static INFO: &str = "info";
 
 /// The endpoint configured on the Pi
-pub static PI_LISTENER: &str = "state_listener";
+pub static PI_LISTENER: &str = "    _listener";
 pub static SMS_SERVICE: &str = "https://api.twilio.com/2010-04-01/Accounts/";
 
 pub fn hash_password(password: &str, salt: &[u8]) -> String {
@@ -103,7 +103,7 @@ pub struct HealthData {
 }
 // For saving login informatino in db
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct LoggedInformation {
+pub struct UsersLoggedInformation {
     pub username: String,
     pub password: String,
     pub salt: Binary,
