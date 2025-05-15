@@ -43,7 +43,12 @@ V3: https://typst.app/project/wspwi0v4u0rPC6rRsfVS4B
 https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=sharing
 
 
-Dicussion toppics:
-Falty state
-Bluetooth speaker not included in health check
-Security
+#### Dicussion toppics:
+- Faulty state
+- Bluetooth speaker not included in health check
+- Security
+- automic connection between resident and relatives profiles
+- forgot password
+- What happens if network connection is lost
+- pros and cons with cloud based solution
+
