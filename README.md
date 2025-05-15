@@ -44,6 +44,7 @@ https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=shari
 
 
 Dicussion toppics:
-Falty state
-Bluetooth speaker not included in health check
-Security
+- Faulty state
+- Bluetooth speaker not included in health check
+- Security
+- automic connection between resident and relatives profiles
