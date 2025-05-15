@@ -26,7 +26,7 @@ pub static USERS: &str = "users";
 pub static INFO: &str = "info";
 
 /// The endpoint configured on the Pi
-pub static PI_LISTENER: &str = "    _listener";
+pub static PI_LISTENER: &str = "state_listener";
 pub static SMS_SERVICE: &str = "https://api.twilio.com/2010-04-01/Accounts/";
 
 pub fn hash_password(password: &str, salt: &[u8]) -> String {

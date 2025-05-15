@@ -11,7 +11,7 @@ impl PiCommunicator {
     async fn _send_to_pi(pi_ip: String, new_state: States, current_room_pir: &str) {
         // let pi_ip = self.ips.get(&res_id);
         let ip = pi_ip;
-        let url = format!("http://{}/{}", ip, PI_LISTENER);
+        let url = format!("http://{}:9000/{}", ip, PI_LISTENER);
         let client = reqwest::Client::new();
         match client.post(&url)
             .json(&serde_json::json!({

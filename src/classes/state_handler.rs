@@ -5,6 +5,7 @@ use mongodb::{bson::{self, doc, oid::ObjectId}, Client};
 use core::panic;
 use std::time::{Duration, Instant};
 use std::env;
+use dotenv::dotenv;
 use futures_util::StreamExt;
 
 use super::{
@@ -80,24 +81,27 @@ impl Handler<SetJobScheduler> for StateHandler {
 
 impl StateHandler {
     async fn notify_relatives(to_number: String, res_id: &str) {
+        dotenv().ok();
         let client = reqwest::Client::new();
         let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
         let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
+        print!("sid: {}", account_sid);
         let from_number = env::var("FROM_NUMBER").unwrap_or_default();
-        let message = format!("Hello from server!, resident {} is in critical mode!", res_id);
+        let message = format!("Hello from KitchenGuardServer!, resident {} is in critical mode!", res_id);
         let url = format!("{}{}/Message.json", shared_struct::SMS_SERVICE, account_sid);
+        println!("url: {}", url);
         let params = [
             ("To", to_number),
             ("From", from_number),
             ("Body", message),
         ];
+        println!("It has been sent!");
 
         let response = client.post(&url)
             .basic_auth(account_sid, Some(auth_token))
             .form(&params)
             .send()
             .await;
-
         match response {
             Ok(resp) => {
                 println!("Response: {:?}", resp.text().await.unwrap());
@@ -113,31 +117,34 @@ impl StateHandler {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            shared_struct::States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(20) },
-            shared_struct::States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(5) },
-            shared_struct::States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(7)},
+            shared_struct::States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(3) },
+            shared_struct::States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(3) },
+            shared_struct::States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(3)},
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
 
     /// This function is our main business logic, determining what we should do given a state and an event happening.
     /// Returns: the new state for the resident, and maybe a task to be scheduled, cancelled or to do nothing.
-    fn determine_new_state(state_log: StateLog, list_of_sensors: &shared_struct::SensorLookup, data: &shared_struct::Event, is_test: bool) -> (shared_struct::States, TaskValue, String) {
+    fn determine_new_state(state_log: StateLog, list_of_sensors: &shared_struct::SensorLookup, data: &shared_struct::Event, is_test: bool) -> (shared_struct::States, TaskValue, Option<String>) {
         let current_state = state_log.state.clone();
         println!("Current state: {:?}", state_log.state);
         println!("current mode: {:?} and sensor: {:?}", data.mode, data.device_model);
         let mut scheduled_task = TaskValue::new();
         // If the pi has not sent health check yet, then we do nothing
         if current_state == shared_struct::States::Initialization || current_state == shared_struct::States::Faulty {
-            return (current_state.clone(), scheduled_task, state_log.current_room_pir)
+            return (current_state.clone(), scheduled_task, None)
         }
         // Determine if resident walked into a new room, such as to change current_room_pir
-        let new_room_pir = if data.device_model.to_lowercase().contains("pir") {
-                data.device_model.clone()
+        println!("device model: {}", data.device_model);
+        println!("old room was: {}", state_log.current_room_pir);
+        let new_room_pir = if data.device_model.to_lowercase().contains("pir") && data.mode == "True" {
+                println!("resident is changing room because mode is: {}", data.mode);
+                Some(data.device_model.clone())
             } else {
-                state_log.current_room_pir
+                None
             };
-
+        // println!("relative in current room: {}", new_room_pir);
         // IF were in any of these states, then we only check if it's kitchen PIR detecting motion
         let new_state = if current_state == shared_struct::States::CriticallyAlarmed || current_state == shared_struct::States::Alarmed
                                             || current_state == shared_struct::States::Unattended 
@@ -165,6 +172,7 @@ impl StateHandler {
                 println!("device found to be from jobscheduler");
                 // An event from jobscheduler means that a timer was done, so give the appropriate task duration
                 let next_state = match current_state {
+                    shared_struct::States::CriticallyAlarmed => shared_struct::States::CriticallyAlarmed,
                     shared_struct::States::Alarmed => shared_struct::States::CriticallyAlarmed,
                     shared_struct::States::Unattended => shared_struct::States::Alarmed,
                     _ => {
@@ -318,7 +326,7 @@ impl StateHandler {
             "$set": {
                 "_id": ObjectId::new(),
                 "res_ip": data.ip_addr.clone(),
-                "res_id": data.info.res_id.clone()
+                "res_id": data.info.res_id.clone(),
             }
         };
         let _ = StateHandler::create_or_update_entry::<shared_struct::IpCollection>("res_id", &data.info.res_id.clone(), ip_update, shared_struct::RESIDENT_DATA, shared_struct::IP_ADDRESSES, db_client.clone()).await;
@@ -346,6 +354,21 @@ impl StateHandler {
         db_client: Client) 
         -> Result<shared_struct::States, std::io::ErrorKind> 
     {
+        match dotenv() {
+            Ok(_) => println!("Successfully loaded .env file"),
+            Err(e) => println!("Failed to load .env file: {}", e),
+        }
+        let account_sid = match env::var("ACCOUNT_SID") {
+            Ok(value) => {
+                println!("Successfully read ACCOUNT_SID");
+                value
+            },
+            Err(e) => {
+                println!("Failed to read ACCOUNT_SID: {}", e);
+                String::default()
+            }
+        };
+        print!("sid: {}", account_sid);
         let res_id = data.res_id.to_string();
         // Log the event data
         let collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<shared_struct::Event>(shared_struct::RESIDENT_LOGS);
@@ -358,12 +381,18 @@ impl StateHandler {
         let latest_statelog = StateHandler::get_state(&res_id.to_string(), db_client.clone()).await.unwrap().unwrap();
         let sensor_lookup = StateHandler::get_sensors(&res_id, db_client.clone()).await.unwrap().unwrap();
         let current_state = latest_statelog.state.clone();
-        let (new_state, task_type, new_room_pir) = StateHandler::determine_new_state(latest_statelog, &sensor_lookup, &data, is_test.clone());
-        println!("new state found to be: {:?}", new_state);
-        if new_state == current_state {
+        let (new_state, task_type, room_pir) = StateHandler::determine_new_state(latest_statelog.clone(), &sensor_lookup, &data, is_test.clone());
+        println!("new state found to be: {:?} with old state: {:?}", new_state, current_state);
+        let has_changed_state = new_state != current_state;
+        if !has_changed_state && !room_pir.is_some() {
             println!("-------------SAME STATE");
             return Ok(new_state)
         }
+        println!("changing state, {}", has_changed_state);
+        let new_room_pir = match room_pir {
+            Some(room) => room,
+            None => latest_statelog.current_room_pir,
+        };
         // Save the new state
         let state_log = StateLog {
             res_id: res_id.clone(),
@@ -371,6 +400,11 @@ impl StateHandler {
             state: new_state.clone(),
             current_room_pir: new_room_pir.clone(),
             context: format!("{:?}", data),
+        };
+        let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
+        if let Err(err) = state_collection.insert_one(state_log).await {
+            eprintln!("Failed to save new state: {:?}", err);
+            return Err(std::io::ErrorKind::InvalidInput);
         };
         // if any job scheduling task -- either new task(20 minutes) or a cancellation
         if task_type.type_of_task != TypeOfTask::None {
@@ -390,19 +424,15 @@ impl StateHandler {
                 // do nothing i guess
             }
         }
-        let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
-        if let Err(err) = state_collection.insert_one(state_log).await {
-            eprintln!("Failed to save new state: {:?}", err);
-            return Err(std::io::ErrorKind::InvalidInput);
-        };
-        // This isn't optimal, and would've been nice to be able to put in the requester's flow instead of here
+        
         // send new new_state to pi communicator
-        PiCommunicator::send_new_state(res_id.clone(), new_state.clone(), &new_room_pir,  db_client.clone()).await;
+        if has_changed_state{ PiCommunicator::send_new_state(res_id.clone(), new_state.clone(), &new_room_pir,  db_client.clone()).await; }
         // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
         if new_state == shared_struct::States::CriticallyAlarmed && current_state != shared_struct::States::CriticallyAlarmed {
+            println!("sending phone number!");
             let collection = db_client.database(shared_struct::USERS).collection::<shared_struct::UsersLoggedInformation>(shared_struct::INFO);
             let filter = doc! {
-                "res_uids": {
+                "res_ids": {
                     "$in": [res_id.clone()]
                 }
             };
@@ -428,8 +458,10 @@ impl StateHandler {
                     return Err(std::io::ErrorKind::InvalidInput);
                 }
             };
-            for _info in results {
-                // StateHandler::notify_relatives(info.phone_number, &res_id).await;
+            println!("results: {:?}", results);
+                for _info in results {
+                println!("sending res_id: {} to number: {}", res_id.clone(), _info.phone_number.clone());
+                StateHandler::notify_relatives(_info.phone_number, &res_id).await;
             }
         }
         Ok(new_state)
@@ -455,9 +487,9 @@ impl Handler<HealthData> for StateHandler {
         let db_client = self.db_client.clone();
         actix::spawn(async move {
             let res_id = data.res_id.clone();
-            let system_okay = StateHandler::save_health_check(data, db_client.clone()).await;
+            let system_okay = StateHandler::save_health_check(data.clone(), db_client.clone()).await;
             let current_state = StateHandler::get_state(&res_id, db_client.clone()).await.unwrap().unwrap();
-            println!("in healthcheck: {} \n data:  {:?}",system_okay, current_state);
+            println!("in healthcheck: {} \n data:  {:?}",system_okay, data);
             
             // If we're in faulty, but system is okay again, then go to standby
             // OR If pi sent a healthy check, then that pi system is initalized and should go to standby
