@@ -1,15 +1,16 @@
 use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
-use mongodb::{bson::{self, doc, oid::ObjectId, serde_helpers, }, error, Client};
+use mongodb::{bson::{self, doc, oid::ObjectId}, Client};
 use core::panic;
 use std::time::{Duration, Instant};
 use std::env;
-use futures_util::{future::Shared, StreamExt};
+use dotenv::dotenv;
+use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{self, HealthData, SensorLookup, RESIDENT_DATA},
+    shared_struct::{self, HealthData, SensorLookup},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -42,6 +43,7 @@ pub struct StateLog {
     pub res_id: String,
     pub timestamp: DateTime<chrono::Utc>,
     pub state: shared_struct::States,
+    pub current_room_pir: String,
     pub context: String,            // Store full system state snapshot here
 }
 
@@ -79,24 +81,27 @@ impl Handler<SetJobScheduler> for StateHandler {
 
 impl StateHandler {
     async fn notify_relatives(to_number: String, res_id: &str) {
+        dotenv().ok();
         let client = reqwest::Client::new();
         let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
         let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
+        print!("sid: {}", account_sid);
         let from_number = env::var("FROM_NUMBER").unwrap_or_default();
-        let message = format!("Hello from server!, resident {} is in critical mode!", res_id);
+        let message = format!("Hello from KitchenGuardServer!, resident {} is in critical mode!", res_id);
         let url = format!("{}{}/Message.json", shared_struct::SMS_SERVICE, account_sid);
+        println!("url: {}", url);
         let params = [
             ("To", to_number),
             ("From", from_number),
             ("Body", message),
         ];
+        println!("It has been sent!");
 
         let response = client.post(&url)
             .basic_auth(account_sid, Some(auth_token))
             .form(&params)
             .send()
             .await;
-
         match response {
             Ok(resp) => {
                 println!("Response: {:?}", resp.text().await.unwrap());
@@ -112,31 +117,41 @@ impl StateHandler {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            shared_struct::States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(20) },
-            shared_struct::States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(5) },
-            shared_struct::States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(7)},
+            shared_struct::States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(3) },
+            shared_struct::States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(3) },
+            shared_struct::States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(3)},
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
 
     /// This function is our main business logic, determining what we should do given a state and an event happening.
     /// Returns: the new state for the resident, and maybe a task to be scheduled, cancelled or to do nothing.
-    fn determine_new_state(current_state: &shared_struct::States, list_of_sensors: &shared_struct::SensorLookup, data: &shared_struct::Event, is_test: bool) -> (shared_struct::States, TaskValue) {
-        println!("Current state: {:?}", *current_state);
+    fn determine_new_state(state_log: StateLog, list_of_sensors: &shared_struct::SensorLookup, data: &shared_struct::Event, is_test: bool) -> (shared_struct::States, TaskValue, Option<String>) {
+        let current_state = state_log.state.clone();
+        println!("Current state: {:?}", state_log.state);
         println!("current mode: {:?} and sensor: {:?}", data.mode, data.device_model);
         let mut scheduled_task = TaskValue::new();
         // If the pi has not sent health check yet, then we do nothing
-        if *current_state == shared_struct::States::Initialization || *current_state == shared_struct::States::Faulty {
-            return (current_state.clone(), scheduled_task)
+        if current_state == shared_struct::States::Initialization || current_state == shared_struct::States::Faulty {
+            return (current_state.clone(), scheduled_task, None)
         }
-
+        // Determine if resident walked into a new room, such as to change current_room_pir
+        println!("device model: {}", data.device_model);
+        println!("old room was: {}", state_log.current_room_pir);
+        let new_room_pir = if data.device_model.to_lowercase().contains("pir") && data.mode == "True" {
+                println!("resident is changing room because mode is: {}", data.mode);
+                Some(data.device_model.clone())
+            } else {
+                None
+            };
+        // println!("relative in current room: {}", new_room_pir);
         // IF were in any of these states, then we only check if it's kitchen PIR detecting motion
-        let new_state = if *current_state == shared_struct::States::CriticallyAlarmed || *current_state == shared_struct::States::Alarmed
-                                            || *current_state == shared_struct::States::Unattended 
+        let new_state = if current_state == shared_struct::States::CriticallyAlarmed || current_state == shared_struct::States::Alarmed
+                                            || current_state == shared_struct::States::Unattended 
             {
             // if event is elderly moving into kitchen, then turn off alarm
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "True" { // occupancy: true
-                if *current_state == shared_struct::States::Unattended || *current_state == shared_struct::States::Alarmed {
+                if current_state == shared_struct::States::Unattended || current_state == shared_struct::States::Alarmed {
                     scheduled_task = TaskValue {
                         type_of_task: TypeOfTask::Cancellation,
                         scheduled_task: None,
@@ -157,6 +172,7 @@ impl StateHandler {
                 println!("device found to be from jobscheduler");
                 // An event from jobscheduler means that a timer was done, so give the appropriate task duration
                 let next_state = match current_state {
+                    shared_struct::States::CriticallyAlarmed => shared_struct::States::CriticallyAlarmed,
                     shared_struct::States::Alarmed => shared_struct::States::CriticallyAlarmed,
                     shared_struct::States::Unattended => shared_struct::States::Alarmed,
                     _ => {
@@ -180,7 +196,7 @@ impl StateHandler {
             }
         } 
         // In attended, we check both kitchen PIR status and power plug status
-        else if *current_state == shared_struct::States::Attended 
+        else if current_state == shared_struct::States::Attended 
         {
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "False" { // occupancy: false
                 println!("resident is out of kitchen!");
@@ -204,7 +220,7 @@ impl StateHandler {
         // If power plug gets turned on
         } 
 
-        else if *current_state == shared_struct::States::Standby 
+        else if current_state == shared_struct::States::Standby 
         {
             println!("we are in standby!!!");
             if data.device_model == list_of_sensors.power_plug && data.mode == "ON" {
@@ -220,10 +236,11 @@ impl StateHandler {
             // default to current_state
             current_state.clone()
         };
-        return (new_state, scheduled_task)
+        return (new_state, scheduled_task, new_room_pir)
     }
 
     async fn get_state(res_id: &str, db_client: Client) -> Result<std::option::Option<StateLog>, mongodb::error::Error> {
+        println!("Trying to find {}", res_id);
         db_client
             .database(shared_struct::RESIDENT_DATA)
             .collection::<StateLog>(shared_struct::STATES)
@@ -241,52 +258,7 @@ impl StateHandler {
             .await 
     }
 
-    async fn get_resident_data(res_id: String, db_client: Client) -> error::Result<(shared_struct::States, shared_struct::SensorLookup)> {
-        // Fetch the current state
-        let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
-        let current_state = match state_collection
-            .find_one(doc! {"res_id": &res_id})
-            .sort(doc!{"_id": -1}) //finds the latest (datewise) entry matching res_id
-            .await {
-            Ok(Some(document)) => document.state,
-            Ok(None) => {
-                eprintln!("No state found for res_id: {}", res_id);
-                shared_struct::States::Standby
-            }
-            Err(err) => {
-                eprintln!("Error querying state: {:?}", err);
-                return Err(err);
-            }
-        };
-
-        // Fetch the list of sensors
-        let sensor_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<shared_struct::SensorLookup>(shared_struct::SENSOR_LOOKUP);
-        let sensors = match sensor_collection
-            .find_one(doc! {"res_id": &res_id})
-            .sort(doc!{"_id": -1})
-            .await {
-            Ok(Some(document)) => document,
-            Ok(None) => {
-                eprintln!("No sensors found for res_id: {}", res_id);
-                shared_struct::SensorLookup {
-                    res_id: res_id.clone(),
-                    kitchen_pir: String::new(),
-                    power_plug: String::new(),
-                    other_pir: Vec::new(),
-                    led: Vec::new(),
-                }
-            }
-            Err(err) => {
-                eprintln!("Error querying sensors: {:?}", err);
-                return Err(err);
-            }
-        };
-
-        Ok((current_state, sensors))
-    }
-
-    
-    pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Result<Option<shared_struct::LoggedInformation>, mongodb::error::Error> {
+    pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: Client) -> Result<Option<shared_struct::UsersLoggedInformation>, mongodb::error::Error> {
         let user_salt = username.as_bytes().to_vec();
         let hashed_password = shared_struct::hash_password(password, &user_salt);
         println!("creating user");
@@ -304,7 +276,7 @@ impl StateHandler {
                 "phone_number": phone_number.to_string(),
             }
         };
-        StateHandler::create_or_update_entry::<shared_struct::LoggedInformation>("username", username, user_fields, shared_struct::USERS, shared_struct::INFO, db_client.clone()).await
+        StateHandler::create_or_update_entry::<shared_struct::UsersLoggedInformation>("username", username, user_fields, shared_struct::USERS, shared_struct::INFO, db_client.clone()).await
     }
 
     // uses the T type, to allow for different collections to be found
@@ -325,7 +297,7 @@ impl StateHandler {
     }
 
     /// Allows a user to see information on a resident
-    pub async fn add_res_to_user(res_id: &str, username: &str, db_client: Client) -> Result<Option<shared_struct::LoggedInformation>, mongodb::error::Error> {
+    pub async fn add_res_to_user(res_id: &str, username: &str, db_client: Client) -> Result<Option<shared_struct::UsersLoggedInformation>, mongodb::error::Error> {
         println!("Adding residents to user!");
 
         let update = doc! {
@@ -354,7 +326,7 @@ impl StateHandler {
             "$set": {
                 "_id": ObjectId::new(),
                 "res_ip": data.ip_addr.clone(),
-                "res_id": data.info.res_id.clone()
+                "res_id": data.info.res_id.clone(),
             }
         };
         let _ = StateHandler::create_or_update_entry::<shared_struct::IpCollection>("res_id", &data.info.res_id.clone(), ip_update, shared_struct::RESIDENT_DATA, shared_struct::IP_ADDRESSES, db_client.clone()).await;
@@ -362,6 +334,7 @@ impl StateHandler {
             res_id: data.info.res_id.clone(),
             timestamp: chrono::Utc::now(),
             state: shared_struct::States::Initialization,
+            current_room_pir: data.info.kitchen_pir.clone(),
             context: format!("{:?}", data.clone()),
         };
         let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
@@ -370,7 +343,7 @@ impl StateHandler {
             return Err(std::io::ErrorKind::InvalidInput);
         };
 
-        PiCommunicator::send_new_state(data.info.res_id.clone(), shared_struct::States::Initialization, db_client.clone()).await;
+        PiCommunicator::send_new_state(data.info.res_id.clone(), shared_struct::States::Initialization, &data.info.kitchen_pir, db_client).await;
         Ok(())
     }
 
@@ -381,6 +354,21 @@ impl StateHandler {
         db_client: Client) 
         -> Result<shared_struct::States, std::io::ErrorKind> 
     {
+        match dotenv() {
+            Ok(_) => println!("Successfully loaded .env file"),
+            Err(e) => println!("Failed to load .env file: {}", e),
+        }
+        let account_sid = match env::var("ACCOUNT_SID") {
+            Ok(value) => {
+                println!("Successfully read ACCOUNT_SID");
+                value
+            },
+            Err(e) => {
+                println!("Failed to read ACCOUNT_SID: {}", e);
+                String::default()
+            }
+        };
+        print!("sid: {}", account_sid);
         let res_id = data.res_id.to_string();
         // Log the event data
         let collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<shared_struct::Event>(shared_struct::RESIDENT_LOGS);
@@ -389,22 +377,34 @@ impl StateHandler {
             return Err(std::io::ErrorKind::InvalidData);
         }
         // Get current state and sensors
-        let (current_state, sensors) = match StateHandler::get_resident_data(res_id.clone(), db_client.clone()).await {
-            Ok(vals) => (vals.0, vals.1),
-            Err(_err) => return Err(std::io::ErrorKind::InvalidInput),
-        };
-        let (new_state, task_type) = StateHandler::determine_new_state(&current_state, &sensors, &data, is_test.clone());
-        println!("new state found to be: {:?}", new_state);
-        if new_state == current_state {
+        // This shouldn't be able to fail, and if it does then the server should panic. So this is okay
+        let latest_statelog = StateHandler::get_state(&res_id.to_string(), db_client.clone()).await.unwrap().unwrap();
+        let sensor_lookup = StateHandler::get_sensors(&res_id, db_client.clone()).await.unwrap().unwrap();
+        let current_state = latest_statelog.state.clone();
+        let (new_state, task_type, room_pir) = StateHandler::determine_new_state(latest_statelog.clone(), &sensor_lookup, &data, is_test.clone());
+        println!("new state found to be: {:?} with old state: {:?}", new_state, current_state);
+        let has_changed_state = new_state != current_state;
+        if !has_changed_state && !room_pir.is_some() {
             println!("-------------SAME STATE");
             return Ok(new_state)
         }
+        println!("changing state, {}", has_changed_state);
+        let new_room_pir = match room_pir {
+            Some(room) => room,
+            None => latest_statelog.current_room_pir,
+        };
         // Save the new state
         let state_log = StateLog {
             res_id: res_id.clone(),
             timestamp: chrono::Utc::now(),
             state: new_state.clone(),
+            current_room_pir: new_room_pir.clone(),
             context: format!("{:?}", data),
+        };
+        let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
+        if let Err(err) = state_collection.insert_one(state_log).await {
+            eprintln!("Failed to save new state: {:?}", err);
+            return Err(std::io::ErrorKind::InvalidInput);
         };
         // if any job scheduling task -- either new task(20 minutes) or a cancellation
         if task_type.type_of_task != TypeOfTask::None {
@@ -424,19 +424,15 @@ impl StateHandler {
                 // do nothing i guess
             }
         }
-        let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
-        if let Err(err) = state_collection.insert_one(state_log).await {
-            eprintln!("Failed to save new state: {:?}", err);
-            return Err(std::io::ErrorKind::InvalidInput);
-        };
-        // This isn't optimal, and would've been nice to be able to put in the requester's flow instead of here
+        
         // send new new_state to pi communicator
-        PiCommunicator::send_new_state(res_id.clone(), new_state.clone(), db_client.clone()).await;
+        if has_changed_state{ PiCommunicator::send_new_state(res_id.clone(), new_state.clone(), &new_room_pir,  db_client.clone()).await; }
         // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
         if new_state == shared_struct::States::CriticallyAlarmed && current_state != shared_struct::States::CriticallyAlarmed {
-            let collection = db_client.database(shared_struct::USERS).collection::<shared_struct::LoggedInformation>(shared_struct::INFO);
+            println!("sending phone number!");
+            let collection = db_client.database(shared_struct::USERS).collection::<shared_struct::UsersLoggedInformation>(shared_struct::INFO);
             let filter = doc! {
-                "res_uids": {
+                "res_ids": {
                     "$in": [res_id.clone()]
                 }
             };
@@ -462,8 +458,10 @@ impl StateHandler {
                     return Err(std::io::ErrorKind::InvalidInput);
                 }
             };
-            for _info in results {
-                // StateHandler::notify_relatives(info.phone_number, &res_id).await;
+            println!("results: {:?}", results);
+                for _info in results {
+                println!("sending res_id: {} to number: {}", res_id.clone(), _info.phone_number.clone());
+                StateHandler::notify_relatives(_info.phone_number, &res_id).await;
             }
         }
         Ok(new_state)
@@ -489,14 +487,14 @@ impl Handler<HealthData> for StateHandler {
         let db_client = self.db_client.clone();
         actix::spawn(async move {
             let res_id = data.res_id.clone();
-            let system_okay = StateHandler::save_health_check(data, db_client.clone()).await;
+            let system_okay = StateHandler::save_health_check(data.clone(), db_client.clone()).await;
             let current_state = StateHandler::get_state(&res_id, db_client.clone()).await.unwrap().unwrap();
-            println!("{}  :  {:?}",system_okay, current_state);
-            if current_state.state != shared_struct::States::Initialization && system_okay {
-                return
-            }
-            // If pi sent a healthy check, then that pi system is initalized and should go to standby
-            if current_state.state == shared_struct::States::Initialization && system_okay {
+            println!("in healthcheck: {} \n data:  {:?}",system_okay, data);
+            
+            // If we're in faulty, but system is okay again, then go to standby
+            // OR If pi sent a healthy check, then that pi system is initalized and should go to standby
+            if system_okay && (current_state.state == shared_struct::States::Initialization 
+            || current_state.state == shared_struct::States::Faulty) {
                 let new_state = shared_struct::States::Standby;
                 println!("INITIALIZED!!  GOING INTO STANDBY");
                 let initialization_event = shared_struct::Event {
@@ -519,6 +517,7 @@ impl Handler<HealthData> for StateHandler {
                     res_id: res_id.clone(),
                     timestamp: chrono::Utc::now(),
                     state: new_state.clone(),
+                    current_room_pir: current_state.current_room_pir.clone(),
                     context: "system is now initialized".to_string(),
                 };
                  let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
@@ -526,8 +525,9 @@ impl Handler<HealthData> for StateHandler {
                     eprintln!("Failed to save new state: {:?}", err);
                     return;
                 };
-                PiCommunicator::send_new_state(res_id.clone(), new_state, db_client).await;
+                PiCommunicator::send_new_state(res_id.clone(), new_state, &current_state.current_room_pir,  db_client).await;
             } else if !system_okay {
+            // But if system is not okay whilst 
                 println!("######  SYSTEM IS FAULTY");
                 let new_state = shared_struct::States::Faulty;
                 // if the system is not okay, then we go into faulty mode
@@ -551,6 +551,7 @@ impl Handler<HealthData> for StateHandler {
                     res_id: res_id.clone(),
                     timestamp: chrono::Utc::now(),
                     state: new_state.clone(),
+                    current_room_pir: current_state.current_room_pir.clone(),
                     context: "A sensor was faulty".to_string(),
                 };
                  let state_collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<StateLog>(shared_struct::STATES);
@@ -558,7 +559,7 @@ impl Handler<HealthData> for StateHandler {
                     eprintln!("Failed to save new state: {:?}", err);
                     return;
                 };
-                PiCommunicator::send_new_state(res_id, new_state, db_client).await;
+                PiCommunicator::send_new_state(res_id, new_state, &current_state.current_room_pir, db_client).await;
             }
         });
     }
@@ -633,11 +634,20 @@ impl Handler<shared_struct::Event> for StateHandler {
 // ====== TESTING ======
 #[cfg(test)]
 mod tests {
-	use super::*;
+	use chrono::Utc;
+
+use super::*;
 
     #[test]
     fn test_determine_new_state_critically_alarmed_to_standby() {
         let current_state = shared_struct::States::CriticallyAlarmed;
+        let current_state_log = StateLog {
+            res_id: "1".to_string(),
+            timestamp: Utc::now(),
+            state: current_state,
+            current_room_pir: "kitchen_pir_1".to_string(),
+            context: "TEST".to_string(),
+        };
         let list_of_sensors = shared_struct::SensorLookup {
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
@@ -657,7 +667,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
+        let (new_state, task_value, _) = StateHandler::determine_new_state(current_state_log, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, shared_struct::States::Standby);
         assert_eq!(task_value.type_of_task, TypeOfTask::None);
@@ -666,6 +676,13 @@ mod tests {
     #[test]
     fn test_determine_new_state_attended_to_unattended() {
         let current_state = shared_struct::States::Attended;
+        let current_state_log = StateLog {
+            res_id: "1".to_string(),
+            timestamp: Utc::now(),
+            state: current_state,
+            current_room_pir: "kitchen_pir_1".to_string(),
+            context: "TEST".to_string(),
+        };
         let list_of_sensors = shared_struct::SensorLookup {
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
@@ -685,7 +702,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
+        let (new_state, task_value, _) = StateHandler::determine_new_state(current_state_log, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, shared_struct::States::Unattended);
         assert_eq!(task_value.type_of_task, TypeOfTask::NewTask);
@@ -695,6 +712,13 @@ mod tests {
     #[test]
     fn test_determine_new_state_standby_to_attended() {
         let current_state = shared_struct::States::Standby;
+        let current_state_log = StateLog {
+            res_id: "1".to_string(),
+            timestamp: Utc::now(),
+            state: current_state,
+            current_room_pir: "kitchen_pir_1".to_string(),
+            context: "TEST".to_string(),
+        };
         let list_of_sensors = shared_struct::SensorLookup {
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
@@ -714,7 +738,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
+        let (new_state, task_value, _) = StateHandler::determine_new_state(current_state_log, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, shared_struct::States::Attended);
         assert_eq!(task_value.type_of_task, TypeOfTask::None);
@@ -723,6 +747,13 @@ mod tests {
     #[test]
     fn test_determine_new_state_no_change() {
         let current_state = shared_struct::States::Attended;
+        let current_state_log = StateLog {
+            res_id: "1".to_string(),
+            timestamp: Utc::now(),
+            state: current_state,
+            current_room_pir: "kitchen_pir_1".to_string(),
+            context: "TEST".to_string(),
+        };
         let list_of_sensors = shared_struct::SensorLookup {
             res_id: "1".to_string(),
             kitchen_pir: "kitchen_pir_1".to_string(),
@@ -742,7 +773,7 @@ mod tests {
             id: "".to_string(),
         };
 
-        let (new_state, task_value) = StateHandler::determine_new_state(&current_state, &list_of_sensors, &data, true);
+        let (new_state, task_value, _) = StateHandler::determine_new_state(current_state_log, &list_of_sensors, &data, true);
 
         assert_eq!(new_state, shared_struct::States::Attended);
         assert_eq!(task_value.type_of_task, TypeOfTask::None);

@@ -8,13 +8,16 @@ pub struct PiCommunicator;
 
 impl PiCommunicator {
     // send the current state to the pi with the given res_id
-    async fn _send_to_pi(pi_ip: String, new_state: States) {
+    async fn _send_to_pi(pi_ip: String, new_state: States, current_room_pir: &str) {
         // let pi_ip = self.ips.get(&res_id);
         let ip = pi_ip;
-        let url = format!("http://{}/{}", ip, PI_LISTENER);
+        let url = format!("http://{}:9000/{}", ip, PI_LISTENER);
         let client = reqwest::Client::new();
         match client.post(&url)
-            .json(&new_state)
+            .json(&serde_json::json!({
+                "new_state": new_state,
+                "current_room_pir": current_room_pir
+            }))
             .send()
             .await {
         Ok(response) => {
@@ -30,15 +33,14 @@ impl PiCommunicator {
         }
     }
 
-    pub async fn send_new_state(res_id: String, new_state: States, db_client: Client) {
+    pub async fn send_new_state(res_id: String, new_state: States, current_room_pir: &str, db_client: Client) {
         // query db for the residents ip-address
-        let ip_collection  = db_client.database(RESIDENT_DATA).collection::<IpCollection>(IP_ADDRESSES);
-        let ip_addr = ip_collection.find_one(doc! {"res_id": res_id}).await;
+        let ip_addr  = db_client.database(RESIDENT_DATA).collection::<IpCollection>(IP_ADDRESSES).find_one(doc! {"res_id": res_id}).await;
         match ip_addr {
             Ok(Some(logs)) => {
                 // now send to pi
                 println!("!!!!!Send to pi");
-                PiCommunicator::_send_to_pi(logs.res_ip, new_state).await;
+                PiCommunicator::_send_to_pi(logs.res_ip, new_state, current_room_pir).await;
             }
             Ok(None) => println!("an error occured whilst sending new state, no log"),
             Err(err) => println!("an error occured whilst sending new state: {:?}", err),

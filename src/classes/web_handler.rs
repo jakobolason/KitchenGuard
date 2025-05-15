@@ -8,7 +8,7 @@ use futures_util::StreamExt;
 
 use super::{
     cookie_manager::CookieManager, 
-    shared_struct::{LoggedInformation, LoginInformation, ResIdFetcher, ValidateSession, Event, 
+    shared_struct::{UsersLoggedInformation, LoginInformation, ResIdFetcher, ValidateSession, Event, 
         INFO, RESIDENT_DATA, RESIDENT_LOGS, USERS}
 };
 pub struct WebHandler {
@@ -23,7 +23,7 @@ impl WebHandler {
 
     async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::ErrorKind> {
         // checks the db for username
-        let users = db_client.database(USERS).collection::<LoggedInformation>(INFO);
+        let users = db_client.database(USERS).collection::<UsersLoggedInformation>(INFO);
         match users
             .find_one(doc! {"username": &username})
             .await {

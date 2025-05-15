@@ -61,7 +61,7 @@ async fn dashboard(session: Session, app_state: web::Data<AppState>) -> HttpResp
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
             Ok(Some(ids)) => {
-                match fs::read_to_string("./src/templates/forside.html") { // files are retrived from base dir
+                match fs::read_to_string("./src/templates/stats.html") { // files are retrived from base dir
                     Ok(contents) => {
                         HttpResponse::Ok()
                             .content_type(http::header::ContentType::html())

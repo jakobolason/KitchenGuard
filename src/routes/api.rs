@@ -7,16 +7,13 @@ use crate::classes::shared_struct::{CreateUser, AppState, SensorLookup, InitStat
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
-            .route("/test-save", web::post().to(test_save))
             .route("/save", web::post().to(save_data))
             .route("/status", web::get().to(get_status))
             .route("/health_check", web::post().to(health_check))
-            .route("/event", web::post().to(log_event))
             .route("/create_user", web::post().to(create_user))
             .route("/initialization", web::post().to(initialization))
     );
 }
-
 const DB_NAME: &str = "test";
 const COLL_NAME: &str = "users";
 
@@ -45,47 +42,15 @@ async fn initialization(
     }
 }
 
-async fn log_event(data: web::Json<Event>, app_state: web::Data<AppState>) -> HttpResponse {
-    match app_state.state_handler.send(data.into_inner()).await {
-        Ok(_) => HttpResponse::Ok().body("OK"),
-        Err(_) => HttpResponse::BadRequest().finish()
-    }
-}
 
 async fn get_status() -> HttpResponse {
     HttpResponse::Ok().body("API Status: OK")
 }
 
-
-
 async fn health_check(form: web::Json<HealthData>, app_state: web::Data<AppState>) -> HttpResponse {
-    log::info!("Save endpoint reached");
-    println!("{:?}", form);
+    log::info!("Health chech endpoint reached");
     app_state.state_handler.send(form.into_inner()).await.unwrap();
     HttpResponse::Ok().body("YEP")
-}
-
-// query or body format (struct)
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct User {
-    pub first_name: String,
-    pub last_name: String,
-    pub username: String,
-    pub email: String,
-}
-
-async fn test_save(
-    form: web::Json<User>,
-    client: web::Data<Client>
-                    ) -> HttpResponse 
-{
-    let collection = client.database(DB_NAME).collection(COLL_NAME);
-    let result = collection.insert_one(form.into_inner()).await;
-    log::info!("Save endpoint reached");
-    match result {
-        Ok(_) => HttpResponse::Ok().body("user added"),
-        Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
-    }
 }
 
 async fn save_data(

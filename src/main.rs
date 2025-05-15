@@ -107,7 +107,10 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::api::api_config)  // State handler '/api'
             
             // Serve static files like stylesheet.css and logo2.png
+
+            .configure(routes::api::api_config)  // State handler '/api'
             .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true))
+
             // Global middleware or other configs
             .default_service(web::route().to(|| async {
                 HttpResponse::NotFound().body("404 Not Found")
