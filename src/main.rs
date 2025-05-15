@@ -103,10 +103,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(app_state.clone()) // holds references to actors and db
             .configure(routes::browser::browser_config) // webhandler '/'
 
+            
+            .configure(routes::api::api_config)  // State handler '/api'
+            
             // Serve static files like stylesheet.css and logo2.png
             .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true))
-
-            .configure(routes::api::api_config)  // State handler '/api'
             // Global middleware or other configs
             .default_service(web::route().to(|| async {
                 HttpResponse::NotFound().body("404 Not Found")

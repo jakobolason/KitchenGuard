@@ -46,6 +46,16 @@
         </div>
     </div>
 
+
+    <!-- Choose resident ID dropdown -->
+    <div class="dropdown-container">
+        <label for="resIdDropDown"><b>Vælg beboer ID:</b></label>
+        <select id="resIdDropDown" onchange="resSelectionHandler()">
+            <option value="all">Alle beboer ID</option>
+        </select>
+    </div>
+
+
     <!-- Statistik her -->
     <!-- <div id="params", class="CenterContainer", style="margin-left: 20%; margin-right: 20%;"></div> -->
     <div id="params" class="statTable"></div>
@@ -61,10 +71,44 @@
 
     <script>
         async function fetchStats() {
-            var response = await fetch("/get_res_info");
-            var data = await response.json();
+            try {
+                var response = await fetch("/get_res_info");
+                if (!response.ok) {
+                    throw new Error("Failed to fetch stats");
+                }
+    
+                const data = await response.json();
+                return Object.values(data);
+            } catch (error) {
+                console.error("Error fetching stats: ", error)
+                return [];
+            }
+        }
 
-            return data;
+        async function fetchResStats(ID) {
+            try {
+                const response = await fetch(`/get_resident_info/${ID}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch stats for resident ID: ${ID}`);
+                }
+
+                const dat = await response.json();
+                console.log(`Fetched stats for resident ID: ${ID}`);
+                return dat;
+            } catch (error) {
+                console.error(`Error fetching stats for resident ID: ${ID}, with error: `, error);
+                return [];
+            }
+        }
+
+        async function fetchDates() {
+            var data = await fetchStats();
+            return data.map(item => item.time_stamp);
+        }
+
+        async function fetchActAmount() {
+            var data = await fetchStats();
+            return data.map(item => item.mode);
         }
 
         async function makeStatTable() {
@@ -78,9 +122,8 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Amount of activations</th>
+                            <th>Tidskode</th>
+                            <th>Mode</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -94,54 +137,158 @@
             for (var param of params) {
                 tableBody.innerHTML += `
                     <tr>
-                        <td>${param.date}</td>
-                        <td>${param.time}</td>
-                        <td>${param.activation_amount}</td>
+                        <td>${param.time_stamp}</td>
+                        <td>${param.mode}</td>
                     </tr>
                 `;
             }
         }
 
-        makeStatTable();
+        function updateStatTable(data) {
+            if (!Array.isArray(data) || data.length === 0) {
+                console.error("No data available to update the table.");
+                return;
+            }
+
+            const paramsContainer = document.querySelector("#params");
+
+            /* Create table headers */
+            var htmlTable = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tidskode</th>
+                            <th>Mode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            `;
+
+            paramsContainer.innerHTML = htmlTable;
+            var tableBody = paramsContainer.querySelector("tbody");
+
+            for (var param of params) {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${param.time_stamp}</td>
+                        <td>${param.mode}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        function updateStatChart(data) {
+            const chartContext = document.getElementById("chart").getContext("2d");
+            const labels = data.map((item) => new Date(item.time_stamp).toLocaleString());
+            const vals = data.ap((item) => item.mode === "ON" ? 1 : 0); 
+
+            new Chart(chartContext, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Mode (ON = 1, OFF = 0)",
+                        data: vals,
+                        borderColor: "blue",
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // fetch res info
+        async function fetchResIds() {
+            try {
+                const response = await fetch("/get_res_info");
+                if (!response.ok) {
+                    throw new Error("Failed to fetch resident ID(s)");
+                }
+
+                const dat = await response.json();
+                console.log("Fetched resident ID: ", dat);
+                return dat;
+            } catch (error) {
+                console.error("Error fetching resident ID(s): ", error);
+                return {};
+            }
+        }
+
+        async function addResIdsToDropDown() {
+            const dropdown = document.getElementById("resIdDropDown");
+            const resIDs = await fetchResIds();
+
+            const uniqueResIds = Object.keys(resIDs);
+
+            uniqueResIds.forEach((id) => {
+                const opt = document.createElement("option");
+                opt.value = id;
+                opt.textContent = id;
+                dropdown.appendChild(opt);
+            });
+        }
+
+        function resSelectionHandler() {
+            const dropdown = document.getElementById("resIdDropDown");
+            const selectVal = dropdown.value;
+
+            if (selectVal === "all") {
+                console.log("All resident ID(s) selected");
+                // Logic
+                makeStatTable();
+
+            } else {
+                console.log(`Selected resident ID: ${selectVal}`);
+                // Logic
+                fetchResStats(selectVal).then((data) => {
+                    if (data.length === 0) {
+                        console.error("No data available for the selected resident.");
+                        return;
+                    }
+
+                    console.log("Data for selected resident: ", data);
+                    updateStatTable(data);
+                    updateStatChart(data);
+                });
+            }
+        }
+
+        addResIdsToDropDown();
+
     </script>
 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
     <script>
-        async function fetchDates() {
-            var data = await fetchStats();
-            return data.map(item => item.date);
-        }
-
-        async function fetchActAmount() {
-            var data = await fetchStats();
-            return data.map(item => item.activation_amount);
-        }
-
         async function makeStatChart() {
-            let chart = document.getElementById("chart").getContext("2d");
-            let x = await fetchDates();
-            let y = await fetchActAmount();
+            const data = await fetchStats();
+            const chartContext = document.getElementById("chart").getContext("2d");
+            const labels = data.map((item) => new Date(item.time_stamp).toLocaleString());
+            const vals = data.map((item) => item.mode === "ON" ? 1 : 0); 
 
-            new Chart("chart", {
+            new Chart(chartContext, {
                 type: "line",
                 data: {
-                    labels: x,
+                    labels: labels,
                     datasets: [{
-                        label: "Activation Amount",
-                        data: y,
-                        borderColor: "red",
+                        label: "Mode (ON = 1, OFF = 0)",
+                        data: vals,
+                        borderColor: "blue",
                         fill: false
                     }]
                 },
                 options: {
-                    legend: {display: false},
                     responsive: true,
                     maintainAspectRatio: false
                 }
             });
-            
         }
+
         makeStatChart();
         
     </script>

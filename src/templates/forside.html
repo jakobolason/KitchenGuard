@@ -43,6 +43,7 @@
             margin: 5px 0 22px 0;
             border: none;
             background: #f1f1f1;
+            box-sizing: border-box;
         }
 
         /* When the inputs get focus, do something */
@@ -107,17 +108,79 @@
     <!-- Login Form -->
     <button class="open-button" onClick="openForm()">Login</button>
     <div class="form-popup" id="loginForm">
-        <form action="/action" class="form-container">
+        <!-- Login form -->
+        <form action="/login" method="POST" class="form-container">
             <h1>Login</h1>
+            <br>
             
-            <label for="email"><b>Email</b></label>
-            <input type="text" placeholder="Enter Email" name="Email" required></input>
+            <label for="username"><b>Brugernavn</b></label>
+            <input type="text" placeholder="Indtast brugernavn" name="username" required></input>
 
-            <label for="psw"><b>Password</b></label>
-            <input type="password" placeholder="Enter Password" name="psw" required></input>
+            <label for="password"><b>Kodeord</b></label>
+            <input type="password" placeholder="Indtast kodeord" name="password" required></input>
 
             <button type="submit" class="btn">Login</button>
-            <button type="button" class="btn cancel" onClick="closeForm()">Close</button>
+            <!-- Forgot password option -->
+            <div style="display: flex; justify-content: space-between; margin-top: 2px; margin-bottom: 30px;">
+                <a onClick="openOpretBruger()" style="color: #4DA6FF; text-decoration: none;">Opret bruger</a>
+                <a onClick="openForgotPasswordForm()" style="color: #4DA6FF; text-decoration: none;">Glemt kodeord?</a>
+            </div>
+            <button type="button" class="btn cancel" onClick="closeForm()">Luk</button>
+        </form>
+    </div>
+
+    <!-- Forgot password form -->
+    <div class="form-popup" id="forgotPasswordForm" style="display: none;">
+        <form action="/api/create_user" method="POST" class="form-container">
+            <h1>Glemt kodeord</h1>
+            <br>
+            <p>
+                Har du glemt dit kodeord? Indtast brugernavn, dit tlf. og ny kode.
+            </p>
+            <br>
+            <br>
+            
+            <label for="username"><b>Brugernavn</b></label>
+            <input type="text" placeholder="Indtast brugernavn" name="username" required></input>
+
+            <label for="phone_number"><b>Telefonnummer</b></label>
+            <input type="text" placeholder="Indtast telefonnummer (+45)" name="phone_number" required></input>
+
+            <label for="password"><b>Nyt kodeord</b></label>
+            <input type="password" placeholder="Indtast kodeord" name="password" required></input>
+
+            <button type="submit" class="btn">Opret bruger</button>
+
+            <!-- Back to login -->
+            <div style="display: flex; justify-content: space-between; margin-top: 2px; margin-bottom: 30px;">
+                <a onClick="closeForm(); openForm()" style="color: #4DA6FF; text-decoration: none;">Login</a>
+            </div>
+            <button type="button" class="btn cancel" onClick="closeForm()">Luk</button>
+        </form>
+    </div>
+
+    <!-- Opret bruger form -->
+    <div class="form-popup" id="opretBrugerForm" style="display: none;">
+        <form action="/api/create_user" method="POST" class="form-container">
+            <h1>Opret bruger</h1>
+            <br>
+            
+            <label for="username"><b>Brugernavn</b></label>
+            <input type="text" placeholder="Indtast brugernavn" name="username" required></input>
+
+            <label for="phone_number"><b>Telefonnummer</b></label>
+            <input type="text" placeholder="Indtast telefonnummer (+45)" name="phone_number" required></input>
+
+            <label for="password"><b>Kodeord</b></label>
+            <input type="password" placeholder="Indtast kodeord" name="password" required></input>
+
+            <button type="submit" class="btn">Opret bruger</button>
+
+            <!-- Back to login -->
+            <div style="display: flex; justify-content: space-between; margin-top: 2px; margin-bottom: 30px;">
+                <a onClick="closeForm(); openForm()" style="color: #4DA6FF; text-decoration: none;">Login</a>
+            </div>
+            <button type="button" class="btn cancel" onClick="closeForm()">Luk</button>
 
         </form>
     </div>
@@ -184,10 +247,26 @@
     <script>
         function openForm() {
             document.getElementById("loginForm").style.display = "block";
+            document.getElementById("opretBrugerForm").style.display = "none";
+            document.getElementById("forgotPasswordForm").style.display = "none";
         }
 
         function closeForm() {
             document.getElementById("loginForm").style.display = "none";
+            document.getElementById("opretBrugerForm").style.display = "none";
+            document.getElementById("forgotPasswordForm").style.display = "none";
+        }
+
+        function openOpretBruger() {
+            document.getElementById("loginForm").style.display = "none";
+            document.getElementById("forgotPasswordForm").style.display = "none";
+            document.getElementById("opretBrugerForm").style.display = "block";
+        }
+
+        function openForgotPasswordForm() {
+            document.getElementById("loginForm").style.display = "none";
+            document.getElementById("opretBrugerForm").style.display = "none";
+            document.getElementById("forgotPasswordForm").style.display = "block";
         }
 
     </script>

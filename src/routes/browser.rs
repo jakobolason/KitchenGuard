@@ -1,8 +1,9 @@
 use actix_web::{web, HttpResponse, http};
 use actix_session::Session;
-use std::fs;
+use std::{collections::HashMap, fs};
 use log::error;
-use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession, ResIdFetcher};
+use serde_json;
+use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession, ResIdFetcher, Event};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))
@@ -87,37 +88,40 @@ async fn settings() -> HttpResponse {
     HttpResponse::Ok().body("Settings Page")
 }
 
-async fn get_res_info(session: Session, app_state: web::Data<AppState>, res_id_fetcher: web::Query<ResIdFetcher>) -> HttpResponse {
+async fn get_res_info(session: Session, app_state: web::Data<AppState>) -> HttpResponse {
     println!("IN GET_RES_INFO");
     if let Some(cookie) = session.get::<String>("cookie").unwrap() {
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
             Ok(Some(ids)) => {
-
-
-                // Check if the id is valid
-                if ids.contains(&res_id_fetcher.res_id) {
-                    println!("Fetching resident info for id: {}", res_id_fetcher.res_id);
-    
-                    // Extract id before moving the Query value
-                    let id = res_id_fetcher.res_id.clone();
-                    let resident_request = res_id_fetcher.into_inner();
-                    
+                let mut id_vals: HashMap<String, Vec::<Event>> = HashMap::<String, Vec::<Event>>::new();
+                for id in ids  {
+                    println!("Fetching resident info for id: {}", id);
                     // Fetch the resident information from the web_handler
-                    let res_info = app_state.web_handler.send(resident_request).await;
+                    let res_info = app_state.web_handler.send(ResIdFetcher{res_id: id.clone()}).await;
                     match res_info {
-                        Ok(_info) => HttpResponse::Ok().body(format!("Resident info for id: {}", id)),
-                        Err(_) => HttpResponse::InternalServerError().body("Failed to fetch resident information")
+                        Ok(Some(info)) =>id_vals.insert(id, info),
+                        _ => {
+                            println!("not found any info on res_id");
+                            None
+                        },
+                    };
+                }
+                match serde_json::to_string(&id_vals) {
+                    Ok(json) => HttpResponse::Ok().content_type(http::header::ContentType::json()).body(json),
+                    Err(e) => {
+                        error!("Failed to serialize id_vals: {}", e);
+                        HttpResponse::InternalServerError().body("Failed to serialize response")
                     }
-                
-
-                } else {
-                    HttpResponse::BadRequest().body("Invalid resident id")
                 }
             },
-            Ok(None) => HttpResponse::ServiceUnavailable().into(),
-            Err(_) => HttpResponse::BadRequest().body("You are not allowed here")
+            Ok(_) => {
+                HttpResponse::InternalServerError().into()
+            }
+            Err(_) => {
+                HttpResponse::InternalServerError().into()
+            }
         }
     } else {
         println!("no cookie found..");
