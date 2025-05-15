@@ -4,6 +4,7 @@ use super::{
     state_handler::StateHandler,
     web_handler::WebHandler,
 };
+use crate::classes::state_handler::StateLog;
 
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
@@ -83,7 +84,7 @@ pub enum States {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Option<Vec<Event>>")]
+#[rtype(result = "Option<Vec<StateLog>>")]
 pub struct ResIdFetcher {
     pub res_id: String,
 }

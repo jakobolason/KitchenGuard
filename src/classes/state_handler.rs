@@ -85,10 +85,10 @@ impl StateHandler {
         let client = reqwest::Client::new();
         let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
         let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
-        print!("sid: {}", account_sid);
+        println!("sid: {}", account_sid);
         let from_number = env::var("FROM_NUMBER").unwrap_or_default();
         let message = format!("Hello from KitchenGuardServer!, resident {} is in critical mode!", res_id);
-        let url = format!("{}{}/Message.json", shared_struct::SMS_SERVICE, account_sid);
+        let url = format!("{}{}/Messages.json", shared_struct::SMS_SERVICE, account_sid);
         println!("url: {}", url);
         let params = [
             ("To", to_number),
@@ -102,6 +102,7 @@ impl StateHandler {
             .form(&params)
             .send()
             .await;
+        println!("HELLOOO");
         match response {
             Ok(resp) => {
                 println!("Response: {:?}", resp.text().await.unwrap());
@@ -354,21 +355,6 @@ impl StateHandler {
         db_client: Client) 
         -> Result<shared_struct::States, std::io::ErrorKind> 
     {
-        match dotenv() {
-            Ok(_) => println!("Successfully loaded .env file"),
-            Err(e) => println!("Failed to load .env file: {}", e),
-        }
-        let account_sid = match env::var("ACCOUNT_SID") {
-            Ok(value) => {
-                println!("Successfully read ACCOUNT_SID");
-                value
-            },
-            Err(e) => {
-                println!("Failed to read ACCOUNT_SID: {}", e);
-                String::default()
-            }
-        };
-        print!("sid: {}", account_sid);
         let res_id = data.res_id.to_string();
         // Log the event data
         let collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<shared_struct::Event>(shared_struct::RESIDENT_LOGS);

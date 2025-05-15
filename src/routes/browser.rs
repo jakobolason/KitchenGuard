@@ -3,7 +3,7 @@ use actix_session::Session;
 use std::{collections::HashMap, fs};
 use log::error;
 use serde_json;
-use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession, ResIdFetcher, Event};
+use crate::classes::{shared_struct::{AppState, Event, LoginInformation, ResIdFetcher, ValidateSession}, state_handler::StateLog};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))
@@ -95,7 +95,7 @@ async fn get_res_info(session: Session, app_state: web::Data<AppState>) -> HttpR
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
             Ok(Some(ids)) => {
-                let mut id_vals: HashMap<String, Vec::<Event>> = HashMap::<String, Vec::<Event>>::new();
+                let mut id_vals = HashMap::<String, Vec::<StateLog>>::new();
                 for id in ids  {
                     println!("Fetching resident info for id: {}", id);
                     // Fetch the resident information from the web_handler

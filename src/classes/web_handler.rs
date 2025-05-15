@@ -8,8 +8,7 @@ use futures_util::StreamExt;
 
 use super::{
     cookie_manager::CookieManager, 
-    shared_struct::{UsersLoggedInformation, LoginInformation, ResIdFetcher, ValidateSession, Event, 
-        INFO, RESIDENT_DATA, RESIDENT_LOGS, USERS}
+    shared_struct::{Event, LoginInformation, ResIdFetcher, UsersLoggedInformation, ValidateSession, INFO, RESIDENT_DATA, RESIDENT_LOGS, STATES, USERS}, state_handler::StateLog
 };
 pub struct WebHandler {
     cookie_manager: CookieManager,
@@ -63,10 +62,10 @@ impl WebHandler {
         ).is_ok()
     }
 
-    async fn get_info(res_id: &str, db_client: Client) -> Option<Vec<Event>> {
+    async fn get_info(res_id: &str, db_client: Client) -> Option<Vec<StateLog>> {
         match db_client
             .database(RESIDENT_DATA)
-            .collection::<Event>(RESIDENT_LOGS)
+            .collection::<StateLog>(STATES)
             .find(doc! {"res_id": res_id})
             .await
         {
@@ -145,7 +144,7 @@ impl Handler<ValidateSession> for WebHandler {
 
 // Specify the expected result from handling this message
 impl Handler<ResIdFetcher> for WebHandler {
-    type Result = ResponseFuture<Option<Vec<Event>>>;
+    type Result = ResponseFuture<Option<Vec<StateLog>>>;
 
     fn handle(&mut self, msg: ResIdFetcher, _ctx: &mut Self::Context) -> Self::Result {
         let db_client = self.db_client.clone();
