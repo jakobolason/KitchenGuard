@@ -43,7 +43,7 @@ V3: https://typst.app/project/wspwi0v4u0rPC6rRsfVS4B
 https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=sharing
 
 
-Dicussion toppics:
+#### Dicussion toppics:
 - Faulty state
 - Bluetooth speaker not included in health check
 - Security
