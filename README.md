@@ -49,3 +49,5 @@ https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=shari
 - Security
 - automic connection between resident and relatives profiles
 - forgot password
+- What happens if network connection is lost
+
