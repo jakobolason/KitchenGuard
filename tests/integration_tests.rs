@@ -203,8 +203,8 @@ mod tests {
             let password = "123";
             let phone_number = "12345678";
             let res_id = "test_resident_1";
-            let _ = StateHandler::create_user(username, password, phone_number, db_client.clone()).await;
-            let _ = StateHandler::add_res_to_user(&res_id, &username, db_client.clone()).await;
+            let _ = StateHandler::create_user(username, password, phone_number, &db_client).await;
+            let _ = StateHandler::add_res_to_user(&res_id, &username, &db_client).await;
             println!("created user");
             // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
             

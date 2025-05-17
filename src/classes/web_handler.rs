@@ -8,7 +8,7 @@ use futures_util::StreamExt;
 
 use super::{
     cookie_manager::CookieManager, 
-    shared_struct::{Event, LoginInformation, ResIdFetcher, UsersLoggedInformation, ValidateSession, INFO, RESIDENT_DATA, RESIDENT_LOGS, STATES, USERS}, state_handler::StateLog
+    shared_struct::{LoginInformation, ResIdFetcher, UsersLoggedInformation, ValidateSession, INFO, RESIDENT_DATA, STATES, USERS}, state_handler::StateLog
 };
 pub struct WebHandler {
     cookie_manager: CookieManager,
