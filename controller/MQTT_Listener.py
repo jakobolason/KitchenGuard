@@ -33,16 +33,7 @@ class MQTT_Listener:
         if response.status_code == 200:
             print("Status of database was a SUCCESS!")
         else:
-            print("Response from request: ", response)
-            
-        #event = {"first_name": "Jakob", "last_name": "Miller", "username": "Jalle", "email": "jalle@cool.com"}
-        
-        
-
-    def stop(self) -> None:
-        """ Stop listening for zigbee2mqtt events.
-        """
-        self.__z2m_client.disconnect()
+            print("Response from request: ", response)        
 
     def __zigbee2mqtt_event_received(self, message: Cep2Zigbee2mqttMessage) -> None:
         """ Process an event received from zigbee2mqtt. """
@@ -50,7 +41,7 @@ class MQTT_Listener:
             print("NO MESSAGE RECIEVED")
             return
 
-        # ✅ Blacklist this topic
+        # Blacklist this topic
         if message.topic != environment.ZIGBEE_METADATA_TOPIC and message.topic != environment.INTERVIEW_RESPONSE_TOPIC and message.topic != environment.INTERVIEW_REQUEST_TOPIC:
             print(f"zigbee2mqtt event received on topic {message.topic}: {message.event if hasattr(message, 'event') else message.data}")
         
@@ -68,56 +59,44 @@ class MQTT_Listener:
         device = tokens[1]
         # If the device ID is known, then process the device event and send a message to the remote
         # web server.
-
-        if device == "bridge":
+        if not device or device == "bridge":
             return
 
-        if device:
-            data = message.event
-            mode = ""
-            if "occupancy" in data.keys():
-                mode = data["occupancy"]
-            elif "power" in data.keys() and int(data["power"]) != self.old_web_event_power_plug:
-                current_power = int(data["power"])
-                self.old_web_event_power_plug = current_power
-                if (current_power > 0):
-                    mode = "ON"
-                else : 
-                    mode = "OFF"
-            else:
-                return
+        data = message.event
+        mode = ""
+        # now we check 
+        if "occupancy" in data.keys():
+            mode = data["occupancy"]
+        elif "power" in data.keys() and int(data["power"]) != self.old_web_event_power_plug:
+            current_power = int(data["power"])
+            self.old_web_event_power_plug = current_power
+            if (current_power > 0):
+                mode = "ON"
+            else : 
+                mode = "OFF"
+        else:
+            return
 
-            #print(type(device.type_))
-            #print(type(device.id_))
-            # Based on the value of occupancy, change the state of the actuators to ON
-            # (occupancy is true, i.e. a person is present in the room) or OFF.
-#            new_state = "ON" if occupancy else "OFF"
-#            print("New state: ", new_state)
-            # Change the state on all actuators, i.e. LEDs and power plugs.
- #           for a in self.__devices_model.actuators_list:
- #               self.__z2m_client.change_state(a.id_, new_state)
-            daTime = f"{datetime.datetime.now()}"
-            
-            # Convert event_data to string
-            data_str = f"{data}"
+        crnt_time = f"{datetime.datetime.now()}"
+        # Convert event_data to string
+        data_str = f"{data}"
+        # Register event in the remote web server.
+        web_event = {
+            "time_stamp": crnt_time, 
+            "mode": str(mode),
+            "event_data": data_str, 
+            "event_type_enum": "17", # We don't use this
+            "res_id": environment.RES_ID, 
+            "device_model": device, 
+            "device_vendor": "Aqara", 
+            "gateway_id": environment.GATEWAY_ID, 
+            "id": next((k for k, v in environment.SENSOR_DICT.items() if v == device), None)
+            }
 
-            # Register event in the remote web server.
-            web_event = {
-                "time_stamp": daTime, 
-                "mode": str(mode),
-                "event_data": data_str, 
-                "event_type_enum": "17", # We don't use this
-                "res_id": environment.RES_ID, 
-                "device_model": device, 
-                "device_vendor": "Aqara", 
-                "gateway_id": environment.GATEWAY_ID, 
-                "id": next((k for k, v in environment.SENSOR_DICT.items() if v == device), None)
-                }
-
-            try:
-                print("Trying to save: ", web_event)
-                responseSave = requests.post(environment.DB_ENDPOINT, json = web_event)
-                print("Response from save function: ", responseSave)
-                    
-            except ConnectionError as ex:
-                print(f"{ex}")
+        try:
+            print("Trying to save: ", web_event)
+            responseSave = requests.post(environment.DB_ENDPOINT, json = web_event)
+            print("Response from save function: ", responseSave)
+                
+        except ConnectionError as ex:
+            print(f"{ex}")

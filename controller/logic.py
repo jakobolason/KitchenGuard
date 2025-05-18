@@ -15,7 +15,6 @@ import threading
 class Logic:
 	
 	def __init__(self):
-		
 		# Connect
 		self.client = mqtt.Client()
 		self.client.connect(environment.MQTT_BROKER_HOST, environment.MQTT_BROKER_PORT)
