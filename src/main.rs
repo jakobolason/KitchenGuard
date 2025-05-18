@@ -8,7 +8,6 @@ use env_logger::Env;
 use actix_cors::Cors;
 // use model::User;
 use mongodb::Client;
-use std::collections::VecDeque;
 use actix_files;
 
 /* 
@@ -22,7 +21,7 @@ pub mod classes;
 use crate::classes::{
     job_scheduler::{JobsScheduler, StartChecking},
     state_handler::{StateHandler, SetJobScheduler},
-    shared_struct::{AppState, ScheduledTask},
+    shared_struct::{AppState},
     cookie_manager::CookieManager,
 };
 
@@ -41,17 +40,11 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
     log::info!("Setting up state and scheduler... ");
     // Start state handler actor
-    let state_handler = StateHandler {
-        db_client: db_client.clone(),
-        job_scheduler: None,
-        is_test: false,
-    }.start();
+    let is_test = false;
+    let state_handler = StateHandler::new(&db_client, &is_test).start();
     
     // Start job scheduler actor and link to state handler
-    let job_scheduler = JobsScheduler {
-        tasks: VecDeque::<ScheduledTask>::new(),
-        state_handler: state_handler.clone(),
-    }.start();
+    let job_scheduler = JobsScheduler::new(&state_handler).start();
     let web_handler = WebHandler::new(
         CookieManager::new(24), db_client.clone()).start();
     
@@ -68,7 +61,6 @@ async fn main() -> std::io::Result<()> {
     // Create app state to share actor addresses
     let app_state = web::Data::new(AppState {
         state_handler: state_handler.clone(),
-        job_scheduler: job_scheduler.clone(),
         web_handler: web_handler.clone(),
         db_client: db_client.clone(),
     });
@@ -85,9 +77,6 @@ async fn main() -> std::io::Result<()> {
 
         // we got cors error when connecting pi to server, so we used this
         let cors = Cors::default()
-            //.allowed_origin(
-            //    &(std::env::var("SERVER_URL").unwrap().to_string()+ ":" + &std::env::var("FROTEND").unwrap().to_string())
-            //)
             .allow_any_origin()
             .allowed_methods(vec!["GET","POST","PUT"]);
 
@@ -102,13 +91,9 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(app_state.clone()) // holds references to actors and db
             .configure(routes::browser::browser_config) // webhandler '/'
-
-            
             .configure(routes::api::api_config)  // State handler '/api'
-            
+
             // Serve static files like stylesheet.css and logo2.png
-
-            .configure(routes::api::api_config)  // State handler '/api'
             .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true))
 
             // Global middleware or other configs

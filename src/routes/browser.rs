@@ -3,7 +3,7 @@ use actix_session::Session;
 use std::{collections::HashMap, fs};
 use log::error;
 use serde_json;
-use crate::classes::{shared_struct::{AppState, Event, LoginInformation, ResIdFetcher, ValidateSession}, state_handler::StateLog};
+use crate::classes::{shared_struct::{AppState, LoginInformation, ResIdFetcher, ValidateSession}, state_handler::StateLog};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))
@@ -12,7 +12,6 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
         .route("/settings", web::get().to(settings))
         .route("/get_res_info", web::get().to(get_res_info))
         .route("/login", web::post().to(login));
-        // .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true));
 }
 
 

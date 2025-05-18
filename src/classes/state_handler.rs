@@ -50,9 +50,9 @@ pub struct StateLog {
 // ============= Setup of StateHandler =============
 #[derive(Clone)]
 pub struct StateHandler {
-    pub db_client: Client, 
-    pub job_scheduler: Option<Addr<JobsScheduler>>, // option, because we don't have address of scheduler at initialisation (look in main.rs)
-    pub is_test: bool,
+    db_client: Client, 
+    job_scheduler: Option<Addr<JobsScheduler>>, // option, because we don't have address of scheduler at initialisation (look in main.rs)
+    is_test: bool,
 }
 // Makes StateHandler like a CPU from vdm-rt, but no bus is needed in Rust. Instead messages are used. Look for `impl Handler for StateHandler{` to see how that is done
 impl Actor for StateHandler {
@@ -80,29 +80,34 @@ impl Handler<SetJobScheduler> for StateHandler {
 }
 
 impl StateHandler {
+    pub fn new(db_client: &Client, is_test: &bool) -> Self {
+        Self {
+            db_client: db_client.clone(),
+            job_scheduler: None, 
+            is_test: *is_test,
+        } 
+    }
+
     async fn notify_relatives(to_number: String, res_id: &str) {
         dotenv().ok();
         let client = reqwest::Client::new();
         let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
         let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
-        println!("sid: {}", account_sid);
+
         let from_number = env::var("FROM_NUMBER").unwrap_or_default();
         let message = format!("Hello from KitchenGuardServer!, resident {} is in critical mode!", res_id);
         let url = format!("{}{}/Messages.json", shared_struct::SMS_SERVICE, account_sid);
-        println!("url: {}", url);
         let params = [
             ("To", to_number),
             ("From", from_number),
             ("Body", message),
         ];
-        println!("It has been sent!");
 
         let response = client.post(&url)
             .basic_auth(account_sid, Some(auth_token))
             .form(&params)
             .send()
             .await;
-        println!("HELLOOO");
         match response {
             Ok(resp) => {
                 println!("Response: {:?}", resp.text().await.unwrap());
@@ -146,10 +151,10 @@ impl StateHandler {
             } else {
                 None
             };
-        // println!("relative in current room: {}", new_room_pir);
         // IF were in any of these states, then we only check if it's kitchen PIR detecting motion
-        let new_state = if current_state == shared_struct::States::CriticallyAlarmed || current_state == shared_struct::States::Alarmed
-                                            || current_state == shared_struct::States::Unattended 
+        let new_state = if current_state == shared_struct::States::CriticallyAlarmed 
+                                || current_state == shared_struct::States::Alarmed
+                                || current_state == shared_struct::States::Unattended 
             {
             // if event is elderly moving into kitchen, then turn off alarm
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "True" { // occupancy: true
@@ -290,10 +295,10 @@ impl StateHandler {
     where 
     T: std::marker::Send + Sync + serde::de::DeserializeOwned + serde::Serialize + std::fmt::Debug + 'static
     {
-        let sensor_collection = db_client.database(database).collection::<T>(collection);
+        let collection_t = db_client.database(database).collection::<T>(collection);
         let filter = doc! { identifier: search_query};
 
-        let res = sensor_collection
+        let res = collection_t
             .find_one_and_update(filter, data)
             .upsert(true)
             .return_document(mongodb::options::ReturnDocument::After)
@@ -347,9 +352,10 @@ impl StateHandler {
             current_room_pir: data.info.kitchen_pir.clone(),
             context: format!("{:?}", data.clone()),
         };
-        let state_collection = db_client.database(shared_struct::RESIDENT_DATA)
-            .collection::<StateLog>(shared_struct::STATES);
-        if let Err(err) = state_collection.insert_one(state_log).await {
+        if let Err(err) =  db_client.database(shared_struct::RESIDENT_DATA)
+                                            .collection::<StateLog>(shared_struct::STATES)
+                                            .insert_one(state_log).await 
+        {
             eprintln!("Failed to save new state: {:?}", err);
             return Err(std::io::ErrorKind::InvalidInput);
         };
@@ -496,7 +502,7 @@ impl Handler<HealthData> for StateHandler {
             // If we're in faulty, but system is okay again, then go to standby
             // OR If pi sent a healthy check, then that pi system is initalized and should go to standby
             if system_okay && (current_state.state == shared_struct::States::Initialization 
-            || current_state.state == shared_struct::States::Faulty) {
+                            || current_state.state == shared_struct::States::Faulty) {
                 let new_state = shared_struct::States::Standby;
                 println!("INITIALIZED!!  GOING INTO STANDBY");
                 let initialization_event = shared_struct::Event {

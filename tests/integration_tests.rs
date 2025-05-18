@@ -68,17 +68,14 @@ mod tests {
                 .expect("Failed to upsert test state data");
     
             // Start state handler actor
-            let state_handler: Addr<StateHandler> = StateHandler {
-                db_client: db_client.clone(),
-                job_scheduler: None,
-                is_test: true
-            }.start();
+            let is_test = true;
+            let state_handler: Addr<StateHandler> = StateHandler::new(
+                &db_client,
+                &is_test
+            ).start();
             
             // Start job scheduler actor and link to state handler
-            let job_scheduler = JobsScheduler {
-                tasks: VecDeque::<ScheduledTask>::new(),
-                state_handler: state_handler.clone(),
-            }.start();
+            let job_scheduler = JobsScheduler::new(&state_handler).start();
             
             // Update state handler with job scheduler reference
             let _ = state_handler.send(SetJobScheduler {
@@ -215,20 +212,16 @@ mod tests {
             let cookie_value = cookie.unwrap();
             assert!(!cookie_value.is_empty());
 
-
             // Make sure that there are events for the resident id given
             // Start state handler actor
-            let state_handler: Addr<StateHandler> = StateHandler {
-                db_client: db_client.clone(),
-                job_scheduler: None,
-                is_test: true
-            }.start();
+            let is_test = true;
+            let state_handler: Addr<StateHandler> = StateHandler::new(
+                &db_client,
+                &is_test
+            ).start();
             
             // Start job scheduler actor and link to state handler
-            let job_scheduler = JobsScheduler {
-                tasks: VecDeque::<ScheduledTask>::new(),
-                state_handler: state_handler.clone(),
-            }.start();
+            let job_scheduler = JobsScheduler::new(&state_handler).start();
             
             // Update state handler with job scheduler reference
             let _ = state_handler.send(SetJobScheduler {
