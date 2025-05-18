@@ -1,4 +1,6 @@
 use mongodb::{bson::{oid::ObjectId, Binary}, Client};
+use chrono::DateTime;
+
 use super::{
     job_scheduler::JobsScheduler,
     state_handler::StateHandler,
@@ -17,7 +19,7 @@ pub static MONGODB_URI: &str = "mongodb://localhost:27017";
 pub static RESIDENT_DATA: &str = "resident_data";
 pub static RESIDENT_LOGS: &str = "resident_logs";
 pub static DEVICE_HEALTH: &str = "device_health";
-pub static STATES: &str = "States";
+pub static STATES: &str = "states";
 pub static SENSOR_LOOKUP: &str = "sensor_lookup";
 pub static IP_ADDRESSES: &str = "ip_addresses";
 
@@ -83,7 +85,7 @@ pub enum States {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Option<Vec<Event>>")]
+#[rtype(result = "Option<Vec<StateLog>>")]
 pub struct ResIdFetcher {
     pub res_id: String,
 }
@@ -165,9 +167,32 @@ pub struct IpCollection {
     pub res_ip: String,
     pub res_id: String,
 }
+
 #[derive(Message, Deserialize)]
 #[rtype(result = "()")]
 pub struct AddRelative {
     pub res_id: String,
     pub username: String,
+}
+
+// For when an alarm is sounded
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct StateLog {
+    pub res_id: String,
+    pub timestamp: DateTime<chrono::Utc>,
+    pub state: States,
+    pub current_room_pir: String,
+    pub context: String,            // Store full system state snapshot here
+}
+
+#[derive(Message, Deserialize, Serialize)]
+#[rtype(result = "Option<String>")]
+pub struct GetStoveData {
+    pub res_id: String,
+}
+
+#[derive(Message, Deserialize, Serialize)]
+#[rtype(result = "Option<String>")]
+pub struct GetSensorLookup {
+    pub res_id: String,
 }

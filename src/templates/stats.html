@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KitchenGuard - Statistik</title>
     <link href="/stylesheet.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <style>
@@ -49,9 +50,11 @@
 
     <!-- Choose resident ID dropdown -->
     <div class="dropdown-container">
-        <label for="resIdDropDown"><b>Vælg beboer ID:</b></label>
+        <label for="resIdDropDown"><b>Vælg beboer ID</b></label>
         <select id="resIdDropDown" onchange="resSelectionHandler()">
-            <option value="all">Alle beboer ID</option>
+            <option value="">
+                Vælg Beboer
+            </option>
         </select>
     </div>
 
@@ -64,55 +67,53 @@
     <br>
 
     <!-- div for statistic graph -->
-    <div class="chartContainer">
+    <div class="chartContainer" style="height: 500px">
         <canvas class="statChart" id="chart"></canvas>
     </div>
 
 
     <script>
-        async function fetchStats() {
-            try {
-                var response = await fetch("/get_res_info");
-                if (!response.ok) {
-                    throw new Error("Failed to fetch stats");
-                }
-    
-                const data = await response.json();
-                return Object.values(data);
-            } catch (error) {
-                console.error("Error fetching stats: ", error)
-                return [];
-            }
-        }
-
         async function fetchResStats(ID) {
+            if (!ID) return [];
             try {
-                const response = await fetch(`/get_resident_info/${ID}`);
+                const response = await fetch(`/get_res_info`);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch stats for resident ID: ${ID}`);
                 }
 
-                const dat = await response.json();
+                const data = await response.json();
+                
+                let id_data = data[ID]
                 console.log(`Fetched stats for resident ID: ${ID}`);
-                return dat;
+                return id_data;
             } catch (error) {
                 console.error(`Error fetching stats for resident ID: ${ID}, with error: `, error);
                 return [];
             }
         }
+        
+        // gives a dict with days, and how many times an alarm happened
+        function AlarmsAmount(data) {
+            const dateCounts = [];
 
-        async function fetchDates() {
-            var data = await fetchStats();
-            return data.map(item => item.time_stamp);
+            data.forEach((item) => {
+                if (!item.timestamp) return;
+                // short circuit if entry was not alarmed
+                if (item.state != "Alarmed") return;
+
+                const date = new Date(item.timestamp);
+                const dateStr = date.toISOString().split("T")[0];
+                if (!dateCounts[dateStr]) {
+                    dateCounts[dateStr] = 0;
+                }
+                dateCounts[dateStr]++;
+            })
+            return dateCounts;
         }
 
-        async function fetchActAmount() {
-            var data = await fetchStats();
-            return data.map(item => item.mode);
-        }
-
-        async function makeStatTable() {
-            var params = await fetchStats();
+        async function makeStatTable(ID) {
+            console.log("Attempting to view for res_id: ", ID);
+            var params = await fetchResStats(ID);
             console.log(params);
 
             var paramsContainer = document.querySelector("#params");
@@ -123,7 +124,6 @@
                     <thead>
                         <tr>
                             <th>Tidskode</th>
-                            <th>Mode</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -138,7 +138,6 @@
                 tableBody.innerHTML += `
                     <tr>
                         <td>${param.time_stamp}</td>
-                        <td>${param.mode}</td>
                     </tr>
                 `;
             }
@@ -146,19 +145,18 @@
 
         function updateStatTable(data) {
             if (!Array.isArray(data) || data.length === 0) {
-                console.error("No data available to update the table.");
+                console.error("Not able to update stat table, no data.");
                 return;
             }
 
             const paramsContainer = document.querySelector("#params");
-
+            console.log("Data in stat table: ", data);
             /* Create table headers */
             var htmlTable = `
                 <table>
                     <thead>
                         <tr>
                             <th>Tidskode</th>
-                            <th>Mode</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -169,11 +167,10 @@
             paramsContainer.innerHTML = htmlTable;
             var tableBody = paramsContainer.querySelector("tbody");
 
-            for (var param of params) {
+            for (var param of data) {
                 tableBody.innerHTML += `
                     <tr>
-                        <td>${param.time_stamp}</td>
-                        <td>${param.mode}</td>
+                        <td>${new Date(param.timestamp).toLocaleString()} ||  ${param.state}</td>
                     </tr>
                 `;
             }
@@ -181,23 +178,31 @@
 
         function updateStatChart(data) {
             const chartContext = document.getElementById("chart").getContext("2d");
-            const labels = data.map((item) => new Date(item.time_stamp).toLocaleString());
-            const vals = data.ap((item) => item.mode === "ON" ? 1 : 0); 
+            const activations = AlarmsAmount(data);
+            console.log("alarms: ", data);
+            console.log("formatted; ", activations);
+            const labels = Object.keys(activations);
+            const values = Object.values(activations);
 
             new Chart(chartContext, {
                 type: "line",
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: "Mode (ON = 1, OFF = 0)",
-                        data: vals,
+                        label: "Aktiveringer pr. dag",
+                        data: values,
                         borderColor: "blue",
                         fill: false
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: false,
+                    scale: {
+                        ticks: {
+                        precision: 0
+                        }
+                    }
                 }
             });
         }
@@ -237,61 +242,32 @@
             const dropdown = document.getElementById("resIdDropDown");
             const selectVal = dropdown.value;
 
-            if (selectVal === "all") {
-                console.log("All resident ID(s) selected");
-                // Logic
-                makeStatTable();
-
-            } else {
-                console.log(`Selected resident ID: ${selectVal}`);
-                // Logic
-                fetchResStats(selectVal).then((data) => {
-                    if (data.length === 0) {
-                        console.error("No data available for the selected resident.");
-                        return;
-                    }
-
-                    console.log("Data for selected resident: ", data);
-                    updateStatTable(data);
-                    updateStatChart(data);
-                });
+            if (!selectVal || selectVal == "") {
+                updateStatTable([]);
+                updateStatChart([]);
+                return;
             }
+
+            console.log(`Selected resident ID: ${selectVal}`);
+            // Logic
+            fetchResStats(selectVal).then((res_data) => {
+                if (res_data.length === 0) {
+                    console.error("No data available for the selected resident.");
+                    return;
+                }
+
+                console.log("Data for selected resident: ", res_data);
+                updateStatTable(res_data);
+                updateStatChart(res_data);
+            });
         }
 
         addResIdsToDropDown();
 
     </script>
+    
 
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
-    <script>
-        async function makeStatChart() {
-            const data = await fetchStats();
-            const chartContext = document.getElementById("chart").getContext("2d");
-            const labels = data.map((item) => new Date(item.time_stamp).toLocaleString());
-            const vals = data.map((item) => item.mode === "ON" ? 1 : 0); 
-
-            new Chart(chartContext, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: "Mode (ON = 1, OFF = 0)",
-                        data: vals,
-                        borderColor: "blue",
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-        }
-
-        makeStatChart();
-        
-    </script>
+    
 
 </body>
 </html>

@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{self, HealthData, SensorLookup},
+    shared_struct::{self, HealthData, SensorLookup, StateLog},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -37,15 +37,7 @@ impl TaskValue {
     }
 }
 
-// For when an alarm is sounded
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct StateLog {
-    pub res_id: String,
-    pub timestamp: DateTime<chrono::Utc>,
-    pub state: shared_struct::States,
-    pub current_room_pir: String,
-    pub context: String,            // Store full system state snapshot here
-}
+
 
 // ============= Setup of StateHandler =============
 #[derive(Clone)]

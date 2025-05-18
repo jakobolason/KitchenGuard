@@ -3,7 +3,7 @@ use actix_session::Session;
 use std::{collections::HashMap, fs};
 use log::error;
 use serde_json;
-use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession, ResIdFetcher, Event};
+use crate::classes::shared_struct::{AppState, LoginInformation, ValidateSession, StateLog, ResIdFetcher, GetStoveData, GetSensorLookup};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))
@@ -11,6 +11,7 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
         .route("/dashboard", web::get().to(dashboard))
         .route("/settings", web::get().to(settings))
         .route("/get_res_info", web::get().to(get_res_info))
+        .route("/get_res_healthcheck", web::get().to(get_res_healthcheck))
         .route("/login", web::post().to(login));
         // .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true));
 }
@@ -88,6 +89,89 @@ async fn settings() -> HttpResponse {
     HttpResponse::Ok().body("Settings Page")
 }
 
+async fn get_res_stove_data(session: Session, app_state: web::Data<AppState>, id: web::Query<String>) -> HttpResponse {
+    println!("IN GET_RES_INFO");
+    if let Some(cookie) = session.get::<String>("cookie").unwrap() {
+        println!("accessed with cookie: {}", cookie);
+        // check this cookie for session valid
+        match app_state.web_handler.send(ValidateSession { cookie }).await {
+            Ok(Some(ids)) => {
+                let res_id = id.into_inner();
+                // if user doesn't have access to requested data
+                if !ids.contains(&res_id) {
+                    return HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
+                }
+                println!("Fetching resident info for id: {}", id);
+                // Fetch the resident information from the web_handler
+                let res_info = app_state.web_handler.send(GetStoveData { res_id}).await;
+                match res_info {
+                    Some(logs) => logs,
+                    None =>  Vec::<StateLog>::new(),
+                };
+                match serde_json::to_string(&id_vals) {
+                    Ok(json) => HttpResponse::Ok().content_type(http::header::ContentType::json()).body(json),
+                    Err(e) => {
+                        error!("Failed to serialize id_vals: {}", e);
+                        HttpResponse::InternalServerError().body("Failed to serialize response")
+                    }
+                }
+            },
+            Ok(_) => {
+                HttpResponse::InternalServerError().into()
+            }
+            Err(_) => {
+                HttpResponse::InternalServerError().into()
+            }
+        }
+    } else {
+        println!("no cookie found..");
+        // User is not logged in, redirect to login
+        HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
+    }
+}
+
+async fn get_res_healthcheck(session: Session, app_state: web::Data<AppState>) -> HttpResponse {
+    println!("IN GET_RES_INFO");
+    if let Some(cookie) = session.get::<String>("cookie").unwrap() {
+        println!("accessed with cookie: {}", cookie);
+        // check this cookie for session valid
+        match app_state.web_handler.send(ValidateSession { cookie}).await {
+            Ok(Some(ids)) => {
+                let mut id_vals: HashMap<String, Vec::<StateLog>> = HashMap::<String, Vec::<StateLog>>::new();
+                for id in ids  {
+                    println!("Fetching resident info for id: {}", id);
+                    // Fetch the resident information from the web_handler
+                    let res_info = app_state.web_handler.send(ResIdFetcher{res_id: id.clone()}).await;
+                    match res_info {
+                        Ok(Some(info)) =>id_vals.insert(id, info),
+                        _ => {
+                            println!("not found any info on res_id");
+                            None
+                        },
+                    };
+                }
+                match serde_json::to_string(&id_vals) {
+                    Ok(json) => HttpResponse::Ok().content_type(http::header::ContentType::json()).body(json),
+                    Err(e) => {
+                        error!("Failed to serialize id_vals: {}", e);
+                        HttpResponse::InternalServerError().body("Failed to serialize response")
+                    }
+                }
+            },
+            Ok(_) => {
+                HttpResponse::InternalServerError().into()
+            }
+            Err(_) => {
+                HttpResponse::InternalServerError().into()
+            }
+        }
+    } else {
+        println!("no cookie found..");
+        // User is not logged in, redirect to login
+        HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
+    }
+}
+
 async fn get_res_info(session: Session, app_state: web::Data<AppState>) -> HttpResponse {
     println!("IN GET_RES_INFO");
     if let Some(cookie) = session.get::<String>("cookie").unwrap() {
@@ -95,7 +179,7 @@ async fn get_res_info(session: Session, app_state: web::Data<AppState>) -> HttpR
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
             Ok(Some(ids)) => {
-                let mut id_vals: HashMap<String, Vec::<Event>> = HashMap::<String, Vec::<Event>>::new();
+                let mut id_vals: HashMap<String, Vec::<StateLog>> = HashMap::<String, Vec::<StateLog>>::new();
                 for id in ids  {
                     println!("Fetching resident info for id: {}", id);
                     // Fetch the resident information from the web_handler

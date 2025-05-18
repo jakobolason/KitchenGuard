@@ -10,9 +10,9 @@ mod tests {
     use kitchen_guard_server::classes::cookie_manager;
     use kitchen_guard_server::classes::web_handler;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
-    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, StateLog};
+    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler};
     use serial_test::serial;
-    use kitchen_guard_server::classes::shared_struct::{ScheduledTask, SensorLookup, States, Event, LoginInformation, ResIdFetcher};
+    use kitchen_guard_server::classes::shared_struct::{ScheduledTask, SensorLookup, States, Event, LoginInformation, ResIdFetcher, StateLog};
     use std::collections::VecDeque;
 
     #[tokio::test]

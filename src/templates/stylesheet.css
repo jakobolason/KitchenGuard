@@ -59,7 +59,6 @@ body {
 }
 
 .statTable {
-    overflow: scroll;
     display: grid;
     place-items: center;
     height: 30vh;
@@ -81,7 +80,7 @@ body {
     justify-content: center; /* Centers the canvas horizontally */
     align-items: center; /* Centers the canvas vertically if needed */
     width: 100%; /* Full width of the parent */
-    height: auto; /* Adjust height as needed */
+    height: 500px; /* Adjust height as needed */
 }
 
 .centered-div {

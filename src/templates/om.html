@@ -5,6 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KitchenGuard - Om</title>
     <link href="/stylesheet.css" rel="stylesheet">
+
+    <style>
+        .about-container {
+            max-width: 800px;
+            margin: 60px auto 0 auto;
+            background: #fffbe9;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 2.5rem 2rem 2rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .about-image {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 50%;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+            margin-bottom: 1.5rem;
+            border: 5px solid #FABA5F;
+            background: #fff;
+        }
+        .about-title {
+            font-size: 2rem;
+            color: #313131;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        .about-text {
+            font-size: 1.15rem;
+            color: #313131;
+            line-height: 1.7;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 600px) {
+            .about-container {
+                padding: 1rem 0.5rem;
+            }
+            .about-title {
+                font-size: 1.3rem;
+            }
+            .about-image {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+
 </head>
 <body>
     <!-- Drop down menu -->
@@ -30,18 +80,14 @@
     
     
     
-    <div class="centered-div">
-        <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1682668938117-a45b79fb4476%3Fcrop%3Dentropy%26amp%3Bcs%3Dsrgb%26amp%3Bfm%3Djpg%26amp%3Bixid%3DM3w0MjA4MDF8MHwxfHNlYXJjaHwyOHx8cHJvamVjdCUyMG1hbmFnZW1lbnQlMjBJVCUyMHByb2plY3RzJTIwZnVuZGFtZW50YWwlMjBjb25jZXB0c3xlbnwxfDB8fHwxNzA0Mjc2ODg3fDA%26amp%3Bixlib%3Drb-4.0.3%26amp%3Bq%3D85%26amp%3Bw%3D800%26amp%3Bfit%3Dcrop%26amp%3Bh%3D300%26amp%3Bq%3D75%26amp%3Bfm%3Dwebp&f=1&nofb=1&ipt=a629cf08d2ea4be0bc594da4debd2e2bb20c88b3aa49e43a5315f0224006fa2b"
-        alt="" style="width: 100%; z-index: 1; position: relative;">
-
-        <div class="colored-box" style="float: left; width: 40%; height: 55%; position: absolute; z-index: 2;">
-            <p>
-                Vi er en gruppe studerende, der har udviklet KitchenGuard, et avanceret sikkerhedssystem designet til at overvåge brugen af komfuret og registrere, om der er nogen til stede i køkkenet. Systemet alarmerer brugeren og eventuelt pårørende, hvis der opstår en farlig situation. Vores mål med dette projekt er at øge sikkerheden i køkkenet og skabe tryghed for både brugere og deres familier gennem teknologi og innovation.
-            </p>
+    <div class="about-container">
+        <img class="about-image" src="https://images.unsplash.com/photo-1682668938117-a45b79fb4476?auto=format&fit=facearea&w=400&h=400&facepad=3&q=80" alt="KitchenGuard team">
+        <div class="about-title">Hvem er vi?</div>
+        <div class="about-text">
+            Vi er en gruppe studerende, der har udviklet <b>KitchenGuard</b> – et avanceret sikkerhedssystem designet til at overvåge brugen af komfuret og registrere, om der er nogen til stede i køkkenet.
         </div>
-
-        <div class="colored-box" style="float: right; width: 40%; height: 55%; position: absolute;">
-
+        <div class="about-text">
+            Systemet alarmerer brugeren og eventuelt pårørende, hvis der opstår en farlig situation. Vores mål med dette projekt er at øge sikkerheden i køkkenet og skabe tryghed for både brugere og deres familier gennem teknologi og innovation.
         </div>
     </div>
 
