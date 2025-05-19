@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{self, HealthData, SensorLookup, StateLog},
+    shared_struct::{self, HealthCheck, HealthData, SensorLookup, StateLog, RESIDENT_DATA, SENSOR_LOOKUP},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -473,22 +473,22 @@ impl StateHandler {
     }
 
     /// Simply logs the health check
-    async fn save_health_check(data: shared_struct::HealthData, db_client: Client) -> bool {
+    async fn save_health_check(data: shared_struct::HealthCheck, db_client: Client) -> bool {
+        // HealthCheck is a vector of tuples. Compare each entries first el to a sensor in SensorLookup
         if let Err(err) = db_client.database(shared_struct::RESIDENT_DATA)
-            .collection::<shared_struct::HealthData>(shared_struct::DEVICE_HEALTH)
+            .collection::<shared_struct::HealthCheck>(shared_struct::DEVICE_HEALTH)
             .insert_one(data.clone()).await {
                 eprint!("Failed to save health check: {:?}", err);
         }
-        // return whether or not health is okay
-        return data.bathroom_LED == "ok" && data.bathroom_pir == "ok" && data.bridge == "ok" && data.kitchen_pir == "ok" 
-            && data.living_room_LED == "ok" && data.pi == "ok" && data.power_plug == "ok"
+        // checks each entry, if any aren't okay then the system is faulty
+        data.data.iter().all(|sens | sens.1 == "ok")
     }
 }
 
-impl Handler<HealthData> for StateHandler {
+impl Handler<HealthCheck> for StateHandler {
     type Result = ();
 
-    fn handle(&mut self, data: HealthData, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, data: HealthCheck, _ctx: &mut Self::Context) -> Self::Result {
         let db_client = self.db_client.clone();
         actix::spawn(async move {
             let res_id = data.res_id.clone();

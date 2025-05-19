@@ -101,6 +101,12 @@ pub struct HealthData {
     pub pi: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct HealthCheck {
+    pub res_id: String,
+    pub data: Vec<(String, String)>
+}
+impl Message for HealthCheck { type Result = (); }
 
 // For saving login informatino in db
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]

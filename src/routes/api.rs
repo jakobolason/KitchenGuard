@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use mongodb::Client;
 
-use crate::classes::shared_struct::{CreateUser, AppState, SensorLookup, InitState, Event, HealthData};
+use crate::classes::shared_struct::{AppState, CreateUser, Event, HealthCheck, HealthData, InitState, SensorLookup};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -47,7 +47,7 @@ async fn get_status() -> HttpResponse {
     HttpResponse::Ok().body("API Status: OK")
 }
 
-async fn health_check(form: web::Json<HealthData>, app_state: web::Data<AppState>) -> HttpResponse {
+async fn health_check(form: web::Json<HealthCheck>, app_state: web::Data<AppState>) -> HttpResponse {
     log::info!("Health chech endpoint reached");
     app_state.state_handler.send(form.into_inner()).await.unwrap();
     HttpResponse::Ok().body("YEP")
