@@ -6,10 +6,11 @@ use mongodb::{bson::doc, Client,};
 use log::error;
 use futures_util::StreamExt;
 
+use crate::classes::shared_struct::{HealthData, SensorLookup, RESIDENT_LOGS, SENSOR_LOOKUP};
+
 use super::{
     cookie_manager::CookieManager, 
-    shared_struct::{UsersLoggedInformation, StateLog, LoginInformation, ResIdFetcher, ValidateSession, Event, 
-        INFO, RESIDENT_DATA, STATES, USERS}
+    shared_struct::{Event, GetHealthData, GetStoveData, LoginInformation, ResIdFetcher, StateLog, UsersLoggedInformation, ValidateSession, INFO, RESIDENT_DATA, STATES, USERS}
 };
 pub struct WebHandler {
     cookie_manager: CookieManager,
@@ -63,11 +64,15 @@ impl WebHandler {
         ).is_ok()
     }
 
-    async fn get_info(res_id: &str, db_client: Client) -> Option<Vec<StateLog>> {
+    async fn get_info<T>(res_id: &str, collection: &str, db_client: Client) -> Option<Vec<T>>
+    where 
+    T: std::marker::Send + Sync + serde::de::DeserializeOwned + serde::Serialize + std::fmt::Debug + 'static 
+    {
         match db_client
             .database(RESIDENT_DATA)
-            .collection::<StateLog>(STATES)
+            .collection::<T>(collection)
             .find(doc! {"res_id": res_id})
+            .sort(doc!{"_id": -1})
             .await
         {
             Ok(mut cursor) => {
@@ -76,7 +81,7 @@ impl WebHandler {
                 while let Some(doc) = cursor.next().await {
                     match doc {
                         Ok(d) => {
-                        println!("Found document: {:?}", d);
+                        // println!("Found document: {:?}", d);
                         result.push(d)
                     },
                         Err(e) => eprintln!("Error reading doc: {:?}", e),
@@ -134,7 +139,7 @@ impl Handler<LoginInformation> for WebHandler {
     }
 }
 
-// This is a weird workaround instead of not sending directly, but makes since architecturally
+// This is a weird workaround instead of not sending directly, but makes sense architecturally
 impl Handler<ValidateSession> for WebHandler {
     type Result = Option<Vec<String>>;
 
@@ -145,33 +150,94 @@ impl Handler<ValidateSession> for WebHandler {
 
 // Specify the expected result from handling this message
 impl Handler<ResIdFetcher> for WebHandler {
-    type Result = Option<Vec<StateLog>>;
+    type Result = ResponseFuture<Option<Vec<StateLog>>>;
 
     fn handle(&mut self, msg: ResIdFetcher, _ctx: &mut Self::Context) -> Self::Result {
         let db_client = self.db_client.clone();
 
         Box::pin(async move {
-            // Use the db_client to find documents matching the res_uid
-            println!("Fetching logs for res_id: {:?}", msg.res_id);
-            WebHandler::get_info(&msg.res_id, db_client).await
+            // Use the db_client to find documents matching the res_id
+            println!("Fetching state logs for res_id: {:?}", msg.res_id);
+            WebHandler::get_info::<StateLog>(&msg.res_id, STATES, db_client).await
         })
     }
 }
 
 impl Handler<GetStoveData> for WebHandler {
-    type Result = Option<Vec<Event>>;
+    type Result = ResponseFuture<Option<Vec<Event>>>;
 
     fn handle(&mut self, msg: GetStoveData, _ctx: &mut Self::Context) -> Self::Result {
         let db_client = self.db_client.clone();
+        println!("Attempting to get stove data");
 
         Box::pin(async move {
-            // Use the db_client to find documents matching the res_uid
-            println!("Fetching logs for res_id: {:?}", msg.res_id);
-            WebHandler::get_info(&msg.res_id, db_client).await
+            let res_id = msg.res_id;
+            let sensors = match db_client
+                .database(RESIDENT_DATA)
+                .collection::<SensorLookup>(SENSOR_LOOKUP)
+                .find_one(doc! {"res_id": &res_id})
+                .sort(doc!{"_id": -1})
+                .await {
+                    Ok(Some(doc)) => doc,
+                    Ok(None) => return None,
+                    Err(err) => {
+                        eprint!("error occured whilst looking up sensors: {:?}", err);
+                        return None
+                    }
+                };
+            // Use the db_client to find documents matching the res_id
+            // match the sensor data with the power plug values
+            match db_client
+                .database(RESIDENT_DATA)
+                .collection::<Event>(RESIDENT_LOGS)
+                .find(doc! {"res_id": &res_id, "device_model": sensors.power_plug})
+                .sort(doc!{"_id": -1})
+                .await
+            {
+                Ok(mut cursor) => {
+                    let mut result = Vec::new();
+                    let mut count = 0;
+                    while let Some(doc) = cursor.next().await {
+                        if count > 1000 { break; }
+                        count += 1;
+                        match doc {
+                            Ok(d) => {
+                            // println!("Found document: {:?}", d);
+                            result.push(d)
+                        },
+                            Err(e) => eprintln!("Error reading doc: {:?}", e),
+                        }
+                    }
+                    // Check if the result is empty
+                    if result.is_empty() {
+                        println!("No documents found for res_id: {:?}", res_id);
+                    }
+                    // Return the result
+                    Some(result)
+
+                },
+                Err(err) => {
+                    eprintln!("Error querying database: {:?}", err);
+                    None
+                }
+            }
         })
     }
 }
 
+impl Handler<GetHealthData> for WebHandler {
+    type Result = ResponseFuture<Option<Vec<HealthData>>>;
+
+    fn handle(&mut self, msg: GetHealthData, _ctx: &mut Self::Context) -> Self::Result {
+        let db_client = self.db_client.clone();
+
+        Box::pin(async move {
+            // Use the db_client to find documents matching the res_id
+            println!("Fetching healthdata logs for res_id: {:?}", msg.res_id);
+            WebHandler::get_info::<HealthData>(&msg.res_id, RESIDENT_DATA, db_client).await
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {

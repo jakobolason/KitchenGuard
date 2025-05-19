@@ -84,11 +84,7 @@ pub enum States {
     Faulty,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Option<Vec<StateLog>>")]
-pub struct ResIdFetcher {
-    pub res_id: String,
-}
+
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
 #[rtype(result = "()")]
@@ -103,6 +99,8 @@ pub struct HealthData {
     pub bridge: String,
     pub pi: String,
 }
+
+
 // For saving login informatino in db
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct UsersLoggedInformation {
@@ -127,7 +125,6 @@ pub struct ValidateSession {
     pub cookie: String
 }
 
-
 // holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SensorLookup {
@@ -144,7 +141,6 @@ pub struct InitState {
     pub info: SensorLookup,
     pub ip_addr: String,
 }
-
 
 #[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]
@@ -185,14 +181,26 @@ pub struct StateLog {
     pub context: String,            // Store full system state snapshot here
 }
 
-#[derive(Message, Deserialize, Serialize)]
-#[rtype(result = "Option<String>")]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ResIdFetcher {
+    pub res_id: String,
+}
+impl Message for ResIdFetcher {type Result = Option<Vec<StateLog>>;}
+
+#[derive(Deserialize, Serialize)]
 pub struct GetStoveData {
     pub res_id: String,
 }
+impl Message for GetStoveData {type Result = Option<Vec<Event>>;}
 
-#[derive(Message, Deserialize, Serialize)]
-#[rtype(result = "Option<String>")]
-pub struct GetSensorLookup {
+#[derive(Deserialize, Serialize)]
+pub struct GetHealthData {
     pub res_id: String,
 }
+impl Message for GetHealthData {type Result = Option<Vec<HealthData>>;}
+
+#[derive(Deserialize, Serialize)]
+pub struct TurnOffalarm {
+    pub res_id: String
+}
+impl Message for TurnOffalarm {type Result = (); }

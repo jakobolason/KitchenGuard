@@ -15,14 +15,14 @@ body {
 }
 
 /* NAVBAR */
-.DropDownMenu {
+.drop-down-menu {
     right: 1%;
     position: fixed;
     display: inline;
     z-index: 999;
 }
 
-.DropDownButton {
+.drop-down-button {
     background: none;
     border: none;
     cursor: pointer;
@@ -30,7 +30,7 @@ body {
     z-index: 1000;
 }
 
-.DropDownMenuContent {
+.drop-down-menu-content {
     display: none;
     position: absolute;
     right: 0;
@@ -40,7 +40,7 @@ body {
     z-index: 1000;
 }
 
-.DropDownMenuContent a {
+.drop-down-menu-content a {
     float: none;
     color: black;
     padding: 12px 16px;
@@ -50,23 +50,30 @@ body {
     z-index: 1000;
 }
 
-.DropDownMenuContent a:hover {
+.drop-down-menu-content a:hover {
     background-color: whitesmoke;
 }
 
-.DropDownMenu:focus-within .DropDownMenuContent {
+.drop-down-menu:focus-within .drop-down-menu-content {
     display: block;
 }
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+}
 
-.statTable {
+.stat-table {
     display: grid;
     place-items: center;
-    height: 30vh;
+    max-height: 800px;
+    overflow: scroll;
     margin-left: 20%;
     margin-right: 20%;
 }
 
-.statChart {
+
+.stat-chart {
     display: grid;
     place-items: center;
     height: auto;
@@ -75,7 +82,7 @@ body {
     max-width: 60%;
 }
 
-.chartContainer {
+.chart-container {
     display: flex;
     justify-content: center; /* Centers the canvas horizontally */
     align-items: center; /* Centers the canvas vertically if needed */

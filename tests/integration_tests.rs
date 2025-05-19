@@ -88,7 +88,7 @@ mod tests {
             let _ = job_scheduler.send(StartChecking).await;
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
             let enter_kitchen = Event { // to make sure we're in Attended mode
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "True".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -100,7 +100,7 @@ mod tests {
             };
             let _ = state_handler.send(enter_kitchen.clone()).await;
             let stove_off = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "OFF".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -115,7 +115,7 @@ mod tests {
 
             // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
             let stove_on = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "ON".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -131,7 +131,7 @@ mod tests {
             // tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
     
             let leaving_kitchen = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "False".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -238,7 +238,7 @@ mod tests {
             let _ = job_scheduler.send(StartChecking).await;
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
             let enter_kitchen = Event { // to make sure we're in Attended mode
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "True".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -250,7 +250,7 @@ mod tests {
             };
             let _ = state_handler.send(enter_kitchen.clone()).await;
             let stove_off = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "OFF".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -265,7 +265,7 @@ mod tests {
 
             // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
             let stove_on = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "ON".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),

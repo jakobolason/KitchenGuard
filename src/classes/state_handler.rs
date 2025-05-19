@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{self, HealthData, SensorLookup, StateLog},
+    shared_struct::{self, HealthData, SensorLookup, StateLog, TurnOffalarm},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -462,7 +462,7 @@ impl StateHandler {
     /// Simply logs the health check
     async fn save_health_check(data: shared_struct::HealthData, db_client: Client) -> bool {
         if let Err(err) = db_client.database(shared_struct::RESIDENT_DATA)
-            .collection(shared_struct::DEVICE_HEALTH)
+            .collection::<shared_struct::HealthData>(shared_struct::DEVICE_HEALTH)
             .insert_one(data.clone()).await {
                 eprint!("Failed to save health check: {:?}", err);
         }

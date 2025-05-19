@@ -27,13 +27,13 @@
 
 <body>
     <!-- Drop down menu -->
-    <nav class="DropDownMenu">
-        <button class="DropDownButton">
+    <nav class="drop-down-menu">
+        <button class="drop-down-button">
             <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.thenounproject.com%2Fpng%2F1123247-200.png&f=1&nofb=1&ipt=01f476a25d20356b4901c217bd2fe9329571477b13b9006da797367ca4d2ddd4&ipo=images", style="width: 40; height:40px;">
         </button>
 
         <!-- Drop down menu buttons -->
-        <nav class="DropDownMenuContent">
+        <nav class="drop-down-menu-content">
             <a href="forside.html">Forside</a>
             <a href="stats.html">Statistik</a>
             <a href="om.html">Om</a>
@@ -58,23 +58,52 @@
         </select>
     </div>
 
+    <div class="stat-grid">
+        <div class="tables">
+            <!-- Left side, table showing resident states over time -->
+            <div id="res-states" class="stat-table"></div>
+            <div id="stove-on-off" class="stat-table"> </div>
+        </div>
+        
+        <div class="charts">
+            <!-- center div for statistic graph -->
+            <div class="chart-container" style="height: 500px">
+                <canvas class="stat-chart" id="alarm-chart"></canvas>
+            </div>
 
-    <!-- Statistik her -->
-    <!-- <div id="params", class="CenterContainer", style="margin-left: 20%; margin-right: 20%;"></div> -->
-    <div id="params" class="statTable"></div>
-
-    <br>
-    <br>
-
-    <!-- div for statistic graph -->
-    <div class="chartContainer" style="height: 500px">
-        <canvas class="statChart" id="chart"></canvas>
+            <div class="chart-container" style="height: 500px">
+                <canvas class="stat-chart" id="stove-chart"></canvas>
+            </div>
+        </div>
+        
+        <!-- right side shows health data, and button to turn off alarm -->
+        <div class="right-hub">
+            <button onclick="RestartAlarm()">Turn off Alarm</button>
+        </div> 
     </div>
+    
 
 
     <script>
+        let alarmChartInstance = null;
+        let stoveChartInstance = null;
+
+        async function RestartAlarm() {
+            // Take the current resident they are looking at, as the intended alarm
+            const dropdown = document.getElementById("resIdDropDown");
+            const selectVal = dropdown.value;
+            console.log("intended id: ", selectVal);
+            try {
+                const response = await fetch("/restart_alarm");
+                if (!response.ok) {
+                    throw new Error(`Failed to reset alarm for resident ID: ${ID}`);
+                }
+
+            } catch(error) {
+                console.error("error occured whilst resetting alarm: ", error);
+            }
+        }
         async function fetchResStats(ID) {
-            if (!ID) return [];
             try {
                 const response = await fetch(`/get_res_info`);
                 if (!response.ok) {
@@ -91,32 +120,50 @@
                 return [];
             }
         }
+
+        async function fetchResStove(id) {
+            if (!id) return [];
+            try {
+                const response = await fetch(`/get_res_stove_data?id=${id}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch stats for resident ID: ${id}`);
+                }
+
+                const data = await response.json();
+                
+                console.log(`Fetched stove stats for resident ID: ${id}, response; `, response);
+                // console.log(data);
+                return data;
+            } catch (error) {
+                console.error(`Error fetching stats for resident ID: ${id}, with error: `, error);
+                return [];
+            }
+        }
         
         // gives a dict with days, and how many times an alarm happened
         function AlarmsAmount(data) {
-            const dateCounts = [];
+            const dateCounts = {};
 
-            data.forEach((item) => {
-                if (!item.timestamp) return;
-                // short circuit if entry was not alarmed
-                if (item.state != "Alarmed") return;
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                if (!item.timestamp || item.state !== "Alarmed") continue;
 
-                const date = new Date(item.timestamp);
-                const dateStr = date.toISOString().split("T")[0];
+                // Only parse date if needed
+                const dateStr = item.timestamp.split("T")[0];
                 if (!dateCounts[dateStr]) {
                     dateCounts[dateStr] = 0;
                 }
                 dateCounts[dateStr]++;
-            })
+            }
             return dateCounts;
         }
 
         async function makeStatTable(ID) {
             console.log("Attempting to view for res_id: ", ID);
             var params = await fetchResStats(ID);
-            console.log(params);
+            // console.log(params);
 
-            var paramsContainer = document.querySelector("#params");
+            var paramsContainer = document.querySelector("#res-states");
 
             /* Create table headers */
             var htmlTable = `
@@ -149,8 +196,8 @@
                 return;
             }
 
-            const paramsContainer = document.querySelector("#params");
-            console.log("Data in stat table: ", data);
+            const paramsContainer = document.querySelector("#res-states");
+            // console.log("Data in stat table: ", data);
             /* Create table headers */
             var htmlTable = `
                 <table>
@@ -177,14 +224,18 @@
         }
 
         function updateStatChart(data) {
-            const chartContext = document.getElementById("chart").getContext("2d");
+            const chartContext = document.getElementById("alarm-chart").getContext("2d");
             const activations = AlarmsAmount(data);
-            console.log("alarms: ", data);
-            console.log("formatted; ", activations);
+            // console.log("alarms: ", data);
+            // console.log("formatted; ", activations);
             const labels = Object.keys(activations);
             const values = Object.values(activations);
 
-            new Chart(chartContext, {
+            if (alarmChartInstance) {
+                alarmChartInstance.destroy()
+            }
+
+            alarmChartInstance = new Chart(chartContext, {
                 type: "line",
                 data: {
                     labels: labels,
@@ -207,6 +258,86 @@
             });
         }
 
+        function StoveAmount(data) {
+            const dateCounts = {};
+
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                if (!item.time_stamp || item.mode !== "ON") continue;
+
+                // Only parse date if needed
+                const dateStr = item.time_stamp.split("T")[0];
+                if (!dateCounts[dateStr]) {
+                    dateCounts[dateStr] = 0;
+                }
+                dateCounts[dateStr]++;
+            }
+            return dateCounts;
+        }
+
+        function updateStoveChart(data) {
+            const chartContext = document.getElementById("stove-chart").getContext("2d");
+            const activations = StoveAmount(data);
+            // console.log("stove info: ", data);
+            // console.log("formatted for stove; ", activations);
+            const labels = Object.keys(activations);
+            const values = Object.values(activations);
+
+            if (stoveChartInstance) {
+                stoveChartInstance.destroy();
+            }
+
+            stoveChartInstance = new Chart(chartContext, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Tændt pr. dag",
+                        data: values,
+                        borderColor: "blue",
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scale: {
+                        ticks: {
+                        precision: 0
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateStoveTable(data) {
+            const paramsContainer = document.querySelector("#stove-on-off");
+            console.log("Data in stove table: ", data);
+            /* Create table headers */
+            var htmlTable = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tidskode  |  mode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            `;
+
+            paramsContainer.innerHTML = htmlTable;
+            var tableBody = paramsContainer.querySelector("tbody");
+
+            for (var entry of data) {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${new Date(entry.time_stamp).toLocaleString()} ||  ${entry.mode}</td>
+                    </tr>
+                `;
+            }
+        }
+
         // fetch res info
         async function fetchResIds() {
             try {
@@ -227,6 +358,7 @@
         async function addResIdsToDropDown() {
             const dropdown = document.getElementById("resIdDropDown");
             const resIDs = await fetchResIds();
+            console.log("fethced res_ids:")
 
             const uniqueResIds = Object.keys(resIDs);
 
@@ -244,7 +376,7 @@
 
             if (!selectVal || selectVal == "") {
                 updateStatTable([]);
-                updateStatChart([]);
+                uupdateStatChart([]);
                 return;
             }
 
@@ -259,6 +391,16 @@
                 console.log("Data for selected resident: ", res_data);
                 updateStatTable(res_data);
                 updateStatChart(res_data);
+            });
+            fetchResStove(selectVal).then((stove_data) => {
+                console.log("stove data: ", stove_data)
+                if (stove_data.length === 0) {
+                    console.error("No data available for the selected resident.");
+                    return;
+                }
+                console.log("stove data: ", stove_data);
+                updateStoveChart(stove_data);
+                updateStoveTable(stove_data)
             });
         }
 
