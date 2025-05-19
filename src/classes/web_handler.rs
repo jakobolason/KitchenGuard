@@ -72,7 +72,7 @@ impl WebHandler {
             .database(RESIDENT_DATA)
             .collection::<T>(collection)
             .find(doc! {"res_id": res_id})
-            .sort(doc!{"_id": -1})
+            // .sort(doc!{"_id": -1})
             .await
         {
             Ok(mut cursor) => {
@@ -191,7 +191,6 @@ impl Handler<GetStoveData> for WebHandler {
                 .database(RESIDENT_DATA)
                 .collection::<Event>(RESIDENT_LOGS)
                 .find(doc! {"res_id": &res_id, "device_model": sensors.power_plug})
-                .sort(doc!{"_id": -1})
                 .await
             {
                 Ok(mut cursor) => {

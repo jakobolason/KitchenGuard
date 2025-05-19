@@ -26,46 +26,40 @@
 </style>
 
 <body>
-    <!-- Drop down menu -->
-    <nav class="drop-down-menu">
-        <button class="drop-down-button">
-            <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.thenounproject.com%2Fpng%2F1123247-200.png&f=1&nofb=1&ipt=01f476a25d20356b4901c217bd2fe9329571477b13b9006da797367ca4d2ddd4&ipo=images", style="width: 40; height:40px;">
-        </button>
-
-        <!-- Drop down menu buttons -->
-        <nav class="drop-down-menu-content">
-            <a href="forside.html">Forside</a>
-            <a href="stats.html">Statistik</a>
-            <a href="om.html">Om</a>
-        </nav>
-    </nav>
-
-    <!-- Page header -->
     <div class="colored-box">
+        <nav>
+            <a href="forside.html">Frontpage</a>
+            <a href="stats.html">Information</a>
+            <a href="om.html">About</a>
+        </nav>
+        
         <div class="centered-div">
-            <h1 style="margin-bottom: 1%; margin-top: 1%;">Opsætningspanel</h1>
+            <strong style="margin-bottom: 1%; margin-top: 1%;"><h1>KitchenGuard</h1></strong>
         </div>
     </div>
 
 
     <!-- Choose resident ID dropdown -->
     <div class="dropdown-container">
-        <label for="resIdDropDown"><b>Vælg beboer ID</b></label>
+        <label for="resIdDropDown"><b>Choose resident id</b></label>
         <select id="resIdDropDown" onchange="resSelectionHandler()">
             <option value="">
-                Vælg Beboer
+                Choose resident
             </option>
         </select>
     </div>
 
     <div class="stat-grid" id="resInfo">
         <div class="tables">
+            <h2> Table showing status of resident </h2>
             <!-- Left side, table showing resident states over time -->
             <div id="res-states" class="stat-table"></div>
+            <h2> Table showing status of stove </h2>
             <div id="stove-on-off" class="stat-table"> </div>
         </div>
         
         <div class="charts">
+            <h2>Data charts</h2>
             <!-- center div for statistic graph -->
             <div class="chart-container" style="height: 500px">
                 <canvas class="stat-chart" id="alarm-chart"></canvas>
@@ -78,10 +72,10 @@
         
         <!-- right side shows health data, and button to turn off alarm -->
         <div class="right-hub">
-            <button onclick="RestartAlarm()">Turn off Alarm</button>
             <div class="health-overview" id="health-view">
                 <h3>Status of local devices</h3>
             </div>
+            <button onclick="RestartAlarm()" class="alarm-button">Turn off Alarm</button>
         </div> 
     </div>
     
@@ -93,6 +87,8 @@
     <script>
         let alarmChartInstance = null;
         let stoveChartInstance = null;
+        document.getElementById("resInfo").style.display = "none"
+
 
         async function RestartAlarm() {
             // Take the current resident they are looking at, as the intended alarm
@@ -111,6 +107,7 @@
                 console.error("error occured whilst resetting alarm: ", error);
             }
         }
+        // ======= GETTERS =======
         async function fetchResStats(ID) {
             try {
                 const response = await fetch(`/get_res_info`);
@@ -147,241 +144,6 @@
                 return [];
             }
         }
-        
-        // gives a dict with days, and how many times an alarm happened
-        function AlarmsAmount(data) {
-            const dateCounts = {};
-
-            for (let i = 0; i < data.length; i++) {
-                const item = data[i];
-                if (!item.timestamp || item.state !== "Alarmed") continue;
-                try {
-                    // Only parse date if needed
-                    let splitted = item.timestamp.split("T");
-                    let dateStr = ""
-                    if (!splitted[1] || splitted[1] == "") {
-                        dateStr = item.timestamp.split(" ");
-                    } else {
-                        dateStr = splitted[0]
-                    }
-                    if (!dateCounts[dateStr]) {
-                        dateCounts[dateStr] = 0;
-                    }
-                    dateCounts[dateStr]++;
-                } catch(err) {
-                    console.log(err);
-                }
-                
-            }
-            return dateCounts;
-        }
-
-        async function makeStatTable(ID) {
-            console.log("Attempting to view for res_id: ", ID);
-            var params = await fetchResStats(ID);
-            // console.log(params);
-
-            var paramsContainer = document.querySelector("#res-states");
-
-            /* Create table headers */
-            var htmlTable = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tidskode</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            `;
-
-            paramsContainer.innerHTML = htmlTable;
-            var tableBody = paramsContainer.querySelector("tbody");
-
-            for (var param of params) {
-                tableBody.innerHTML += `
-                    <tr>
-                        <td>${param.time_stamp}</td>
-                    </tr>
-                `;
-            }
-        }
-
-
-        function updateStatTable(data) {
-            const paramsContainer = document.querySelector("#res-states");
-            
-            // Create table structure once
-            paramsContainer.innerHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tidskode  |  mode</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            `;
-            
-            const tableBody = paramsContainer.querySelector("tbody");
-            
-            // Build all rows at once using DocumentFragment
-            const fragment = document.createDocumentFragment();
-            
-            // Pre-format date strings outside the loop
-            const formattedData = data.map(entry => ({
-                timeString: new Date(entry.time_stamp).toLocaleString(),
-                status: entry.state
-            }));
-            
-            // Create all rows at once
-            for (const entry of formattedData) {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.textContent = `${entry.timeString} ||  ${entry.status}`;
-                row.appendChild(cell);
-                fragment.appendChild(row);
-            }
-            
-            // Add all rows to the DOM in one operation
-            tableBody.appendChild(fragment);
-        }
-
-        function updateStatChart(data) {
-            const chartContext = document.getElementById("alarm-chart").getContext("2d");
-            const activations = AlarmsAmount(data);
-            // console.log("alarms: ", data);
-            // console.log("formatted; ", activations);
-            const labels = Object.keys(activations);
-            const values = Object.values(activations);
-
-            if (alarmChartInstance) {
-                alarmChartInstance.destroy()
-            }
-
-            alarmChartInstance = new Chart(chartContext, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: "Aktiveringer pr. dag",
-                        data: values,
-                        borderColor: "blue",
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scale: {
-                        ticks: {
-                        precision: 0
-                        }
-                    }
-                }
-            });
-        }
-
-        function StoveAmount(data) {
-            const dateCounts = {};
-
-            for (let i = 0; i < data.length; i++) {
-                const item = data[i];
-                if (!item.time_stamp || item.mode !== "ON") continue;
-
-                // Only parse date if needed
-                let splitted = item.time_stamp.split("T");
-                let dateStr = ""
-                if (!splitted[1] || splitted[1] == "") {
-                    dateStr = splitted[0].split(" ")[0];
-                } else {
-                    dateStr = splitted[0]
-                }
-                if (!dateCounts[dateStr]) {
-                    dateCounts[dateStr] = 0;
-                }
-                dateCounts[dateStr]++;
-            }
-            return dateCounts;
-        }
-
-        function updateStoveChart(data) {
-            const chartContext = document.getElementById("stove-chart").getContext("2d");
-            const activations = StoveAmount(data);
-            // console.log("stove info: ", data);
-            // console.log("formatted for stove; ", activations);
-            const labels = Object.keys(activations);
-            const values = Object.values(activations);
-
-            if (stoveChartInstance) {
-                stoveChartInstance.destroy();
-            }
-
-            stoveChartInstance = new Chart(chartContext, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: "Tændt pr. dag",
-                        data: values,
-                        borderColor: "blue",
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scale: {
-                        ticks: {
-                        precision: 0
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateStoveTable(data) {
-            const paramsContainer = document.querySelector("#stove-on-off");
-            
-            // Create table structure once
-            paramsContainer.innerHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tidskode  |  mode</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            `;
-            
-            const tableBody = paramsContainer.querySelector("tbody");
-            
-            // Build all rows at once using DocumentFragment
-            const fragment = document.createDocumentFragment();
-            
-            // Pre-format date strings outside the loop
-            const formattedData = data.map(entry => ({
-                timeString: new Date(entry.time_stamp).toLocaleString(),
-                mode: entry.mode
-            }));
-            
-            // Create all rows at once
-            for (const entry of formattedData) {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.textContent = `${entry.timeString} ||  ${entry.mode}`;
-                row.appendChild(cell);
-                fragment.appendChild(row);
-            }
-            
-            // Add all rows to the DOM in one operation
-            tableBody.appendChild(fragment);
-        }
-
         // fetch res info
         async function fetchResIds() {
             try {
@@ -413,6 +175,212 @@
                 return {};
             }
         }
+        
+        /// ======= FORMATTERS ========
+
+        // gives a dict with days, and how many times an alarm happened
+        function AlarmsAmount(data) {
+            const dateCounts = {};
+            console.log("alarms: ", data);
+
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                if (!item.timestamp || item.state !== "Alarmed") continue;
+                try {
+                    console.log("time: ", new Date(item.timestamp));
+                    // Format date as dd-mm-yyyy
+                    let dateObj = new Date(item.timestamp);
+                    let day = String(dateObj.getDate()).padStart(2, '0');
+                    let month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    let year = dateObj.getFullYear();
+                    let formattedDate = `${day}-${month}-${year}`;
+
+                    if (!dateCounts[formattedDate]) {
+                        dateCounts[formattedDate] = 0;
+                    }
+                    dateCounts[formattedDate]++;
+                } catch(err) {
+                    console.log(err);
+                }
+                
+            }
+            return dateCounts;
+        }
+        function StoveAmount(data) {
+            const dateCounts = {};
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                if (!item.time_stamp || item.mode !== "ON") continue;
+
+                // Format date as dd-mm-yyyy
+                    let dateObj = new Date(item.time_stamp);
+                    let day = String(dateObj.getDate()).padStart(2, '0');
+                    let month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    let year = dateObj.getFullYear();
+                    let formattedDate = `${day}-${month}-${year}`;
+
+                    if (!dateCounts[formattedDate]) {
+                        dateCounts[formattedDate] = 0;
+                    }
+                    dateCounts[formattedDate]++;
+            }
+            return dateCounts;
+        }
+
+        /// ===== TABLES ======
+        function updateStatTable(data) {
+            const paramsContainer = document.querySelector("#res-states");
+            
+            // Create table structure once
+            paramsContainer.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th> Timestamp  |  Mode </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            `;
+            
+            const tableBody = paramsContainer.querySelector("tbody");
+            
+            // Build all rows at once using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            
+            // Pre-format date strings outside the loop
+            const formattedData = data.map(entry => ({
+                timeString: new Date(entry.timestamp).toLocaleString(),
+                status: entry.state
+            }));
+            
+            // Create all rows at once
+            for (const entry of formattedData) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.textContent = `${entry.timeString} ||  ${entry.status}`;
+                row.appendChild(cell);
+                fragment.appendChild(row);
+            }
+            
+            // Add all rows to the DOM in one operation
+            tableBody.appendChild(fragment);
+        }
+
+        function updateStoveTable(data) {
+            const paramsContainer = document.querySelector("#stove-on-off");
+            
+            // Create table structure once
+            paramsContainer.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp  |  Mode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            `;
+            
+            const tableBody = paramsContainer.querySelector("tbody");
+            
+            // Build all rows at once using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            
+            // Pre-format date strings outside the loop
+            const formattedData = data.map(entry => ({
+                timeString: new Date(entry.time_stamp).toLocaleString(),
+                mode: entry.mode
+            }));
+            
+            // Create all rows at once
+            for (const entry of formattedData) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.textContent = `${entry.timeString} ||  ${entry.mode}`;
+                row.appendChild(cell);
+                fragment.appendChild(row);
+            }
+            
+            // Add all rows to the DOM in one operation
+            tableBody.appendChild(fragment);
+        }
+
+        /// ======== CHARTS ========
+
+        function updateStatChart(data) {
+            const chartContext = document.getElementById("alarm-chart").getContext("2d");
+            const activations = AlarmsAmount(data);
+            // console.log("alarms: ", data);
+            // console.log("formatted; ", activations);
+            const labels = Object.keys(activations);
+            const values = Object.values(activations);
+
+            if (alarmChartInstance) {
+                alarmChartInstance.destroy()
+            }
+
+            alarmChartInstance = new Chart(chartContext, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Alarms turned on per day",
+                        data: values,
+                        borderColor: "blue",
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scale: {
+                        ticks: {
+                        precision: 0
+                        }
+                    }
+                }
+            });
+        }
+        function updateStoveChart(data) {
+            const chartContext = document.getElementById("stove-chart").getContext("2d");
+            const activations = StoveAmount(data);
+            // console.log("stove info: ", data);
+            // console.log("formatted for stove; ", activations);
+            const labels = Object.keys(activations);
+            const values = Object.values(activations);
+
+            if (stoveChartInstance) {
+                stoveChartInstance.destroy();
+            }
+
+            stoveChartInstance = new Chart(chartContext, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Amount of times the stove was turned on",
+                        data: values,
+                        borderColor: "blue",
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scale: {
+                        ticks: {
+                        precision: 0
+                        }
+                    }
+                }
+            });
+        }
+
+
+        
 
         function displayHealthData(data) {
             console.log("in display: ", data);
@@ -480,6 +448,8 @@
             });
         }
 
+
+        //// ====== USER HANDLING ========
         function resSelectionHandler() {
             const dropdown = document.getElementById("resIdDropDown");
             const selectVal = dropdown.value;
