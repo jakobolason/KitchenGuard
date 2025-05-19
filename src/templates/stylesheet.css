@@ -30,6 +30,10 @@ body {
     z-index: 1000;
 }
 
+.nav {
+    margin: 10px;
+}
+
 .alarm-button {
     border: none;
     cursor: pointer;
@@ -108,9 +112,13 @@ body {
     text-align: center;
 }
 
-.colored-box {
+.grid-3 {
     grid-template-columns: repeat(3, 1fr);
     display: grid;
+}
+
+.colored-box {
+
     background-color: #FABA5F;
 }
 
