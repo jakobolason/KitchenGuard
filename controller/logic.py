@@ -6,10 +6,12 @@ import paho.mqtt.client as mqtt
 import simpleaudio as sa
 import environment
 import threading
+import time
+from heartbeat_class import Heartbeat
 
 class Logic:
 	
-	def __init__(self, shared_data):
+	def __init__(self):
 		# Connect
 		self.client = mqtt.Client()
 		self.client.connect(environment.MQTT_BROKER_HOST, environment.MQTT_BROKER_PORT)
@@ -21,7 +23,7 @@ class Logic:
 		self.stop_event_audio = threading.Event()
 		
 		self.flag_first_run = True
-		self.shared_data = shared_data
+		self.health_check_interval = environment.HEALTH_CHECK_INTERVAL_IDEAL
 	
 	# Setup the Raspberry PI endpoint for the state to change
 	def setup_routes(self):
@@ -91,6 +93,17 @@ class Logic:
 	def stopAudio(self):  
 		self.stop_event_audio.set()
 
+	def heartbeat_scheduler(self):
+		my_heartbeat = Heartbeat()
+		while True:
+			heartbeat_thread = threading.Thread(target = my_heartbeat.heartbeat)
+			heartbeat_thread.start()
+			heartbeat_thread.join()
+			
+			# Sleep to wait for the server answer back what the state is
+			sleep(10)
+			time.sleep(self.health_check_interval) 
+
 	# Handle the state we are in
 	def handleState(self, data):
 		state = data["new_state"]
@@ -100,12 +113,12 @@ class Logic:
 		print("Resident is in room " + str(room))
 		
 		if (state == "Initialization"):
+			threading.Thread(target=self.heartbeat_scheduler).start()
 			self.flag_first_run = True
-			return
-		
+
 		# If we are in "standby", "attended" or "unattended" do the same thing
 		elif (state == "Standby" or state == "Attended" or state == "Unattended"):
-			self.shared_data.health_check_interval = environment.HEALTH_CHECK_INTERVAL_IDEAL
+			self.health_check_interval = environment.HEALTH_CHECK_INTERVAL_IDEAL
 			self.Change_LED_OFF(environment.LIVING_ROOM)
 			self.Change_LED_OFF(environment.BATHROOM)
 			self.Power_plug_ON()
@@ -143,5 +156,5 @@ class Logic:
 			self.Change_LED_ON(environment.LIVING_ROOM, environment.FAULTY_COLOR)
 			self.Change_LED_ON(environment.BATHROOM, environment.FAULTY_COLOR)
 
-			self.shared_data.health_check_interval = environment.FAULTY_HEALTH_CHECK_INTERVAL
+			self.health_check_interval = environment.FAULTY_HEALTH_CHECK_INTERVAL
 
