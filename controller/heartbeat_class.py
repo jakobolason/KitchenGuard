@@ -1,7 +1,6 @@
 from time import sleep
 from threading import Thread
-from paho.mqtt.client import Client as MqttClient, MQTTMessage
-from paho.mqtt import publish, subscribe
+from paho.mqtt.client import Client as MqttClient
 import json
 import requests
 import environment

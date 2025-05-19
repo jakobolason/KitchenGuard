@@ -7,7 +7,6 @@ from threading import Event, Thread
 from time import sleep
 from typing import Any, Callable, List, Optional
 from paho.mqtt.client import Client as MqttClient, MQTTMessage
-from paho.mqtt import publish, subscribe
 
 
 class Cep2Zigbee2mqttMessageType(Enum):
@@ -167,64 +166,6 @@ class Cep2Zigbee2mqttClient:
             self.__client.subscribe(t)
         # Start the subscriber thread.
         self.__subscriber_thread.start()
-
-    def change_state(self, device_id: str, state: str) -> None:
-        if not self.__connected:
-            raise RuntimeError("The client is not connected. Connect first.")
-
-        self.__client.publish(topic=f"zigbee2mqtt/{device_id}/set",
-                              payload=json.dumps({"state": f"{state}"}))
-
-    def check_health(self) -> str:
-        """ Allows to check whether zigbee2mqtt is healthy, i.e. the service is running properly.
-        
-        Refer to zigbee2mqtt for more information. This is a blocking function that waits for a
-        response to the health request.
-
-        Returns:
-            A string with a description of zigbee2mqtt's health. This can be 'ok' or 'fail'. 
-        """
-        health_status = "fail"
-        health_response_received = Event()
-
-        # This function will run the subscriber on a thread. The subscriber must be started first,
-        # so that the health_check message is received, even if the broker does not have message
-        # persistence active. This should also avoid that messages with QoS 0 are not received.
-        # Also, if the subscriber is started after, it could happen the message to be received by
-        # another subscriber and never by this one.
-        # More information can be found in
-        # https://pagefault.blog/2020/02/05/how-to-set-up-persistent-storage-for-mosquitto-mqtt-broker
-        def health_check_subscriber():
-            message = subscribe.simple(hostname=self.__host,
-                                       port=self.__port,
-                                       topics="zigbee2mqtt/bridge/response/health_check")
-
-            if message:
-                # Decode and parse JSON payload.
-                payload = message.payload.decode("utf-8")
-                health = json.loads(payload)
-
-                # The nonlocal keyword is used to set the variable health_status that is not defined
-                # in this function's scope. For more information got to
-                # https://www.programiz.com/python-programming/global-local-nonlocal-variables
-                nonlocal health_status
-                health_status = health.get("status", "fail")
-                # Set the flag so that the function exits.
-                health_response_received.set()
-
-        # Start a thread with the subscriber that will wait for the response of the health_check.
-        Thread(target=health_check_subscriber, daemon=True).start()
-        # Wait for the subscriber to establish a connection with the broker.
-        sleep(.5)
-        # Publish the health_check request.
-        publish.single(hostname=self.__host,
-                       port=self.__port,
-                       topic="zigbee2mqtt/bridge/request/health_check")
-        # Wait until the response is received. If it is not received within 5 seconds, then return
-        # the default state: "fail".
-        health_response_received.wait(timeout=5)
-
-        return health_status
 
     def disconnect(self) -> None:
         """ Disconnects from the MQTT broker.

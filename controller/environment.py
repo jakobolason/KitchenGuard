@@ -1,5 +1,5 @@
 # Start up time
-SLEEP_TIME = 10
+SLEEP_TIME = 15
 
 HTTP_HOST = "http://192.168.43.112:8080"
 MQTT_BROKER_HOST = "localhost"
