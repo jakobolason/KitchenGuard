@@ -59,7 +59,7 @@ pub struct AppState {
 }
 
 // HEUCOD event standard, needs implementing.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Event {
     pub time_stamp: String,
     pub mode: String,

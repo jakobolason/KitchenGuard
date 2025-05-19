@@ -30,6 +30,8 @@
             </option>
         </select>
     </div>
+    <button onclick="resSelectionHandler()" class="alarm-button">Refresh</button>
+
 
     <div class="stat-grid" id="resInfo">
         <div class="tables">
@@ -57,7 +59,7 @@
             <div class="health-overview" id="health-view">
                 <h3>Status of local devices</h3>
             </div>
-            <button onclick="RestartAlarm()" class="alarm-button">Turn off Alarm</button>
+            <button onclick="RestartAlarm()" class="alarm-button" id="alarm-button" style="background-color: red;">Turn off Alarm</button>
         </div> 
     </div>
     
@@ -281,7 +283,7 @@
             }));
             
             // Create all rows at once
-            for (const entry of formattedData) {
+            for (const entry of formattedData.slice().reverse()) {
                 const row = document.createElement('tr');
                 const cell = document.createElement('td');
                 cell.textContent = `${entry.timeString} ||  ${entry.mode}`;
@@ -468,6 +470,14 @@
                 } else {
                     updateStatTable(res_data);
                     updateStatChart(res_data);
+                    let latestEntry = res_data[res_data.length-1]; 
+                    console.log(latestEntry)
+                    if (latestEntry.state === "Alarmed" || latestEntry.state === "CriticallyAlarmed") {
+                        // show the button to deactivate the alarm
+                        document.getElementById("alarm-button").style.display = "";
+                    } else {
+                        document.getElementById("alarm-button").style.display = "none";
+                    }
                 }
                 
                 if (stove_data.length === 0) {
@@ -479,7 +489,7 @@
                 if (health_data.length === 0) {
                     console.error("No healthcheck data");
                 } else {
-                    displayHealthData(health_data[0]);
+                    displayHealthData(health_data[health_data.length-1]);
                 }
                 console.log("done!");
             } catch (error) {

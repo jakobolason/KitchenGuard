@@ -188,20 +188,22 @@ impl StateHandler {
                     shared_struct::States::CriticallyAlarmed => shared_struct::States::Standby,
                     _ => shared_struct::States::Unattended,
                 };
-                scheduled_task = TaskValue {
-                    type_of_task: TypeOfTask::NewTask,
-                    scheduled_task: Some(shared_struct::ScheduledTask {
+                if next_state == shared_struct::States::Unattended {
+                        scheduled_task = TaskValue {
+                        type_of_task: TypeOfTask::NewTask,
+                        scheduled_task: Some(shared_struct::ScheduledTask {
+                            res_id: data.res_id.to_string().clone(),
+                            execute_at: StateHandler::alarm_duration_from_state(&next_state, is_test),
+                        }),
                         res_id: data.res_id.to_string().clone(),
-                        execute_at: StateHandler::alarm_duration_from_state(&next_state, is_test),
-                    }),
-                    res_id: data.res_id.to_string().clone(),
-                };
+                    };
+                }
                 next_state
             } else {
                 // if it's not the user moving into kitchen, don't do anything
                 current_state.clone()
             }
-        } 
+        }
         // In attended, we check both kitchen PIR status and power plug status
         else if current_state == shared_struct::States::Attended 
         {
@@ -362,21 +364,6 @@ impl StateHandler {
         db_client: Client) 
         -> Result<shared_struct::States, std::io::ErrorKind> 
     {
-        match dotenv() {
-            Ok(_) => println!("Successfully loaded .env file"),
-            Err(e) => println!("Failed to load .env file: {}", e),
-        }
-        let account_sid = match env::var("ACCOUNT_SID") {
-            Ok(value) => {
-                println!("Successfully read ACCOUNT_SID");
-                value
-            },
-            Err(e) => {
-                println!("Failed to read ACCOUNT_SID: {}", e);
-                String::default()
-            }
-        };
-        print!("sid: {}", account_sid);
         let res_id = data.res_id.to_string();
         // Log the event data
         let collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<shared_struct::Event>(shared_struct::RESIDENT_LOGS);

@@ -195,10 +195,7 @@ impl Handler<GetStoveData> for WebHandler {
             {
                 Ok(mut cursor) => {
                     let mut result = Vec::new();
-                    let mut count = 0;
                     while let Some(doc) = cursor.next().await {
-                        if count > 1000 { break; }
-                        count += 1;
                         match doc {
                             Ok(d) => {
                             // println!("Found document: {:?}", d);
