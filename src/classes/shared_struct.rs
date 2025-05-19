@@ -1,4 +1,4 @@
-use mongodb::{bson::{oid::ObjectId, Binary}, Client};
+use mongodb::{bson::Binary, Client};
 use chrono::DateTime;
 
 use super::{
@@ -83,20 +83,6 @@ pub enum States {
     Alarmed = 4,
     CriticallyAlarmed = 5,
     Faulty = 6,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "()")]
-pub struct HealthData {
-    pub res_id: String,
-    pub kitchen_pir: String,
-    pub living_room_pir: String,
-    pub bathroom_pir: String,
-    pub bathroom_LED: String,
-    pub living_room_LED: String,
-    pub power_plug: String,
-    pub bridge: String,
-    pub pi: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]

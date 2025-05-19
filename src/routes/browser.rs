@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::{collections::HashMap, fs};
 use log::error;
 use serde_json;
-use crate::classes::shared_struct::{AppState, Event, GetHealthData, GetStoveData, HealthCheck, HealthData, LoginInformation, ResIdFetcher, StateLog, ValidateSession};
+use crate::classes::shared_struct::{AppState, Event, GetHealthData, GetStoveData, HealthCheck, LoginInformation, ResIdFetcher, StateLog, ValidateSession};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))

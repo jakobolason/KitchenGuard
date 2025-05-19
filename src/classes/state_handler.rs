@@ -1,7 +1,5 @@
 use actix::{Actor, Addr, Context, Handler, Message, ResponseFuture};
-use chrono::DateTime;
-use serde::{Deserialize, Serialize};
-use mongodb::{bson::{self, doc, oid::ObjectId}, Client};
+use mongodb::{bson::{self, doc}, Client};
 use core::panic;
 use std::time::{Duration, Instant};
 use std::env;
@@ -10,7 +8,7 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{self, HealthCheck, ScheduledTask, SensorLookup, StateLog, RESIDENT_DATA, SENSOR_LOOKUP},
+    shared_struct::{self, HealthCheck, ScheduledTask, SensorLookup, StateLog},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -593,8 +591,9 @@ impl Handler<shared_struct::CreateUser> for StateHandler {
         println!("creating user");
         let db_client = self.db_client.clone();
         actix::spawn(async move {
-            StateHandler::create_user(&data.username, &data.password, &data.phone_number, db_client).await;
-            
+            if let Err(err) = StateHandler::create_user(&data.username, &data.password, &data.phone_number, db_client).await {
+                eprintln!("Error ocurred whilst creating a new user: {:?}", err);
+            }
         });
         Some("OK".to_string())
     }

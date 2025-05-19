@@ -6,7 +6,7 @@ use mongodb::{bson::doc, Client,};
 use log::error;
 use futures_util::StreamExt;
 
-use crate::classes::shared_struct::{HealthData, SensorLookup, DEVICE_HEALTH, RESIDENT_LOGS, SENSOR_LOOKUP};
+use crate::classes::shared_struct::{SensorLookup, DEVICE_HEALTH, RESIDENT_LOGS, SENSOR_LOOKUP};
 
 use super::{
     cookie_manager::CookieManager, 

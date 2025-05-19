@@ -1,8 +1,6 @@
 use actix_web::{web, HttpResponse};
-use serde::{Deserialize, Serialize};
-use mongodb::Client;
 
-use crate::classes::shared_struct::{AppState, CreateUser, Event, HealthCheck, HealthData, InitState, SensorLookup};
+use crate::classes::shared_struct::{AppState, CreateUser, Event, HealthCheck, InitState, SensorLookup};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -14,9 +12,6 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
             .route("/initialization", web::post().to(initialization))
     );
 }
-const DB_NAME: &str = "test";
-const COLL_NAME: &str = "users";
-
 async fn create_user(data: web::Form<CreateUser>, app_state: web::Data<AppState>) -> HttpResponse {
     println!("creating user!");
     match app_state.state_handler.send(data.into_inner()).await {
