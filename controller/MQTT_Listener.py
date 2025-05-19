@@ -29,7 +29,7 @@ class MQTT_Listener:
         """
         self.__z2m_client.connect()
         # A new event is sent as an HTTP GET request
-        response = requests.get(self.HTTP_HOST + "/api/status")
+        response = requests.get(environment.HTTP_HOST + "/api/status")
         if response.status_code == 200:
             print("Status of database was a SUCCESS!")
         else:

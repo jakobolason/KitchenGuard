@@ -9,7 +9,7 @@ import threading
 
 class Logic:
 	
-	def __init__(self):
+	def __init__(self, shared_data):
 		# Connect
 		self.client = mqtt.Client()
 		self.client.connect(environment.MQTT_BROKER_HOST, environment.MQTT_BROKER_PORT)
@@ -21,6 +21,7 @@ class Logic:
 		self.stop_event_audio = threading.Event()
 		
 		self.flag_first_run = True
+		self.shared_data = shared_data
 	
 	# Setup the Raspberry PI endpoint for the state to change
 	def setup_routes(self):
@@ -42,9 +43,9 @@ class Logic:
 	
 	# Get the LED endpoint based on the room
 	def getTopicRoomLED(self, room):
-		if (room == "living_room"):
+		if (room == environment.LIVING_ROOM):
 			return environment.ZIGBEE_LIVING_ROOM_LED_TOPIC
-		elif (room == "bathroom"):
+		elif (room == environment.BATHROOM):
 			return environment.ZIGBEE_BATHROOM_LED_TOPIC
 		else: return "error"
 	
@@ -62,6 +63,7 @@ class Logic:
 		print("LED " + str(room) + " ON")
 		
 		topic = self.getTopicRoomLED(room)
+		print(topic)
 		
 		self.client.publish(topic, json.dumps(my_json))
 			
@@ -103,9 +105,9 @@ class Logic:
 		
 		# If we are in "standby", "attended" or "unattended" do the same thing
 		elif (state == "Standby" or state == "Attended" or state == "Unattended"):
-			environment.HEALTH_CHECK_INTERVAL = 1800
-			self.Change_LED_OFF("living_room")
-			self.Change_LED_OFF("bathroom")
+			self.shared_data.health_check_interval = environment.HEALTH_CHECK_INTERVAL_IDEAL
+			self.Change_LED_OFF(environment.LIVING_ROOM)
+			self.Change_LED_OFF(environment.BATHROOM)
 			self.Power_plug_ON()
 			self.stopAudio()
 			
@@ -119,10 +121,10 @@ class Logic:
 		
 		# Going into alarmed state
 		elif (state == "Alarmed"):
-			if (room == "bathroom_pir"):
-				self.Change_LED_ON("bathroom", {"state": "ON", "color": {"r": 255, "g": 95, "b": 31}})
-			elif (room == "living_room_pir"):
-				self.Change_LED_ON("living_room", {"state": "ON", "color": {"r": 255, "g": 95, "b": 31}})
+			if (room == environment.BATHROOM_PIR):
+				self.Change_LED_ON(environment.BATHROOM, environment.ALARMED_COLOR)
+			elif (room == environment.LIVING_ROOM_PIR):
+				self.Change_LED_ON(environment.LIVING_ROOM, environment.ALARMED_COLOR)
 			
 			self.Power_plug_ON()
 			
@@ -131,15 +133,15 @@ class Logic:
 		
 		# Going into critically alarmed state
 		elif (state == "CriticallyAlarmed"):
-			self.Change_LED_ON("living_room", {"state": "ON", "color": {"r": 255, "g": 0, "b": 0}})
-			self.Change_LED_ON("bathroom", {"state": "ON", "color": {"r": 255, "g": 0, "b": 0}})
+			self.Change_LED_ON(environment.LIVING_ROOM, environment.CRITICALLY_ALARMED_COLOR)
+			self.Change_LED_ON(environment.BATHROOM, environment.CRITICALLY_ALARMED_COLOR)
 			self.Power_plug_OFF()	
 		
 		# Going into the faulty state
 		elif (state == "Faulty"):
 			# Make the LED's pink to visualize the setup went wrong
-			self.Change_LED_ON("living_room", {"state": "ON", "color": {"r": 255, "g": 0, "b": 255}})
-			self.Change_LED_ON("bathroom", {"state": "ON", "color": {"r": 255, "g": 0, "b": 255}})
+			self.Change_LED_ON(environment.LIVING_ROOM, environment.FAULTY_COLOR)
+			self.Change_LED_ON(environment.BATHROOM, environment.FAULTY_COLOR)
 
-			environment.HEALTH_CHECK_INTERVAL = environment.FAULTY_HEALTH_CHECK_INTERVAL
+			self.shared_data.health_check_interval = environment.FAULTY_HEALTH_CHECK_INTERVAL
 

@@ -56,17 +56,17 @@ class Heartbeat:
 				status = payload_data['status']		
 			
 			# Set the status of the different sensors
-			if (ID == "kitchen_pir"):
+			if (ID == environment.KITCHEN_PIR):
 				self.kitchen_pir_status = status
-			elif (ID == "living_room_pir"):
+			elif (ID == environment.LIVING_ROOM_PIR):
 				self.living_room_pir_status = status
-			elif (ID == "bathroom_pir"):
+			elif (ID == environment.BATHROOM_PIR):
 				self.bathroom_pir_status = status
-			elif (ID == "living_room_LED"):
+			elif (ID == environment.LIVING_ROOM_LED):
 				self.living_room_LED_status = status
-			elif (ID == "bathroom_LED"):
+			elif (ID == environment.BATHROOM_LED):
 				self.bathroom_LED_status = status
-			elif (ID == "power_plug"):
+			elif (ID == environment.POWER_PLUG):
 				self.PowerPlug_status = status
 			
 			print(f"topic = {msg.topic}, ID = {ID}, Status = {status}")
@@ -97,12 +97,12 @@ class Heartbeat:
 
 		# Setup the payload to the server about the interviews
 		event = {
-			"kitchen_pir": self.kitchen_pir_status,
-			"living_room_pir": self.living_room_pir_status,
-			"bathroom_pir": self.bathroom_pir_status,
-			"bathroom_LED": self.bathroom_LED_status,
-			"living_room_LED": self.living_room_LED_status,
-			"power_plug": self.PowerPlug_status,
+			environment.KITCHEN_PIR: self.kitchen_pir_status,
+			environment.LIVING_ROOM_PIR: self.living_room_pir_status,
+			environment.BATHROOM_PIR: self.bathroom_pir_status,
+			environment.BATHROOM_LED: self.bathroom_LED_status,
+			environment.LIVING_ROOM_LED: self.living_room_LED_status,
+			environment.POWER_PLUG: self.PowerPlug_status,
 			"bridge": self.Bridge_status,
 			"pi": self.PI_status,
 			"res_id": environment.RES_ID
