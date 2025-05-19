@@ -1,11 +1,6 @@
 from time import sleep
 from MQTT_Listener import MQTT_Listener
-from threading import Thread
-from paho.mqtt.client import Client as MqttClient, MQTTMessage
-from paho.mqtt import publish, subscribe
 import json
-import re
-import requests
 from flask import Flask, request
 import paho.mqtt.client as mqtt
 import simpleaudio as sa
@@ -23,9 +18,9 @@ class Logic:
 		self.app = Flask(__name__)
 		self.setup_routes()
 		
-		self.stop_event = threading.Event()
+		self.stop_event_audio = threading.Event()
 		
-		self.flag_start = True
+		self.flag_first_run = True
 	
 	# Setup the Raspberry PI endpoint for the state to change
 	def setup_routes(self):
@@ -86,13 +81,13 @@ class Logic:
 	def playAudio(self):
 		wave_obj = sa.WaveObject.from_wave_file(environment.AUDIO_FILE_PATH)
 		
-		while not self.stop_event.is_set():  # Changed to while not stop_event.is_set()
+		while not self.stop_event_audio.is_set():  # Changed to while not stop_event.is_set()
 			play_obj = wave_obj.play()
 			play_obj.wait_done()
 			
 	# Add a function to cleanly stop the audio
 	def stopAudio(self):  
-		self.stop_event.set()
+		self.stop_event_audio.set()
 
 	# Handle the state we are in
 	def handleState(self, data):
@@ -103,7 +98,7 @@ class Logic:
 		print("Resident is in room " + str(room))
 		
 		if (state == "Initialization"):
-			self.flag_start = True
+			self.flag_first_run = True
 			return
 		
 		# If we are in "standby", "attended" or "unattended" do the same thing
@@ -116,10 +111,10 @@ class Logic:
 			
 			# Start the controller
 			print("Starting the controller")
-			if (self.flag_start):
+			if (self.flag_first_run):
 				MQTT_listener = MQTT_Listener()
 				MQTT_listener.start()
-				self.flag_start = False
+				self.flag_first_run = False
 
 		
 		# Going into alarmed state
@@ -131,7 +126,7 @@ class Logic:
 			
 			self.Power_plug_ON()
 			
-			self.stop_event.clear()  # Ensure the stop event is cleared before starting the audio
+			self.stop_event_audio.clear()  # Ensure the stop event is cleared before starting the audio
 			threading.Thread(target=self.playAudio).start()
 		
 		# Going into critically alarmed state

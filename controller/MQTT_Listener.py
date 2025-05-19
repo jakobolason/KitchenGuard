@@ -1,8 +1,8 @@
 from Worker import (Cep2Zigbee2mqttClient,
                                    Cep2Zigbee2mqttMessage, Cep2Zigbee2mqttMessageType)
 import requests
-import json
 import datetime
+import environment
 
 class MQTT_Listener:
     """ The controller is responsible for managing events received from zigbee2mqtt and handle them.

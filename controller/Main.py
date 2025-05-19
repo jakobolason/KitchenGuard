@@ -1,13 +1,11 @@
 from time import sleep
 from threading import Thread
-from paho.mqtt.client import Client as MqttClient, MQTTMessage
-from paho.mqtt import publish, subscribe
-import json
 from heartbeat_class import Heartbeat
 from logic import Logic
 import time
 import environment
 import requests
+import paho.mqtt as mqtt
 
 
 def scheduler(my_heartbeat):
@@ -29,7 +27,7 @@ if __name__ == "__main__":
     client.connect(environment.MQTT_BROKER_HOST, environment.MQTT_BROKER_PORT)
     # Start the logic
     my_logic = Logic()
-    threading.Thread(target=my_logic.start).start()
+    Thread(target=my_logic.start).start()
     
     # Setup the payload to the server that we are ready to go into "Initialization" mode along with other information
     payload = {
@@ -43,7 +41,7 @@ if __name__ == "__main__":
     requests.post(environment.STARTUP_ENDPOINT, json=payload)
 
     # Start the heartbeat
-    threading.Thread(target = scheduler, args = (my_heartbeat, )).start()   
+    Thread(target = scheduler, args = (my_heartbeat, )).start()   
     
     # Sleep until the interview is complete
     while (not my_heartbeat.startup_Check):
