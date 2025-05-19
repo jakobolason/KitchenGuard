@@ -21,7 +21,7 @@ if __name__ == "__main__":
         "kitchen_pir": environment.KITCHEN_PIR,
         "power_plug": environment.POWER_PLUG,
         "other_pir": environment.OTHER_PIR_DEVICES,
-        "led": [environment.LIVING_ROOM_LED, environment.BATHROOM_LED]
+        "led": [d["LED"] for d in environment.ROOMS]
     }   
     # Send the payload
     requests.post(environment.STARTUP_ENDPOINT, json=payload)

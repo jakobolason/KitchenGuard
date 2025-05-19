@@ -10,14 +10,10 @@ class Heartbeat:
 	
 	# Initialization variables
 	def __init__(self):
-		self.kitchen_pir_status = "error"
-		self.living_room_pir_status = "error"
-		self.bathroom_pir_status = "error"
-		self.bathroom_LED_status = "error"
-		self.living_room_LED_status = "error"
-		self.PowerPlug_status = "error"
-		self.Bridge_status = "ok"
-		self.PI_status = "ok"
+		self.status = [(v, "error") for v in environment.SENSOR_DICT.values()]
+		self.status.append(("Bridge", "ok"))
+		self.status.append(("PI", "ok"))
+
 		self.startup_Check = False
 	
 	# Start the heartbeat operation
@@ -55,19 +51,10 @@ class Heartbeat:
 				ID = environment.SENSOR_DICT[hex_name]
 				status = payload_data['status']		
 			
-			# Set the status of the different sensors
-			if (ID == environment.KITCHEN_PIR):
-				self.kitchen_pir_status = status
-			elif (ID == environment.LIVING_ROOM_PIR):
-				self.living_room_pir_status = status
-			elif (ID == environment.BATHROOM_PIR):
-				self.bathroom_pir_status = status
-			elif (ID == environment.LIVING_ROOM_LED):
-				self.living_room_LED_status = status
-			elif (ID == environment.BATHROOM_LED):
-				self.bathroom_LED_status = status
-			elif (ID == environment.POWER_PLUG):
-				self.PowerPlug_status = status
+			# Loop though all sensors
+			for i in range(len(self.status)):
+				if (ID == self.status[i][0]):
+					self.status[i] = (self.status[i][0], status)
 			
 			print(f"topic = {msg.topic}, ID = {ID}, Status = {status}")
 			
@@ -97,20 +84,13 @@ class Heartbeat:
 
 		# Setup the payload to the server about the interviews
 		event = {
-			environment.KITCHEN_PIR: self.kitchen_pir_status,
-			environment.LIVING_ROOM_PIR: self.living_room_pir_status,
-			environment.BATHROOM_PIR: self.bathroom_pir_status,
-			environment.BATHROOM_LED: self.bathroom_LED_status,
-			environment.LIVING_ROOM_LED: self.living_room_LED_status,
-			environment.POWER_PLUG: self.PowerPlug_status,
-			"bridge": self.Bridge_status,
-			"pi": self.PI_status,
-			"res_id": environment.RES_ID
+			"res_id": environment.RES_ID,
+			"data": self.status
 		}
 		
 		# Send the payload
 		response = requests.post(environment.HEALTH_CHECK_ENDPOINT, json=event)
-		print("Response sent to webserver: " + str( response))
+		print("Response sent to webserver: " + str(response))
 		self.startup_Check = True
 
 	
