@@ -145,11 +145,12 @@ async fn get_res_healthcheck(session: Session, app_state: web::Data<AppState>, q
         match app_state.web_handler.send(ValidateSession { cookie}).await {
             Ok(Some(ids)) => {
                 let res_id = query.id.clone();
+                println!("in health retrieve ");
                 // if user doesn't have access to requested data
                 if !ids.contains(&res_id) {
                     return HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
                 }
-                println!("Fetching resident info for id: {}", res_id);
+                println!("Fetching resident health for id: {}", res_id);
                 // Fetch the resident information from the web_handler
                 let res_info = match app_state.web_handler.send(GetHealthData { res_id}).await
                 {

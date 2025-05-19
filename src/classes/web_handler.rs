@@ -6,7 +6,7 @@ use mongodb::{bson::doc, Client,};
 use log::error;
 use futures_util::StreamExt;
 
-use crate::classes::shared_struct::{HealthData, SensorLookup, RESIDENT_LOGS, SENSOR_LOOKUP};
+use crate::classes::shared_struct::{HealthData, SensorLookup, DEVICE_HEALTH, RESIDENT_LOGS, SENSOR_LOOKUP};
 
 use super::{
     cookie_manager::CookieManager, 
@@ -234,7 +234,7 @@ impl Handler<GetHealthData> for WebHandler {
         Box::pin(async move {
             // Use the db_client to find documents matching the res_id
             println!("Fetching healthdata logs for res_id: {:?}", msg.res_id);
-            WebHandler::get_info::<HealthData>(&msg.res_id, RESIDENT_DATA, db_client).await
+            WebHandler::get_info::<HealthData>(&msg.res_id, DEVICE_HEALTH, db_client).await
         })
     }
 }

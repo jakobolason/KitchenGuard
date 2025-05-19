@@ -79,6 +79,9 @@
         <!-- right side shows health data, and button to turn off alarm -->
         <div class="right-hub">
             <button onclick="RestartAlarm()">Turn off Alarm</button>
+            <div class="health-overview" id="health-view">
+                <h3>Status of local devices</h3>
+            </div>
         </div> 
     </div>
     
@@ -205,37 +208,45 @@
             }
         }
 
-        function updateStatTable(data) {
-            if (!Array.isArray(data) || data.length === 0) {
-                console.error("Not able to update stat table, no data.");
-                return;
-            }
 
+        function updateStatTable(data) {
             const paramsContainer = document.querySelector("#res-states");
-            // console.log("Data in stat table: ", data);
-            /* Create table headers */
-            var htmlTable = `
+            
+            // Create table structure once
+            paramsContainer.innerHTML = `
                 <table>
                     <thead>
                         <tr>
-                            <th>Tidskode</th>
+                            <th>Tidskode  |  mode</th>
                         </tr>
                     </thead>
                     <tbody>
                     </tbody>
                 </table>
             `;
-
-            paramsContainer.innerHTML = htmlTable;
-            var tableBody = paramsContainer.querySelector("tbody");
-
-            for (var param of data) {
-                tableBody.innerHTML += `
-                    <tr>
-                        <td>${new Date(param.timestamp).toLocaleString()} ||  ${param.state}</td>
-                    </tr>
-                `;
+            
+            const tableBody = paramsContainer.querySelector("tbody");
+            
+            // Build all rows at once using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            
+            // Pre-format date strings outside the loop
+            const formattedData = data.map(entry => ({
+                timeString: new Date(entry.time_stamp).toLocaleString(),
+                status: entry.state
+            }));
+            
+            // Create all rows at once
+            for (const entry of formattedData) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.textContent = `${entry.timeString} ||  ${entry.status}`;
+                row.appendChild(cell);
+                fragment.appendChild(row);
             }
+            
+            // Add all rows to the DOM in one operation
+            tableBody.appendChild(fragment);
         }
 
         function updateStatChart(data) {
@@ -333,9 +344,9 @@
 
         function updateStoveTable(data) {
             const paramsContainer = document.querySelector("#stove-on-off");
-            // console.log("Data in stove table: ", data);
-            /* Create table headers */
-            var htmlTable = `
+            
+            // Create table structure once
+            paramsContainer.innerHTML = `
                 <table>
                     <thead>
                         <tr>
@@ -346,17 +357,29 @@
                     </tbody>
                 </table>
             `;
-
-            paramsContainer.innerHTML = htmlTable;
-            var tableBody = paramsContainer.querySelector("tbody");
-
-            for (var entry of data) {
-                tableBody.innerHTML += `
-                    <tr>
-                        <td>${new Date(entry.time_stamp).toLocaleString()} ||  ${entry.mode}</td>
-                    </tr>
-                `;
+            
+            const tableBody = paramsContainer.querySelector("tbody");
+            
+            // Build all rows at once using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            
+            // Pre-format date strings outside the loop
+            const formattedData = data.map(entry => ({
+                timeString: new Date(entry.time_stamp).toLocaleString(),
+                mode: entry.mode
+            }));
+            
+            // Create all rows at once
+            for (const entry of formattedData) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.textContent = `${entry.timeString} ||  ${entry.mode}`;
+                row.appendChild(cell);
+                fragment.appendChild(row);
             }
+            
+            // Add all rows to the DOM in one operation
+            tableBody.appendChild(fragment);
         }
 
         // fetch res info
@@ -375,6 +398,72 @@
                 return {};
             }
         }
+        async function getHealthData(id) {
+            try {
+                const response = await fetch(`/get_res_healthcheck?id=${id}`);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch resident ID(s)");
+                }
+
+                const data = await response.json();
+                console.log("Fetched resident health check: ", data);
+                return data;
+            } catch (error) {
+                console.error("Error fetching resident ID(s): ", error);
+                return {};
+            }
+        }
+
+        function displayHealthData(data) {
+            console.log("in display: ", data);
+            
+            const healthView = document.getElementById("health-view");
+            
+            const heading = healthView.querySelector("h3");
+            healthView.innerHTML = '';
+            healthView.appendChild(heading);
+            
+            const resIdElement = document.createElement("h4");
+            resIdElement.textContent = `Resident: ${data.res_id}`;
+            healthView.appendChild(resIdElement);
+            
+            const deviceGrid = document.createElement("div");
+            deviceGrid.className = "device-status-grid";
+            healthView.appendChild(deviceGrid);
+            
+            // Create device entries
+            const deviceEntries = Object.entries(data).filter(([key]) => key !== "res_id");
+            
+            
+            for (const [device, status] of deviceEntries) {
+                const deviceCard = document.createElement("div");
+                deviceCard.className = "device-card";
+                
+                const statusIndicator = document.createElement("div");
+                statusIndicator.className = `status-indicator status-${status === "ok" ? "ok" : "error"}`;
+                
+                const deviceName = document.createElement("div");
+                deviceName.className = "device-name";
+                deviceName.textContent = formatDeviceName(device);
+                
+                const statusText = document.createElement("div");
+                statusText.textContent = status.toUpperCase();
+                statusText.style.color = status === "ok" ? "#4CAF50" : "#F44336";
+                
+                deviceCard.appendChild(statusIndicator);
+                deviceCard.appendChild(deviceName);
+                deviceCard.appendChild(statusText);
+                
+                deviceGrid.appendChild(deviceCard);
+            }
+        }
+        // Helper function to format device names
+            function formatDeviceName(deviceKey) {
+                return deviceKey
+                    .split('_')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            }
 
         async function addResIdsToDropDown() {
             const dropdown = document.getElementById("resIdDropDown");
@@ -413,9 +502,10 @@
         async function handleDataFetching(selectVal) {
             try {
                 // Start both fetches in parallel
-                const [res_data, stove_data] = await Promise.all([
+                const [res_data, stove_data, health_data] = await Promise.all([
                     fetchResStats(selectVal),
-                    fetchResStove(selectVal)
+                    fetchResStove(selectVal),
+                    getHealthData(selectVal),
                 ]);
                 
                 if (res_data.length === 0) {
@@ -430,6 +520,11 @@
                 } else {
                     updateStoveChart(stove_data);
                     updateStoveTable(stove_data);
+                }
+                if (health_data.length === 0) {
+                    console.error("No healthcheck data");
+                } else {
+                    displayHealthData(health_data[0]);
                 }
                 console.log("done!");
             } catch (error) {

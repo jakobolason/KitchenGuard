@@ -102,3 +102,34 @@ body {
 .colored-box {
     background-color: #FABA5F;
 }
+
+.device-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+}
+.device-card {
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.status-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 12px;
+}
+.status-ok {
+    background-color: #4CAF50;
+}
+.status-error {
+    background-color: #F44336;
+}
+.device-name {
+    flex: 1;
+    font-weight: 500;
+}
