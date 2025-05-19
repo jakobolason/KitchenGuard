@@ -43,29 +43,20 @@ class Logic:
 	def start(self):
 		self.app.run(host='0.0.0.0', port = environment.LISTENER_PORT)
 	
-	# Get the LED endpoint based on the room
-	def getTopicRoomLED(self, room):
-		if (room == environment.LIVING_ROOM):
-			return environment.ZIGBEE_LIVING_ROOM_LED_TOPIC
-		elif (room == environment.BATHROOM):
-			return environment.ZIGBEE_BATHROOM_LED_TOPIC
-		else: return "error"
-	
 	# Change the LED to off
 	def Change_LED_OFF(self, room):
-		print("LED " + str(room) + " OFF")
+		print("LED " + str(room["room"]) + " OFF")
 		my_json = json.dumps({"state": "OFF"})
-		
-		topic = self.getTopicRoomLED(room)
-		
+
+		topic = room["LED_TOPIC"]		
+		print(topic)
 		self.client.publish(topic, my_json)
 	
 	# Change the LED to ON
 	def Change_LED_ON(self, room, my_json):
-		print("LED " + str(room) + " ON")
+		print("LED " + str(room["room"]) + " ON")
 		
-		topic = self.getTopicRoomLED(room)
-		print(topic)
+		topic = room["LED_TOPIC"]		
 		
 		self.client.publish(topic, json.dumps(my_json))
 			
@@ -119,8 +110,9 @@ class Logic:
 		# If we are in "standby", "attended" or "unattended" do the same thing
 		elif (state == "Standby" or state == "Attended" or state == "Unattended"):
 			self.health_check_interval = environment.HEALTH_CHECK_INTERVAL_IDEAL
-			self.Change_LED_OFF(environment.LIVING_ROOM)
-			self.Change_LED_OFF(environment.BATHROOM)
+			for i in range(len(environment.ROOMS)):
+				self.Change_LED_OFF(environment.ROOMS[i])
+
 			self.Power_plug_ON()
 			self.stopAudio()
 			
@@ -134,10 +126,8 @@ class Logic:
 		
 		# Going into alarmed state
 		elif (state == "Alarmed"):
-			if (room == environment.BATHROOM_PIR):
-				self.Change_LED_ON(environment.BATHROOM, environment.ALARMED_COLOR)
-			elif (room == environment.LIVING_ROOM_PIR):
-				self.Change_LED_ON(environment.LIVING_ROOM, environment.ALARMED_COLOR)
+			for i in range(len(environment.ROOMS)):
+				self.Change_LED_ON(environment.ROOMS[i], environment.ALARMED_COLOR)
 			
 			self.Power_plug_ON()
 			
@@ -146,15 +136,16 @@ class Logic:
 		
 		# Going into critically alarmed state
 		elif (state == "CriticallyAlarmed"):
-			self.Change_LED_ON(environment.LIVING_ROOM, environment.CRITICALLY_ALARMED_COLOR)
-			self.Change_LED_ON(environment.BATHROOM, environment.CRITICALLY_ALARMED_COLOR)
+			for i in range(len(environment.ROOMS)):
+				self.Change_LED_ON(environment.ROOMS[i], environment.CRITICALLY_ALARMED_COLOR)
+			
 			self.Power_plug_OFF()	
 		
 		# Going into the faulty state
 		elif (state == "Faulty"):
 			# Make the LED's pink to visualize the setup went wrong
-			self.Change_LED_ON(environment.LIVING_ROOM, environment.FAULTY_COLOR)
-			self.Change_LED_ON(environment.BATHROOM, environment.FAULTY_COLOR)
+			for i in range(len(environment.ROOMS)):
+				self.Change_LED_ON(environment.ROOMS[i], environment.FAULTY_COLOR)
 
 			self.health_check_interval = environment.FAULTY_HEALTH_CHECK_INTERVAL
 
