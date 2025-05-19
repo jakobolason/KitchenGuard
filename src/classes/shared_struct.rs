@@ -205,7 +205,7 @@ impl Message for GetStoveData {type Result = Option<Vec<Event>>;}
 pub struct GetHealthData {
     pub res_id: String,
 }
-impl Message for GetHealthData {type Result = Option<Vec<HealthData>>;}
+impl Message for GetHealthData {type Result = Option<HealthCheck>;}
 
 #[derive(Deserialize, Serialize)]
 pub struct TurnOffalarm {

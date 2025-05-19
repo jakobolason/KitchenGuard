@@ -4,7 +4,7 @@ use serde::Deserialize;
 use std::{collections::HashMap, fs};
 use log::error;
 use serde_json;
-use crate::classes::shared_struct::{AppState, Event, GetHealthData, GetStoveData, HealthData, LoginInformation, ResIdFetcher, StateLog, ValidateSession};
+use crate::classes::shared_struct::{AppState, Event, GetHealthData, GetStoveData, HealthCheck, HealthData, LoginInformation, ResIdFetcher, StateLog, ValidateSession};
 
 pub fn browser_config(cfg: &mut web::ServiceConfig) {
     cfg.route("/", web::get().to(front_page))
@@ -155,7 +155,7 @@ async fn get_res_healthcheck(session: Session, app_state: web::Data<AppState>, q
                 let res_info = match app_state.web_handler.send(GetHealthData { res_id}).await
                 {
                     Ok(Some(logs)) => logs,
-                    _ => Vec::<HealthData>::new(),
+                    _ => HealthCheck { res_id: "err".to_string(), data: vec![("err".to_string(), "err".to_string())],},
                 };
                 match serde_json::to_string(&res_info) {
                     Ok(json) => HttpResponse::Ok().content_type(http::header::ContentType::json()).body(json),

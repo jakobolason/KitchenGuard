@@ -387,7 +387,7 @@
             healthView.appendChild(deviceGrid);
             
             // Create device entries
-            const deviceEntries = Object.entries(data).filter(([key]) => key !== "res_id");
+            const deviceEntries = data.data;
             
             
             for (const [device, status] of deviceEntries) {
@@ -489,7 +489,7 @@
                 if (health_data.length === 0) {
                     console.error("No healthcheck data");
                 } else {
-                    displayHealthData(health_data[health_data.length-1]);
+                    displayHealthData(health_data);
                 }
                 console.log("done!");
             } catch (error) {

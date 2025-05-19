@@ -10,7 +10,7 @@ use crate::classes::shared_struct::{HealthData, SensorLookup, DEVICE_HEALTH, RES
 
 use super::{
     cookie_manager::CookieManager, 
-    shared_struct::{Event, GetHealthData, GetStoveData, LoginInformation, ResIdFetcher, StateLog, UsersLoggedInformation, ValidateSession, INFO, RESIDENT_DATA, STATES, USERS}
+    shared_struct::{Event, GetHealthData, GetStoveData, HealthCheck, LoginInformation, ResIdFetcher, StateLog, UsersLoggedInformation, ValidateSession, INFO, RESIDENT_DATA, STATES, USERS}
 };
 pub struct WebHandler {
     cookie_manager: CookieManager,
@@ -222,7 +222,7 @@ impl Handler<GetStoveData> for WebHandler {
 }
 
 impl Handler<GetHealthData> for WebHandler {
-    type Result = ResponseFuture<Option<Vec<HealthData>>>;
+    type Result = ResponseFuture<Option<HealthCheck>>;
 
     fn handle(&mut self, msg: GetHealthData, _ctx: &mut Self::Context) -> Self::Result {
         let db_client = self.db_client.clone();
@@ -230,7 +230,19 @@ impl Handler<GetHealthData> for WebHandler {
         Box::pin(async move {
             // Use the db_client to find documents matching the res_id
             println!("Fetching healthdata logs for res_id: {:?}", msg.res_id);
-            WebHandler::get_info::<HealthData>(&msg.res_id, DEVICE_HEALTH, db_client).await
+            match db_client
+                .database(RESIDENT_DATA)
+                .collection::<HealthCheck>(DEVICE_HEALTH)
+                .find_one(doc! {"res_id": &msg.res_id})
+                .sort(doc!{"_id": -1})
+                .await
+            {
+                Ok(opt) => opt,
+                Err(err) => {
+                    eprintln!("An error occurred whilst getting latest health check: {:?}", err);
+                    None
+                } 
+            }
         })
     }
 }
