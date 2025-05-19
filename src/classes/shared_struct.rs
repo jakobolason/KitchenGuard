@@ -168,7 +168,6 @@ pub struct CreateUser {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct IpCollection {
-    _id: ObjectId,
     pub res_ip: String,
     pub res_id: String,
 }

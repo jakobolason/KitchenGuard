@@ -18,7 +18,6 @@ use super::{
 enum TypeOfTask {
     Cancellation,
     NewTask,
-    SendRelatives,
 }
 
 struct TaskValue {
@@ -139,11 +138,12 @@ impl StateHandler {
     }
 
     fn determine_task(old_state: &shared_struct::States, new_state: &shared_struct::States, res_id: &str, is_test: bool) -> Option<TaskValue> {
+        println!("is new state > old state? {:?}", new_state > old_state);
         if new_state > old_state { // this sometimes means timing an alarm
             match new_state {
                 shared_struct::States::Unattended | shared_struct::States::Alarmed | shared_struct::States::CriticallyAlarmed => 
                     return Some(TaskValue {
-                        type_of_task: TypeOfTask::Cancellation,
+                        type_of_task: TypeOfTask::NewTask,
                         scheduled_task: Some(ScheduledTask {
                             res_id: res_id.to_string(),
                             execute_at: StateHandler::alarm_duration_from_state(new_state, is_test)
@@ -154,7 +154,7 @@ impl StateHandler {
             }
         } else {
             // this sometimes means cancelling an alarm
-            match new_state {
+            match old_state {
                 shared_struct::States::Unattended | shared_struct::States::Alarmed | shared_struct::States::CriticallyAlarmed => 
                     return Some(TaskValue {
                         type_of_task: TypeOfTask::Cancellation,
@@ -343,16 +343,20 @@ impl StateHandler {
                 "led": data.info.led.clone(),
             }
         };
-        let _ = StateHandler::create_or_update_entry::<shared_struct::SensorLookup>("res_id", &data.info.res_id.clone(), update, shared_struct::RESIDENT_DATA, shared_struct::SENSOR_LOOKUP, db_client.clone()).await;
-        // update database with ip address for future use
+        // update sensors
+        if let Err(err) = StateHandler::create_or_update_entry::<shared_struct::SensorLookup>("res_id", &data.info.res_id.clone(), update, shared_struct::RESIDENT_DATA, shared_struct::SENSOR_LOOKUP, db_client.clone()).await {
+            eprintln!("Failure in setting sensor lookup: {:?}", err);
+        }
         let ip_update = doc! {
             "$set": {
-                "_id": ObjectId::new(),
                 "res_ip": data.ip_addr.clone(),
                 "res_id": data.info.res_id.clone(),
             }
         };
-        let _ = StateHandler::create_or_update_entry::<shared_struct::IpCollection>("res_id", &data.info.res_id.clone(), ip_update, shared_struct::RESIDENT_DATA, shared_struct::IP_ADDRESSES, db_client.clone()).await;
+        // update ip address of pi
+        if let Err(err) = StateHandler::create_or_update_entry::<shared_struct::IpCollection>("res_id", &data.info.res_id.clone(), ip_update, shared_struct::RESIDENT_DATA, shared_struct::IP_ADDRESSES, db_client.clone()).await {
+            eprintln!("Failure in setting controller ip address: {:?}", err);
+        }
         let state_log = StateLog {
             res_id: data.info.res_id.clone(),
             timestamp: chrono::Utc::now(),
@@ -439,6 +443,7 @@ impl StateHandler {
                         _=> eprint!("Tried to queue task, but was missing it")
                     }
                 } else if task_el.type_of_task == TypeOfTask::Cancellation {
+                    println!("cancelling timer in jobsscheduler!");
                     let res_id = task_el.res_id;
                     job_scheduler.do_send(CancelTask {
                         res_id,
@@ -626,7 +631,7 @@ use super::*;
         let current_state_log = StateLog {
             res_id: "1".to_string(),
             timestamp: Utc::now(),
-            state: current_state,
+            state: current_state.clone(),
             current_room_pir: "kitchen_pir_1".to_string(),
             context: "TEST".to_string(),
         };
@@ -650,9 +655,11 @@ use super::*;
         };
 
         let (new_state, _) = StateHandler::determine_new_state(current_state_log, &list_of_sensors, &data);
+        let task = StateHandler::determine_task(&current_state, &new_state, "1", true);
 
         assert_eq!(new_state, shared_struct::States::Standby);
-        // assert_eq!(task_value.type_of_task, TypeOfTask::None);
+        assert!(task.is_some());
+        assert_eq!(task.unwrap().type_of_task, TypeOfTask::Cancellation);
     }
 
     #[test]
@@ -661,7 +668,7 @@ use super::*;
         let current_state_log = StateLog {
             res_id: "1".to_string(),
             timestamp: Utc::now(),
-            state: current_state,
+            state: current_state.clone(),
             current_room_pir: "kitchen_pir_1".to_string(),
             context: "TEST".to_string(),
         };
@@ -685,8 +692,11 @@ use super::*;
         };
 
         let (new_state, _) = StateHandler::determine_new_state(current_state_log, &list_of_sensors, &data);
+        let task = StateHandler::determine_task(&current_state, &new_state, "1", true);
 
         assert_eq!(new_state, shared_struct::States::Unattended);
+        assert!(task.is_some());
+        assert_eq!(task.unwrap().type_of_task, TypeOfTask::NewTask);
         // assert_eq!(task_value.type_of_task, TypeOfTask::NewTask);
         // assert!(task_value.scheduled_task.is_some());
     }
