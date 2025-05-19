@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{self, HealthData, SensorLookup, StateLog, TurnOffalarm},
+    shared_struct::{self, HealthData, SensorLookup, StateLog},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -18,6 +18,7 @@ use super::{
 enum TypeOfTask {
     Cancellation,
     NewTask,
+    SendRelatives,
     None,
 }
 
@@ -36,8 +37,6 @@ impl TaskValue {
         }
     }
 }
-
-
 
 // ============= Setup of StateHandler =============
 #[derive(Clone)]
@@ -72,36 +71,70 @@ impl Handler<SetJobScheduler> for StateHandler {
 }
 
 impl StateHandler {
-    async fn notify_relatives(to_number: String, res_id: &str) {
-        dotenv().ok();
-        let client = reqwest::Client::new();
-        let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
-        let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
-        print!("sid: {}", account_sid);
-        let from_number = env::var("FROM_NUMBER").unwrap_or_default();
-        let message = format!("Hello from KitchenGuardServer!, resident {} is in critical mode!", res_id);
-        let url = format!("{}{}/Message.json", shared_struct::SMS_SERVICE, account_sid);
-        println!("url: {}", url);
-        let params = [
-            ("To", to_number),
-            ("From", from_number),
-            ("Body", message),
-        ];
-        println!("It has been sent!");
-
-        let response = client.post(&url)
-            .basic_auth(account_sid, Some(auth_token))
-            .form(&params)
-            .send()
-            .await;
-        match response {
-            Ok(resp) => {
-                println!("Response: {:?}", resp.text().await.unwrap());
+    async fn notify_relatives(res_id: &str, db_client: &Client) -> Result<bool, std::io::ErrorKind> {
+        println!("sending phone number!");
+        let collection = db_client.database(shared_struct::USERS).collection::<shared_struct::UsersLoggedInformation>(shared_struct::INFO);
+        let filter = doc! {
+            "res_ids": {
+                "$in": [res_id.clone()]
             }
-            Err(e) => {
-                eprintln!("Error: {:?}", e);
+        };
+        // Collect ALL relatives that has has this res_id
+        let cursor = collection.find(filter).await;
+        let results = match cursor {
+            Ok(mut cursor) => {
+                let mut results = Vec::new();
+                while let Some(item) = cursor.next().await {
+                    match item {
+                        Ok(logged_info) => results.push(logged_info),
+                        Err(err) => {
+                            eprintln!("Error processing cursor item: {:?}", err);
+                            return Err(std::io::ErrorKind::InvalidInput);
+                        }
+                    }
+                }
+                results
+            },
+            Err(err) => {
+                eprintln!("Error querying user information: {:?}", err);
+                return Err(std::io::ErrorKind::InvalidInput);
+            }
+        };
+        println!("results: {:?}", results);
+        for _info in results {
+            println!("sending res_id: {} to number: {}", res_id.clone(), _info.phone_number.clone());
+            let to_number = _info.phone_number;
+            dotenv().ok();
+            let client = reqwest::Client::new();
+            let auth_token = env::var("AUTH_TOKEN").unwrap_or_default();
+            let account_sid = env::var("ACCOUNT_SID").unwrap_or_default();
+            print!("sid: {}", account_sid);
+            let from_number = env::var("FROM_NUMBER").unwrap_or_default();
+            let message = format!("Hello from KitchenGuardServer!, resident {} is in critical mode!", res_id);
+            let url = format!("{}{}/Message.json", shared_struct::SMS_SERVICE, account_sid);
+            println!("url: {}", url);
+            let params = [
+                ("To", to_number),
+                ("From", from_number),
+                ("Body", message),
+            ];
+            println!("It has been sent!");
+
+            let response = client.post(&url)
+                .basic_auth(account_sid, Some(auth_token))
+                .form(&params)
+                .send()
+                .await;
+            match response {
+                Ok(resp) => {
+                    println!("Response: {:?}", resp.text().await.unwrap());
+                }
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                }
             }
         }
+        Ok(true)
     }
 
 
@@ -109,9 +142,9 @@ impl StateHandler {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            shared_struct::States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(3) },
-            shared_struct::States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(3) },
-            shared_struct::States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(3)},
+            shared_struct::States::Unattended => Instant::now() + if is_test { Duration::from_secs(4) } else { Duration::from_secs(3) }, // 20 minutes
+            shared_struct::States::Alarmed => Instant::now() + if is_test { Duration::from_secs(3) } else { Duration::from_secs(3) }, // 2 minutes
+            shared_struct::States::CriticallyAlarmed => Instant::now() + if is_test { Duration::from_secs(2) } else { Duration::from_secs(3)}, // 8 minutes
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
@@ -239,8 +272,7 @@ impl StateHandler {
                 current_state.clone()
             }
             // Should not be possible, but just in case
-        } 
-
+        }
         else 
         {
             // default to current_state
@@ -378,6 +410,14 @@ impl StateHandler {
         let current_state = latest_statelog.state.clone();
         let (new_state, task_type, room_pir) = StateHandler::determine_new_state(latest_statelog.clone(), &sensor_lookup, &data, is_test.clone());
         println!("new state found to be: {:?} with old state: {:?}", new_state, current_state);
+        if new_state == shared_struct::States::CriticallyAlarmed && new_state == current_state && data.device_model == "JobsScheduler" {
+            // If we are currently in CriticallyAlarmed, then 8 minutes has passed and R6 describes 
+            // notifiying the relatives now
+            match StateHandler::notify_relatives(&res_id, &db_client).await {
+                Ok(_) => println!("Correctly send sms to relatives!"),
+                Err(err) => eprintln!("Error occured whilst sending sms to relatives: {:?}", err)
+            };
+        }
         let has_changed_state = new_state != current_state;
         if !has_changed_state && !room_pir.is_some() {
             println!("-------------SAME STATE");
@@ -415,6 +455,9 @@ impl StateHandler {
                 job_scheduler.do_send(CancelTask {
                     res_id,
                 });
+            } else if task_el.type_of_task == TypeOfTask::SendRelatives {
+                // R6: Send alarm to relatives after 30 minutes
+
             } else {
                 // do nothing i guess
             }
@@ -424,40 +467,7 @@ impl StateHandler {
         if has_changed_state{ PiCommunicator::send_new_state(res_id.clone(), new_state.clone(), &new_room_pir,  db_client.clone()).await; }
         // if were critically alarmed now, and weren't before, then we should send an sms to the relatives
         if new_state == shared_struct::States::CriticallyAlarmed && current_state != shared_struct::States::CriticallyAlarmed {
-            println!("sending phone number!");
-            let collection = db_client.database(shared_struct::USERS).collection::<shared_struct::UsersLoggedInformation>(shared_struct::INFO);
-            let filter = doc! {
-                "res_ids": {
-                    "$in": [res_id.clone()]
-                }
-            };
             
-            // Collect ALL relatives that has has this res_id
-            let cursor = collection.find(filter).await;
-            let results = match cursor {
-                Ok(mut cursor) => {
-                    let mut results = Vec::new();
-                    while let Some(item) = cursor.next().await {
-                        match item {
-                            Ok(logged_info) => results.push(logged_info),
-                            Err(err) => {
-                                eprintln!("Error processing cursor item: {:?}", err);
-                                return Err(std::io::ErrorKind::InvalidInput);
-                            }
-                        }
-                    }
-                    results
-                },
-                Err(err) => {
-                    eprintln!("Error querying user information: {:?}", err);
-                    return Err(std::io::ErrorKind::InvalidInput);
-                }
-            };
-            println!("results: {:?}", results);
-                for _info in results {
-                println!("sending res_id: {} to number: {}", res_id.clone(), _info.phone_number.clone());
-                StateHandler::notify_relatives(_info.phone_number, &res_id).await;
-            }
         }
         Ok(new_state)
     }

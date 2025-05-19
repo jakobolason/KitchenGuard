@@ -150,6 +150,10 @@ pub struct ScheduledTask {
   pub execute_at: Instant,
 }
 
+// #[derive(Debug, Message, Clone)]
+// #[rtype(result = ())]
+// pub struct NotifyRelatives {}
+
 #[derive(Message, Deserialize)]
 #[rtype(result = "Option<String>")]
 pub struct CreateUser {

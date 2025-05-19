@@ -127,7 +127,6 @@ impl JobsScheduler {
 				} else {
 					(None, false)
 				}
-				
 			}
 		};
 		if let Some(task) = next_task {
