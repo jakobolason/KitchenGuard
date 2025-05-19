@@ -7,24 +7,6 @@
     <link href="/stylesheet.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
-<style>
-    table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-
-    td, th {
-        border: 1px solid #dddddd;
-        text-align: left;
-        padding: 8px;
-    }
-    
-    tr:nth-child(even) {
-        background-color: #dddddd;
-    }
-</style>
-
 <body>
     <div class="colored-box grid-3">
         <nav class="nav">
@@ -256,7 +238,10 @@
             }));
             
             // Create all rows at once
-            for (const entry of formattedData) {
+            let latestEntry = "";
+            for (const entry of formattedData.slice().reverse()) {
+                if (latestEntry === entry.status) continue;
+                latestEntry = entry.status;
                 const row = document.createElement('tr');
                 const cell = document.createElement('td');
                 cell.textContent = `${entry.timeString} ||  ${entry.status}`;

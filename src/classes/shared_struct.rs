@@ -60,7 +60,6 @@ pub struct AppState {
 
 // HEUCOD event standard, needs implementing.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Result<States, std::io::ErrorKind>")]
 pub struct Event {
     pub time_stamp: String,
     pub mode: String,
@@ -72,6 +71,8 @@ pub struct Event {
     pub gateway_id: u32,
     pub id: String,
 }
+impl Message for Event {type Result = Result<States, std::io::ErrorKind>; }
+
 
 #[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
 pub enum States {
