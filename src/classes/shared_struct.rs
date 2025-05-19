@@ -74,18 +74,16 @@ pub struct Event {
 impl Message for Event {type Result = Result<States, std::io::ErrorKind>; }
 
 
-#[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
+#[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug, Ord, PartialOrd)]
 pub enum States {
-    Initialization,
-    Standby,
-    Attended,
-    Unattended,
-    Alarmed,
-    CriticallyAlarmed,
-    Faulty,
+    Initialization = 0,
+    Standby = 1,
+    Attended = 2,
+    Unattended = 3,
+    Alarmed = 4,
+    CriticallyAlarmed = 5,
+    Faulty = 6,
 }
-
-
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
 #[rtype(result = "()")]
