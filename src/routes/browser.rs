@@ -96,14 +96,14 @@ async fn settings() -> HttpResponse {
 struct IdQuery {
     id: String,
 }
-async fn get_res_stove_data(session: Session, app_state: web::Data<AppState>, id: web::Query<IdQuery>) -> HttpResponse {
+async fn get_res_stove_data(session: Session, app_state: web::Data<AppState>, query: web::Query<IdQuery>) -> HttpResponse {
     println!("IN GET STOVE DATA");
     if let Ok(Some(cookie)) = session.get::<String>("cookie") {
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie }).await {
             Ok(Some(ids)) => {
-                let res_id = &id.id;
+                let res_id = query.id.clone();
                 // if user doesn't have access to requested data
                 if !ids.contains(&res_id) {
                     return HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
@@ -137,14 +137,14 @@ async fn get_res_stove_data(session: Session, app_state: web::Data<AppState>, id
     }
 }
 
-async fn get_res_healthcheck(session: Session, app_state: web::Data<AppState>, id: web::Query<String>) -> HttpResponse {
+async fn get_res_healthcheck(session: Session, app_state: web::Data<AppState>, query: web::Query<IdQuery>) -> HttpResponse {
     println!("IN GET HEALTH");
     if let Ok(Some(cookie))= session.get::<String>("cookie") {
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie}).await {
             Ok(Some(ids)) => {
-                let res_id = id.into_inner();
+                let res_id = query.id.clone();
                 // if user doesn't have access to requested data
                 if !ids.contains(&res_id) {
                     return HttpResponse::SeeOther().append_header(("Location", "/index")).finish()
@@ -221,14 +221,14 @@ async fn get_res_info(session: Session, app_state: web::Data<AppState>) -> HttpR
 }
 
 // Button that allows the user to remove the alarm
-async fn restart_alarmed_state(session: Session, app_state: web::Data<AppState>, id: web::Query<String>) -> HttpResponse {
+async fn restart_alarmed_state(session: Session, app_state: web::Data<AppState>, query: web::Query<IdQuery>) -> HttpResponse {
     println!("IN GET_RES_INFO");
     if let Ok(Some(cookie)) = session.get::<String>("cookie") {
         println!("accessed with cookie: {}", cookie);
         // check this cookie for session valid
         match app_state.web_handler.send(ValidateSession { cookie }).await {
             Ok(Some(ids)) => {
-                let res_id = id.into_inner();
+                let res_id = query.id.clone();
                 if !ids.contains(&res_id) {
                     return HttpResponse::BadRequest().body("You do not have access to this resident!")
                 }

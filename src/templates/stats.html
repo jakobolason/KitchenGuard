@@ -58,7 +58,7 @@
         </select>
     </div>
 
-    <div class="stat-grid">
+    <div class="stat-grid" id="resInfo">
         <div class="tables">
             <!-- Left side, table showing resident states over time -->
             <div id="res-states" class="stat-table"></div>
@@ -82,6 +82,9 @@
         </div> 
     </div>
     
+    <div id="loader" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1000;">
+        <span>Loading...</span>
+    </div>
 
 
     <script>
@@ -94,7 +97,9 @@
             const selectVal = dropdown.value;
             console.log("intended id: ", selectVal);
             try {
-                const response = await fetch("/restart_alarm");
+                const response = await fetch(`/restart_alarm?id=${selectVal}`, {
+                    method: "PUT"
+                });
                 if (!response.ok) {
                     throw new Error(`Failed to reset alarm for resident ID: ${ID}`);
                 }
@@ -147,13 +152,23 @@
             for (let i = 0; i < data.length; i++) {
                 const item = data[i];
                 if (!item.timestamp || item.state !== "Alarmed") continue;
-
-                // Only parse date if needed
-                const dateStr = item.timestamp.split("T")[0];
-                if (!dateCounts[dateStr]) {
-                    dateCounts[dateStr] = 0;
+                try {
+                    // Only parse date if needed
+                    let splitted = item.timestamp.split("T");
+                    let dateStr = ""
+                    if (!splitted[1] || splitted[1] == "") {
+                        dateStr = item.timestamp.split(" ");
+                    } else {
+                        dateStr = splitted[0]
+                    }
+                    if (!dateCounts[dateStr]) {
+                        dateCounts[dateStr] = 0;
+                    }
+                    dateCounts[dateStr]++;
+                } catch(err) {
+                    console.log(err);
                 }
-                dateCounts[dateStr]++;
+                
             }
             return dateCounts;
         }
@@ -266,7 +281,13 @@
                 if (!item.time_stamp || item.mode !== "ON") continue;
 
                 // Only parse date if needed
-                const dateStr = item.time_stamp.split("T")[0];
+                let splitted = item.time_stamp.split("T");
+                let dateStr = ""
+                if (!splitted[1] || splitted[1] == "") {
+                    dateStr = splitted[0].split(" ")[0];
+                } else {
+                    dateStr = splitted[0]
+                }
                 if (!dateCounts[dateStr]) {
                     dateCounts[dateStr] = 0;
                 }
@@ -312,7 +333,7 @@
 
         function updateStoveTable(data) {
             const paramsContainer = document.querySelector("#stove-on-off");
-            console.log("Data in stove table: ", data);
+            // console.log("Data in stove table: ", data);
             /* Create table headers */
             var htmlTable = `
                 <table>
@@ -373,35 +394,50 @@
         function resSelectionHandler() {
             const dropdown = document.getElementById("resIdDropDown");
             const selectVal = dropdown.value;
+            console.log("Loading");
+            document.getElementById("resInfo").style.display = "none"
+            document.getElementById("loader").style.display = "block"
 
             if (!selectVal || selectVal == "") {
                 updateStatTable([]);
                 uupdateStatChart([]);
+                document.getElementById("loader").style.display = "none";
                 return;
             }
 
             console.log(`Selected resident ID: ${selectVal}`);
-            // Logic
-            fetchResStats(selectVal).then((res_data) => {
+            handleDataFetching(selectVal);
+            
+        }
+
+        async function handleDataFetching(selectVal) {
+            try {
+                // Start both fetches in parallel
+                const [res_data, stove_data] = await Promise.all([
+                    fetchResStats(selectVal),
+                    fetchResStove(selectVal)
+                ]);
+                
                 if (res_data.length === 0) {
                     console.error("No data available for the selected resident.");
-                    return;
+                } else {
+                    updateStatTable(res_data);
+                    updateStatChart(res_data);
                 }
-
-                console.log("Data for selected resident: ", res_data);
-                updateStatTable(res_data);
-                updateStatChart(res_data);
-            });
-            fetchResStove(selectVal).then((stove_data) => {
-                console.log("stove data: ", stove_data)
+                
                 if (stove_data.length === 0) {
-                    console.error("No data available for the selected resident.");
-                    return;
+                    console.error("No stove data available for the selected resident.");
+                } else {
+                    updateStoveChart(stove_data);
+                    updateStoveTable(stove_data);
                 }
-                console.log("stove data: ", stove_data);
-                updateStoveChart(stove_data);
-                updateStoveTable(stove_data)
-            });
+                console.log("done!");
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                document.getElementById("loader").style.display = "none";
+                document.getElementById("resInfo").style.display = ""
+            }
         }
 
         addResIdsToDropDown();

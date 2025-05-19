@@ -105,7 +105,7 @@ impl StateHandler {
     }
 
 
-    fn alarm_duration_from_state(new_state: shared_struct::States, is_test: bool) -> Instant {
+    fn alarm_duration_from_state(new_state: &shared_struct::States, is_test: bool) -> Instant {
         if is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
@@ -176,12 +176,27 @@ impl StateHandler {
                     type_of_task: TypeOfTask::NewTask,
                     scheduled_task: Some(shared_struct::ScheduledTask {
                         res_id: data.res_id.to_string().clone(),
-                        execute_at: StateHandler::alarm_duration_from_state(next_state.clone(), is_test),
+                        execute_at: StateHandler::alarm_duration_from_state(&next_state, is_test),
                     }),
                     res_id: data.res_id.to_string().clone(),
                 };
                 next_state
-
+            } else if data.device_model == "USER" {
+                // user pressed 'turn off alarm' inside website
+                let next_state = match current_state {
+                    // stove is turned off, if state is critical, so it goes to standby
+                    shared_struct::States::CriticallyAlarmed => shared_struct::States::Standby,
+                    _ => shared_struct::States::Unattended,
+                };
+                scheduled_task = TaskValue {
+                    type_of_task: TypeOfTask::NewTask,
+                    scheduled_task: Some(shared_struct::ScheduledTask {
+                        res_id: data.res_id.to_string().clone(),
+                        execute_at: StateHandler::alarm_duration_from_state(&next_state, is_test),
+                    }),
+                    res_id: data.res_id.to_string().clone(),
+                };
+                next_state
             } else {
                 // if it's not the user moving into kitchen, don't do anything
                 current_state.clone()
@@ -192,16 +207,17 @@ impl StateHandler {
         {
             if data.device_model == list_of_sensors.kitchen_pir && data.mode == "False" { // occupancy: false
                 println!("resident is out of kitchen!");
+                let next_state = shared_struct::States::Unattended;
                 // then start 20min's timer in jobscheduler
                 scheduled_task = TaskValue {
                     type_of_task: TypeOfTask::NewTask,
                     scheduled_task: Some(shared_struct::ScheduledTask {
                         res_id: data.res_id.to_string().clone(),
-                        execute_at: StateHandler::alarm_duration_from_state(shared_struct::States::Unattended, is_test),
+                        execute_at: StateHandler::alarm_duration_from_state(&next_state, is_test),
                     }),
                     res_id: data.res_id.to_string().clone(),
                 };
-                shared_struct::States::Unattended
+                next_state
                 // If elderly turns off the stove
             } else if data.device_model == list_of_sensors.power_plug && data.mode == "OFF" { // power: Off
                 shared_struct::States::Standby
