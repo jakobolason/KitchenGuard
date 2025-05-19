@@ -99,7 +99,7 @@ impl StateHandler {
             print!("sid: {}", account_sid);
             let from_number = env::var("FROM_NUMBER").unwrap_or_default();
             let message = format!("Hello from KitchenGuardServer!, resident {} is in critical mode!", res_id);
-            let url = format!("{}{}/Message.json", shared_struct::SMS_SERVICE, account_sid);
+            let url = format!("{}{}/Messages.json", shared_struct::SMS_SERVICE, account_sid);
             println!("url: {}", url);
             let params = [
                 ("To", to_number),
@@ -398,7 +398,8 @@ impl StateHandler {
         let (new_state, room_pir) = StateHandler::determine_new_state(latest_statelog.clone(), &sensor_lookup, &data);
         println!("new state found to be: {:?} with old state: {:?}", new_state, current_state);
 
-        if new_state == shared_struct::States::CriticallyAlarmed && new_state == current_state && data.device_model == "JobsScheduler" {
+        if new_state == shared_struct::States::CriticallyAlarmed && new_state == current_state && data.device_model == "JobScheduler" {
+            println!(" SENDING SMS TO RELATIVES");
             // If we are currently in CriticallyAlarmed, then 8 minutes has passed and R6 describes 
             // notifiying the relatives now
             match StateHandler::notify_relatives(&res_id, &db_client).await {
