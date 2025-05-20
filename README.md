@@ -51,5 +51,5 @@ https://drive.google.com/file/d/1vlJczZhUF7rUxuORh4jo7-XO4NU4Av4_/view?usp=shari
 - forgot password
 - What happens if network connection is lost
 - pros and cons with cloud based solution (server and database, shoudn't be local)
-- Better exception handling. E.g. turning off the power plug fails and then it should retry after a time period.
+- Better exception handling. E.g. turning off the power plug fails and then it should retry after a time period, check that signal has arrived
 
