@@ -21,8 +21,8 @@ pub struct CancelTask {
 // }
 #[derive(Clone, Debug)]
 pub struct JobsScheduler {
-  pub tasks: VecDeque<ScheduledTask>,
-  pub state_handler: Addr<StateHandler>,
+  tasks: VecDeque<ScheduledTask>,
+  state_handler: Addr<StateHandler>,
 }
 
 // Use actor for concurrency design
@@ -90,6 +90,12 @@ impl Handler<AmountOfJobs> for JobsScheduler {
 }
 
 impl JobsScheduler {
+	pub fn new(state_handler: &actix::Addr<StateHandler>) -> Self {
+		Self {
+			tasks: VecDeque::new(),
+			state_handler: state_handler.clone(),
+		}
+	}
 
 	fn cancel(&mut self, res_id: String) -> bool {
 		println!("Asked to cancel a timer!");

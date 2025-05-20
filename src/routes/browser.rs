@@ -16,7 +16,6 @@ pub fn browser_config(cfg: &mut web::ServiceConfig) {
         .route("/get_res_healthcheck", web::get().to(get_res_healthcheck))
         .route("/restart_alarm", web::put().to(restart_alarmed_state))
         .route("/login", web::post().to(login));
-        // .service(actix_files::Files::new("/", "./src/templates").prefer_utf8(true));
 }
 
 

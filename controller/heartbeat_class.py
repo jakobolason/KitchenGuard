@@ -1,8 +1,6 @@
 from time import sleep
-from Cep2Controller import Cep2Controller
 from threading import Thread
-from paho.mqtt.client import Client as MqttClient, MQTTMessage
-from paho.mqtt import publish, subscribe
+from paho.mqtt.client import Client as MqttClient
 import json
 import requests
 import environment
@@ -12,22 +10,18 @@ class Heartbeat:
 	
 	# Initialization variables
 	def __init__(self):
-		self.PIR_status = "error"
-		self.LED_status = "error"
-		self.PowerPlug_status = "error"
-		self.Bridge_status = "ok"
-		self.PI_status = "ok"
+		self.status = [(v, "error") for v in environment.SENSOR_DICT.values()]
+		self.status.append(("Bridge", "ok"))
+		self.status.append(("PI", "ok"))
+
 		self.startup_Check = False
 	
 	# Start the heartbeat operation
 	def heartbeat(self):
 		sub_thread = Thread(target = self.heartbeat_subscriber)
-		interview_thread = Thread(target = self.heartbeat_interview)
 		sub_thread.start()
-		interview_thread.start()
-		
-		
-		interview_thread.join()
+		self.heartbeat_interview()
+
 		sub_thread.join()
 
 	# The heatbeat logic
@@ -57,13 +51,10 @@ class Heartbeat:
 				ID = environment.SENSOR_DICT[hex_name]
 				status = payload_data['status']		
 			
-			# Set the status of the different sensors
-			if (ID == "kitchen_pir"):
-				self.PIR_status = status
-			elif (ID == "LED"):
-				self.LED_status = status
-			elif (ID == "PowerPlug"):
-				self.PowerPlug_status = status
+			# Loop though all sensors
+			for i in range(len(self.status)):
+				if (ID == self.status[i][0]):
+					self.status[i] = (self.status[i][0], status)
 			
 			print(f"topic = {msg.topic}, ID = {ID}, Status = {status}")
 			
@@ -86,29 +77,26 @@ class Heartbeat:
 
 		# Wait until all messages are received (all interviews completed)
 		time_waited = 0
-		while received_messages < target_message_count and time_waited <= 120:
+		while received_messages < target_message_count and time_waited <= environment.HEALTH_CHECK_WAIT:
 			print("Waiting for a sensor to be ok")
 			sleep(0.5)
-			time_waited += 0.1
+			time_waited += 0.5
 
 		# Setup the payload to the server about the interviews
 		event = {
-			"PIR": self.PIR_status,
-			"LED": self.LED_status,
-			"PowerPlug": self.PowerPlug_status,
-			"Bridge": self.Bridge_status,
-			"PI": self.PI_status
+			"res_id": environment.RES_ID,
+			"data": self.status
 		}
 		
 		# Send the payload
 		response = requests.post(environment.HEALTH_CHECK_ENDPOINT, json=event)
-		print("Response sent to webserver")
+		print("Response sent to webserver: " + str(response))
 		self.startup_Check = True
 
 	
 	# Setup the interviews
 	def heartbeat_interview(self):
-
+		
 		def on_connect(client, userdata, flags, rc):
 			print("Connected to MQTT broker!" if rc == 0 else f"failed to connet, return code {rc}")
 		

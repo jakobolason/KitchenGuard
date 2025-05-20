@@ -15,7 +15,7 @@ pub struct CookieManager {
 
 impl CookieManager {
     pub fn new(session_duration_hours: u64) -> Self {
-        CookieManager {
+        Self {
             cookies: HashMap::new(),
             session_duration: Duration::from_secs(session_duration_hours * 3600),
         }

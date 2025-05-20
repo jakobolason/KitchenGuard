@@ -18,8 +18,8 @@ pub struct WebHandler {
 }
 
 impl WebHandler {
-    pub fn new(cookie_manager: CookieManager, db_client: Client) -> WebHandler {
-        WebHandler { cookie_manager, db_client }
+    pub fn new(cookie_manager: CookieManager, db_client: Client) -> Self {
+        Self { cookie_manager, db_client }
     }
 
     async fn check_login(username: String, passwd: String, db_client: Client) -> Result<Vec<String>, std::io::ErrorKind> {

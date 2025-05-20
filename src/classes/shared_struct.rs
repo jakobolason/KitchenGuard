@@ -2,7 +2,6 @@ use mongodb::{bson::Binary, Client};
 use chrono::DateTime;
 
 use super::{
-    job_scheduler::JobsScheduler,
     state_handler::StateHandler,
     web_handler::WebHandler,
 };
@@ -53,7 +52,6 @@ pub fn hash_password(password: &str, salt: &[u8]) -> String {
 
 pub struct AppState {
     pub state_handler: actix::Addr<StateHandler>,
-    pub job_scheduler: actix::Addr<JobsScheduler>,
     pub web_handler: actix::Addr<WebHandler>,
     pub db_client: Client,
 }

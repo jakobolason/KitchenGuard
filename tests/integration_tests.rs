@@ -12,8 +12,7 @@ mod tests {
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
     use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler};
     use serial_test::serial;
-    use kitchen_guard_server::classes::shared_struct::{ScheduledTask, SensorLookup, States, Event, LoginInformation, ResIdFetcher, StateLog};
-    use std::collections::VecDeque;
+    use kitchen_guard_server::classes::shared_struct::{SensorLookup, States, Event, LoginInformation, ResIdFetcher, StateLog};
 
     #[tokio::test]
     #[serial]
@@ -68,17 +67,14 @@ mod tests {
                 .expect("Failed to upsert test state data");
     
             // Start state handler actor
-            let state_handler: Addr<StateHandler> = StateHandler {
-                db_client: db_client.clone(),
-                job_scheduler: None,
-                is_test: true
-            }.start();
+            let is_test = true;
+            let state_handler: Addr<StateHandler> = StateHandler::new(
+                &db_client,
+                &is_test
+            ).start();
             
             // Start job scheduler actor and link to state handler
-            let job_scheduler = JobsScheduler {
-                tasks: VecDeque::<ScheduledTask>::new(),
-                state_handler: state_handler.clone(),
-            }.start();
+            let job_scheduler = JobsScheduler::new(&state_handler).start();
             
             // Update state handler with job scheduler reference
             let _ = state_handler.send(SetJobScheduler {
@@ -203,8 +199,8 @@ mod tests {
             let password = "123";
             let phone_number = "12345678";
             let res_id = "test_resident_1";
-            let _ = StateHandler::create_user(username, password, phone_number, db_client.clone()).await;
-            let _ = StateHandler::add_res_to_user(&res_id, &username, db_client.clone()).await;
+            let _ = StateHandler::create_user(username, password, phone_number, &db_client).await;
+            let _ = StateHandler::add_res_to_user(&res_id, &username, &db_client).await;
             println!("created user");
             // tokio::time::sleep(std::time::Duration::from_secs(3)).await; // the actors are quite slow
             
@@ -215,20 +211,16 @@ mod tests {
             let cookie_value = cookie.unwrap();
             assert!(!cookie_value.is_empty());
 
-
             // Make sure that there are events for the resident id given
             // Start state handler actor
-            let state_handler: Addr<StateHandler> = StateHandler {
-                db_client: db_client.clone(),
-                job_scheduler: None,
-                is_test: true
-            }.start();
+            let is_test = true;
+            let state_handler: Addr<StateHandler> = StateHandler::new(
+                &db_client,
+                &is_test
+            ).start();
             
             // Start job scheduler actor and link to state handler
-            let job_scheduler = JobsScheduler {
-                tasks: VecDeque::<ScheduledTask>::new(),
-                state_handler: state_handler.clone(),
-            }.start();
+            let job_scheduler = JobsScheduler::new(&state_handler).start();
             
             // Update state handler with job scheduler reference
             let _ = state_handler.send(SetJobScheduler {
