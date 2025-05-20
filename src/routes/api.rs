@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse};
 
-use crate::classes::shared_struct::{AppState, CreateUser, Event, HealthCheck, InitState, SensorLookup};
+use crate::classes::shared_struct::{AddRelative, AppState, CreateUser, Event, HealthCheck, InitState, SensorLookup};
 
 pub fn api_config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -9,6 +9,7 @@ pub fn api_config(cfg: &mut web::ServiceConfig) {
             .route("/status", web::get().to(get_status))
             .route("/health_check", web::post().to(health_check))
             .route("/create_user", web::post().to(create_user))
+            .route("add_res_to_user", web::post().to(add_res_to_user))
             .route("/initialization", web::post().to(initialization))
     );
 }
@@ -37,6 +38,12 @@ async fn initialization(
     }
 }
 
+async fn add_res_to_user(data: web::Json<AddRelative>, app_state: web::Data<AppState>) -> HttpResponse {
+    match app_state.state_handler.send(data.into_inner()).await {
+        Ok(_) => HttpResponse::Ok().body("OK"),
+        Err(_) => HttpResponse::BadRequest().body("something went wrong")
+    }
+}
 
 async fn get_status() -> HttpResponse {
     HttpResponse::Ok().body("API Status: OK")

@@ -16,7 +16,7 @@ pub struct WebHandler {
     cookie_manager: CookieManager,
     db_client: Client,
 }
-
+    
 impl WebHandler {
     pub fn new(cookie_manager: CookieManager, db_client: Client) -> Self {
         Self { cookie_manager, db_client }

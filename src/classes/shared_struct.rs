@@ -143,7 +143,7 @@ pub struct ScheduledTask {
 // pub struct NotifyRelatives {}
 
 #[derive(Message, Deserialize)]
-#[rtype(result = "Option<String>")]
+#[rtype(result = "Result<UsersLoggedInformation, std::io::Error>")]
 pub struct CreateUser {
     pub username: String,
     pub password: String,

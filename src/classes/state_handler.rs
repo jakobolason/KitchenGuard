@@ -8,7 +8,7 @@ use futures_util::StreamExt;
 
 use super::{
     job_scheduler::{CancelTask, JobsScheduler}, pi_communicator::PiCommunicator, 
-    shared_struct::{self, HealthCheck, ScheduledTask, SensorLookup, StateLog},
+    shared_struct::{self, AddRelative, HealthCheck, ScheduledTask, SensorLookup, StateLog, UsersLoggedInformation},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -136,9 +136,9 @@ impl StateHandler {
         if *is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            shared_struct::States::Unattended => Instant::now() + if *is_test { Duration::from_secs(4) } else { Duration::from_secs(3) }, // 20 minutes
-            shared_struct::States::Alarmed => Instant::now() + if *is_test { Duration::from_secs(3) } else { Duration::from_secs(3) }, // 2 minutes
-            shared_struct::States::CriticallyAlarmed => Instant::now() + if *is_test { Duration::from_secs(2) } else { Duration::from_secs(3)}, // 8 minutes
+            shared_struct::States::Unattended => Instant::now() + if *is_test { Duration::from_secs(30) } else { Duration::from_secs(20*60) }, // 20 minutes
+            shared_struct::States::Alarmed => Instant::now() + if *is_test { Duration::from_secs(15) } else { Duration::from_secs(2*60) }, // 2 minutes
+            shared_struct::States::CriticallyAlarmed => Instant::now() + if *is_test { Duration::from_secs(20) } else { Duration::from_secs(8*60)}, // 8 minutes
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
         }
     }
@@ -290,6 +290,11 @@ impl StateHandler {
 
     pub async fn create_user(username: &str, password: &str, phone_number: &str, db_client: &Client) 
     -> Result<Option<shared_struct::UsersLoggedInformation>, mongodb::error::Error> {
+        // checks whether phone number contains any letters not a numner
+        if !phone_number.chars().all(|letter| letter.is_numeric()) {
+            return Err(std::io::ErrorKind::InvalidInput.into());
+        }
+
         let user_salt = username.as_bytes().to_vec();
         let hashed_password = shared_struct::hash_password(password, &user_salt);
         println!("creating user");
@@ -573,23 +578,23 @@ impl Handler<HealthCheck> for StateHandler {
 }
 
 /// There is no endpoint for this function, since it will only be used for testing
-// impl Handler<AddRelative> for StateHandler {
-//     type Result = ();
+impl Handler<AddRelative> for StateHandler {
+    type Result = ();
 
-//     fn handle(&mut self, data: AddRelative, _ctx: &mut Self::Context) -> Self::Result {
-//         let res_id_to_add = data.res_id;
-//         let username = data.username;
-//         println!("Adding res_id: {} to user {}", res_id_to_add, username);
-//         let db_client = self.db_client.clone();
-//         // spawn a new thread to handle db interaction (which is async, and Handler doesn't allow for async operation)
-//         actix::spawn(async move {
-//             if let Err(err) = StateHandler::add_res_to_user(&res_id_to_add, &username, db_client).await {
-//                 eprintln!("Failed to add res_id to user, error: {:?}", err);
-//             }
-//         });
-//         ()
-//     }
-// }
+    fn handle(&mut self, data: AddRelative, _ctx: &mut Self::Context) -> Self::Result {
+        let res_id_to_add = data.res_id;
+        let username = data.username;
+        println!("Adding res_id: {} to user {}", res_id_to_add, username);
+        let db_client = self.db_client.clone();
+        // spawn a new thread to handle db interaction (which is async, and Handler doesn't allow for async operation)
+        actix::spawn(async move {
+            if let Err(err) = StateHandler::add_res_to_user(&res_id_to_add, &username, &db_client).await {
+                eprintln!("Failed to add res_id to user, error: {:?}", err);
+            }
+        });
+        ()
+    }
+}
 
 /// When starting up the resident's system, we need to initialise some state (we start in standby), and set the ip address which
 /// we send updates to. (unsafe because there is no authentication here)
@@ -606,17 +611,18 @@ impl Handler<shared_struct::InitState> for StateHandler {
 }
 
 impl Handler<shared_struct::CreateUser> for StateHandler {
-    type Result = Option<String>;
+    type Result = ResponseFuture<Result<UsersLoggedInformation, std::io::Error>>;
 
     fn handle(&mut self, data: shared_struct::CreateUser, _ctx: &mut Self::Context ) -> Self::Result {
         println!("creating user");
         let db_client = self.db_client.clone();
-        actix::spawn(async move {
-            if let Err(err) = StateHandler::create_user(&data.username, &data.password, &data.phone_number, &db_client).await {
-                eprintln!("Error ocurred whilst creating a new user: {:?}", err);
+        Box::pin(async move {
+            match StateHandler::create_user(&data.username, &data.password, &data.phone_number, &db_client).await {
+                Ok(Some(user)) => Ok(user),
+                Ok(None) => Err(std::io::Error::new(std::io::ErrorKind::NotFound, "User not created")),
+                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {:?}", e))),
             }
-        });
-        Some("OK".to_string())
+        })
     }
 }
 
@@ -643,8 +649,7 @@ impl Handler<shared_struct::Event> for StateHandler {
 #[cfg(test)]
 mod tests {
 	use chrono::Utc;
-
-use super::*;
+    use super::*;
 
     #[test]
     fn test_determine_new_state_critically_alarmed_to_standby() {

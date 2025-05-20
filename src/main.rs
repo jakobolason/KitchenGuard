@@ -1,6 +1,7 @@
 use actix_web::{
     cookie::{Key, SameSite}, error, middleware::Logger, web, App, HttpResponse, HttpServer
 };
+use std::env;
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix::Actor;
 use classes::web_handler::WebHandler;
@@ -40,7 +41,8 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
     log::info!("Setting up state and scheduler... ");
     // Start state handler actor
-    let is_test = false;
+    let is_test = env::args().any(|arg| arg == "--test");
+    println!("running kitchen guard in is_test?: {}", is_test);
     let state_handler = StateHandler::new(&db_client, &is_test).start();
     
     // Start job scheduler actor and link to state handler
