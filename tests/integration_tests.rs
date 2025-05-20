@@ -10,10 +10,9 @@ mod tests {
     use kitchen_guard_server::classes::cookie_manager;
     use kitchen_guard_server::classes::web_handler;
     use kitchen_guard_server::classes::job_scheduler::{JobsScheduler, StartChecking, AmountOfJobs};
-    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler, StateLog};
+    use kitchen_guard_server::classes::state_handler::{StateHandler, SetJobScheduler};
     use serial_test::serial;
-    use kitchen_guard_server::classes::shared_struct::{ScheduledTask, SensorLookup, States, Event, LoginInformation, ResIdFetcher};
-    use std::collections::VecDeque;
+    use kitchen_guard_server::classes::shared_struct::{SensorLookup, States, Event, LoginInformation, ResIdFetcher, StateLog};
 
     #[tokio::test]
     #[serial]
@@ -85,7 +84,7 @@ mod tests {
             let _ = job_scheduler.send(StartChecking).await;
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
             let enter_kitchen = Event { // to make sure we're in Attended mode
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "True".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -97,7 +96,7 @@ mod tests {
             };
             let _ = state_handler.send(enter_kitchen.clone()).await;
             let stove_off = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "OFF".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -112,7 +111,7 @@ mod tests {
 
             // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
             let stove_on = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "ON".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -128,7 +127,7 @@ mod tests {
             // tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
     
             let leaving_kitchen = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "False".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -231,7 +230,7 @@ mod tests {
             let _ = job_scheduler.send(StartChecking).await;
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;// make sure scheduler is up and running
             let enter_kitchen = Event { // to make sure we're in Attended mode
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "True".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -243,7 +242,7 @@ mod tests {
             };
             let _ = state_handler.send(enter_kitchen.clone()).await;
             let stove_off = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "OFF".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),
@@ -258,7 +257,7 @@ mod tests {
 
             // now send 2 messages, one saying powerplug is on, and then saying kitchen_pir occupancy is false
             let stove_on = Event {
-                time_stamp: "2023-01-01T00:00:00Z".to_string(),
+                time_stamp: chrono::Utc::now().to_string(),
                 mode: "ON".to_string(),
                 event_data: "".to_string(),
                 event_type_enum: "".to_string(),

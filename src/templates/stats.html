@@ -5,203 +5,129 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KitchenGuard - Statistik</title>
     <link href="/stylesheet.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
-<style>
-    table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-
-    td, th {
-        border: 1px solid #dddddd;
-        text-align: left;
-        padding: 8px;
-    }
-    
-    tr:nth-child(even) {
-        background-color: #dddddd;
-    }
-</style>
-
 <body>
-    <!-- Drop down menu -->
-    <nav class="DropDownMenu">
-        <button class="DropDownButton">
-            <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.thenounproject.com%2Fpng%2F1123247-200.png&f=1&nofb=1&ipt=01f476a25d20356b4901c217bd2fe9329571477b13b9006da797367ca4d2ddd4&ipo=images", style="width: 40; height:40px;">
-        </button>
-
-        <!-- Drop down menu buttons -->
-        <nav class="DropDownMenuContent">
-            <a href="forside.html">Forside</a>
-            <a href="stats.html">Statistik</a>
-            <a href="om.html">Om</a>
+    <div class="colored-box grid-3">
+        <nav class="nav">
+            <a href="forside.html">Frontpage</a>
+            <a href="stats.html">Information</a>
+            <a href="om.html">About</a>
         </nav>
-    </nav>
-
-    <!-- Page header -->
-    <div class="colored-box">
+        
         <div class="centered-div">
-            <h1 style="margin-bottom: 1%; margin-top: 1%;">Opsætningspanel</h1>
+            <strong style="margin-bottom: 1%; margin-top: 1%;"><h1>KitchenGuard</h1></strong>
         </div>
     </div>
 
 
     <!-- Choose resident ID dropdown -->
     <div class="dropdown-container">
-        <label for="resIdDropDown"><b>Vælg beboer ID:</b></label>
+        <label for="resIdDropDown"><b>Choose resident id</b></label>
         <select id="resIdDropDown" onchange="resSelectionHandler()">
-            <option value="all">Alle beboer ID</option>
+            <option value="">
+                Choose resident
+            </option>
         </select>
     </div>
+    <button onclick="resSelectionHandler()" class="alarm-button">Refresh</button>
 
 
-    <!-- Statistik her -->
-    <!-- <div id="params", class="CenterContainer", style="margin-left: 20%; margin-right: 20%;"></div> -->
-    <div id="params" class="statTable"></div>
+    <div class="stat-grid" id="resInfo">
+        <div class="tables">
+            <h2> Table showing status of resident </h2>
+            <!-- Left side, table showing resident states over time -->
+            <div id="res-states" class="stat-table"></div>
+            <h2> Table showing status of stove </h2>
+            <div id="stove-on-off" class="stat-table"> </div>
+        </div>
+        
+        <div class="charts">
+            <h2>Data charts</h2>
+            <!-- center div for statistic graph -->
+            <div class="chart-container" style="height: 500px">
+                <canvas class="stat-chart" id="alarm-chart"></canvas>
+            </div>
 
-    <br>
-    <br>
-
-    <!-- div for statistic graph -->
-    <div class="chartContainer">
-        <canvas class="statChart" id="chart"></canvas>
+            <div class="chart-container" style="height: 500px">
+                <canvas class="stat-chart" id="stove-chart"></canvas>
+            </div>
+        </div>
+        
+        <!-- right side shows health data, and button to turn off alarm -->
+        <div class="right-hub">
+            <div class="health-overview" id="health-view">
+                <h3>Status of local devices</h3>
+            </div>
+            <button onclick="RestartAlarm()" class="alarm-button" id="alarm-button" style="background-color: red;">Turn off Alarm</button>
+        </div> 
+    </div>
+    
+    <div id="loader" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1000;">
+        <span>Loading...</span>
     </div>
 
 
     <script>
-        async function fetchStats() {
+        let alarmChartInstance = null;
+        let stoveChartInstance = null;
+        document.getElementById("resInfo").style.display = "none"
+
+
+        async function RestartAlarm() {
+            // Take the current resident they are looking at, as the intended alarm
+            const dropdown = document.getElementById("resIdDropDown");
+            const selectVal = dropdown.value;
+            console.log("intended id: ", selectVal);
             try {
-                var response = await fetch("/get_res_info");
+                const response = await fetch(`/restart_alarm?id=${selectVal}`, {
+                    method: "PUT"
+                });
                 if (!response.ok) {
-                    throw new Error("Failed to fetch stats");
+                    throw new Error(`Failed to reset alarm for resident ID: ${ID}`);
                 }
-    
-                const data = await response.json();
-                return Object.values(data);
-            } catch (error) {
-                console.error("Error fetching stats: ", error)
-                return [];
+
+            } catch(error) {
+                console.error("error occured whilst resetting alarm: ", error);
             }
         }
-
+        // ======= GETTERS =======
         async function fetchResStats(ID) {
             try {
-                const response = await fetch(`/get_resident_info/${ID}`);
+                const response = await fetch(`/get_res_info`);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch stats for resident ID: ${ID}`);
                 }
 
-                const dat = await response.json();
+                const data = await response.json();
+                
+                let id_data = data[ID]
                 console.log(`Fetched stats for resident ID: ${ID}`);
-                return dat;
+                return id_data;
             } catch (error) {
                 console.error(`Error fetching stats for resident ID: ${ID}, with error: `, error);
                 return [];
             }
         }
 
-        async function fetchDates() {
-            var data = await fetchStats();
-            return data.map(item => item.time_stamp);
-        }
-
-        async function fetchActAmount() {
-            var data = await fetchStats();
-            return data.map(item => item.mode);
-        }
-
-        async function makeStatTable() {
-            var params = await fetchStats();
-            console.log(params);
-
-            var paramsContainer = document.querySelector("#params");
-
-            /* Create table headers */
-            var htmlTable = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tidskode</th>
-                            <th>Mode</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            `;
-
-            paramsContainer.innerHTML = htmlTable;
-            var tableBody = paramsContainer.querySelector("tbody");
-
-            for (var param of params) {
-                tableBody.innerHTML += `
-                    <tr>
-                        <td>${param.time_stamp}</td>
-                        <td>${param.mode}</td>
-                    </tr>
-                `;
-            }
-        }
-
-        function updateStatTable(data) {
-            if (!Array.isArray(data) || data.length === 0) {
-                console.error("No data available to update the table.");
-                return;
-            }
-
-            const paramsContainer = document.querySelector("#params");
-
-            /* Create table headers */
-            var htmlTable = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tidskode</th>
-                            <th>Mode</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            `;
-
-            paramsContainer.innerHTML = htmlTable;
-            var tableBody = paramsContainer.querySelector("tbody");
-
-            for (var param of params) {
-                tableBody.innerHTML += `
-                    <tr>
-                        <td>${param.time_stamp}</td>
-                        <td>${param.mode}</td>
-                    </tr>
-                `;
-            }
-        }
-
-        function updateStatChart(data) {
-            const chartContext = document.getElementById("chart").getContext("2d");
-            const labels = data.map((item) => new Date(item.time_stamp).toLocaleString());
-            const vals = data.ap((item) => item.mode === "ON" ? 1 : 0); 
-
-            new Chart(chartContext, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: "Mode (ON = 1, OFF = 0)",
-                        data: vals,
-                        borderColor: "blue",
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
+        async function fetchResStove(id) {
+            if (!id) return [];
+            try {
+                const response = await fetch(`/get_res_stove_data?id=${id}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch stats for resident ID: ${id}`);
                 }
-            });
-        }
 
+                const data = await response.json();
+                
+                console.log(`Fetched stove stats for resident ID: ${id}, response; `, response);
+                // console.log(data);
+                return data;
+            } catch (error) {
+                console.error(`Error fetching stats for resident ID: ${id}, with error: `, error);
+                return [];
+            }
+        }
         // fetch res info
         async function fetchResIds() {
             try {
@@ -218,10 +144,286 @@
                 return {};
             }
         }
+        async function getHealthData(id) {
+            try {
+                const response = await fetch(`/get_res_healthcheck?id=${id}`);
+                if (!response.ok) {
+                    throw new Error("Failed to fetch resident ID(s)");
+                }
+
+                const data = await response.json();
+                console.log("Fetched resident health check: ", data);
+                return data;
+            } catch (error) {
+                console.error("Error fetching resident ID(s): ", error);
+                return {};
+            }
+        }
+        
+        /// ======= FORMATTERS ========
+
+        // gives a dict with days, and how many times an alarm happened
+        function AlarmsAmount(data) {
+            const dateCounts = {};
+            console.log("alarms: ", data);
+
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                if (!item.timestamp || item.state !== "Alarmed") continue;
+                try {
+                    console.log("time: ", new Date(item.timestamp));
+                    // Format date as dd-mm-yyyy
+                    let dateObj = new Date(item.timestamp);
+                    let day = String(dateObj.getDate()).padStart(2, '0');
+                    let month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    let year = dateObj.getFullYear();
+                    let formattedDate = `${day}-${month}-${year}`;
+
+                    if (!dateCounts[formattedDate]) {
+                        dateCounts[formattedDate] = 0;
+                    }
+                    dateCounts[formattedDate]++;
+                } catch(err) {
+                    console.log(err);
+                }
+                
+            }
+            return dateCounts;
+        }
+        function StoveAmount(data) {
+            const dateCounts = {};
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                if (!item.time_stamp || item.mode !== "ON") continue;
+
+                // Format date as dd-mm-yyyy
+                    let dateObj = new Date(item.time_stamp);
+                    let day = String(dateObj.getDate()).padStart(2, '0');
+                    let month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    let year = dateObj.getFullYear();
+                    let formattedDate = `${day}-${month}-${year}`;
+
+                    if (!dateCounts[formattedDate]) {
+                        dateCounts[formattedDate] = 0;
+                    }
+                    dateCounts[formattedDate]++;
+            }
+            return dateCounts;
+        }
+
+        /// ===== TABLES ======
+        function updateStatTable(data) {
+            const paramsContainer = document.querySelector("#res-states");
+            
+            // Create table structure once
+            paramsContainer.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th> Timestamp  |  Mode </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            `;
+            
+            const tableBody = paramsContainer.querySelector("tbody");
+            
+            // Build all rows at once using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            
+            // Pre-format date strings outside the loop
+            const formattedData = data.map(entry => ({
+                timeString: new Date(entry.timestamp).toLocaleString(),
+                status: entry.state
+            }));
+            
+            // Create all rows at once
+            let latestEntry = "";
+            for (const entry of formattedData.slice().reverse()) {
+                if (latestEntry === entry.status) continue;
+                latestEntry = entry.status;
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.textContent = `${entry.timeString} ||  ${entry.status}`;
+                row.appendChild(cell);
+                fragment.appendChild(row);
+            }
+            
+            // Add all rows to the DOM in one operation
+            tableBody.appendChild(fragment);
+        }
+
+        function updateStoveTable(data) {
+            const paramsContainer = document.querySelector("#stove-on-off");
+            
+            // Create table structure once
+            paramsContainer.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp  |  Mode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            `;
+            
+            const tableBody = paramsContainer.querySelector("tbody");
+            
+            // Build all rows at once using DocumentFragment
+            const fragment = document.createDocumentFragment();
+            
+            // Pre-format date strings outside the loop
+            const formattedData = data.map(entry => ({
+                timeString: new Date(entry.time_stamp).toLocaleString(),
+                mode: entry.mode
+            }));
+            
+            // Create all rows at once
+            for (const entry of formattedData.slice().reverse()) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.textContent = `${entry.timeString} ||  ${entry.mode}`;
+                row.appendChild(cell);
+                fragment.appendChild(row);
+            }
+            
+            // Add all rows to the DOM in one operation
+            tableBody.appendChild(fragment);
+        }
+
+        /// ======== CHARTS ========
+
+        function updateStatChart(data) {
+            const chartContext = document.getElementById("alarm-chart").getContext("2d");
+            const activations = AlarmsAmount(data);
+            // console.log("alarms: ", data);
+            // console.log("formatted; ", activations);
+            const labels = Object.keys(activations);
+            const values = Object.values(activations);
+
+            if (alarmChartInstance) {
+                alarmChartInstance.destroy()
+            }
+
+            alarmChartInstance = new Chart(chartContext, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Alarms turned on per day",
+                        data: values,
+                        borderColor: "blue",
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scale: {
+                        ticks: {
+                        precision: 0
+                        }
+                    }
+                }
+            });
+        }
+        function updateStoveChart(data) {
+            const chartContext = document.getElementById("stove-chart").getContext("2d");
+            const activations = StoveAmount(data);
+            // console.log("stove info: ", data);
+            // console.log("formatted for stove; ", activations);
+            const labels = Object.keys(activations);
+            const values = Object.values(activations);
+
+            if (stoveChartInstance) {
+                stoveChartInstance.destroy();
+            }
+
+            stoveChartInstance = new Chart(chartContext, {
+                type: "line",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Amount of times the stove was turned on",
+                        data: values,
+                        borderColor: "blue",
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scale: {
+                        ticks: {
+                        precision: 0
+                        }
+                    }
+                }
+            });
+        }
+
+
+        
+
+        function displayHealthData(data) {
+            console.log("in display: ", data);
+            
+            const healthView = document.getElementById("health-view");
+            
+            const heading = healthView.querySelector("h3");
+            healthView.innerHTML = '';
+            healthView.appendChild(heading);
+            
+            const resIdElement = document.createElement("h4");
+            resIdElement.textContent = `Resident: ${data.res_id}`;
+            healthView.appendChild(resIdElement);
+            
+            const deviceGrid = document.createElement("div");
+            deviceGrid.className = "device-status-grid";
+            healthView.appendChild(deviceGrid);
+            
+            // Create device entries
+            const deviceEntries = data.data;
+            
+            
+            for (const [device, status] of deviceEntries) {
+                const deviceCard = document.createElement("div");
+                deviceCard.className = "device-card";
+                
+                const statusIndicator = document.createElement("div");
+                statusIndicator.className = `status-indicator status-${status === "ok" ? "ok" : "error"}`;
+                
+                const deviceName = document.createElement("div");
+                deviceName.className = "device-name";
+                deviceName.textContent = formatDeviceName(device);
+                
+                const statusText = document.createElement("div");
+                statusText.textContent = status.toUpperCase();
+                statusText.style.color = status === "ok" ? "#4CAF50" : "#F44336";
+                
+                deviceCard.appendChild(statusIndicator);
+                deviceCard.appendChild(deviceName);
+                deviceCard.appendChild(statusText);
+                
+                deviceGrid.appendChild(deviceCard);
+            }
+        }
+        // Helper function to format device names
+            function formatDeviceName(deviceKey) {
+                return deviceKey
+                    .split('_')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            }
 
         async function addResIdsToDropDown() {
             const dropdown = document.getElementById("resIdDropDown");
             const resIDs = await fetchResIds();
+            console.log("fethced res_ids:")
 
             const uniqueResIds = Object.keys(resIDs);
 
@@ -233,65 +435,77 @@
             });
         }
 
+
+        //// ====== USER HANDLING ========
         function resSelectionHandler() {
             const dropdown = document.getElementById("resIdDropDown");
             const selectVal = dropdown.value;
+            console.log("Loading");
+            document.getElementById("resInfo").style.display = "none"
+            document.getElementById("loader").style.display = "block"
 
-            if (selectVal === "all") {
-                console.log("All resident ID(s) selected");
-                // Logic
-                makeStatTable();
+            if (!selectVal || selectVal == "") {
+                updateStatTable([]);
+                uupdateStatChart([]);
+                document.getElementById("loader").style.display = "none";
+                return;
+            }
 
-            } else {
-                console.log(`Selected resident ID: ${selectVal}`);
-                // Logic
-                fetchResStats(selectVal).then((data) => {
-                    if (data.length === 0) {
-                        console.error("No data available for the selected resident.");
-                        return;
+            console.log(`Selected resident ID: ${selectVal}`);
+            handleDataFetching(selectVal);
+            
+        }
+
+        async function handleDataFetching(selectVal) {
+            try {
+                // Start both fetches in parallel
+                const [res_data, stove_data, health_data] = await Promise.all([
+                    fetchResStats(selectVal),
+                    fetchResStove(selectVal),
+                    getHealthData(selectVal),
+                ]);
+                
+                if (res_data.length === 0) {
+                    console.error("No data available for the selected resident.");
+                } else {
+                    updateStatTable(res_data);
+                    updateStatChart(res_data);
+                    let latestEntry = res_data[res_data.length-1]; 
+                    console.log(latestEntry)
+                    if (latestEntry.state === "Alarmed" || latestEntry.state === "CriticallyAlarmed") {
+                        // show the button to deactivate the alarm
+                        document.getElementById("alarm-button").style.display = "";
+                    } else {
+                        document.getElementById("alarm-button").style.display = "none";
                     }
-
-                    console.log("Data for selected resident: ", data);
-                    updateStatTable(data);
-                    updateStatChart(data);
-                });
+                }
+                
+                if (stove_data.length === 0) {
+                    console.error("No stove data available for the selected resident.");
+                } else {
+                    updateStoveChart(stove_data);
+                    updateStoveTable(stove_data);
+                }
+                if (health_data.length === 0) {
+                    console.error("No healthcheck data");
+                } else {
+                    displayHealthData(health_data);
+                }
+                console.log("done!");
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                document.getElementById("loader").style.display = "none";
+                document.getElementById("resInfo").style.display = ""
             }
         }
 
         addResIdsToDropDown();
 
     </script>
+    
 
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
-    <script>
-        async function makeStatChart() {
-            const data = await fetchStats();
-            const chartContext = document.getElementById("chart").getContext("2d");
-            const labels = data.map((item) => new Date(item.time_stamp).toLocaleString());
-            const vals = data.map((item) => item.mode === "ON" ? 1 : 0); 
-
-            new Chart(chartContext, {
-                type: "line",
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: "Mode (ON = 1, OFF = 0)",
-                        data: vals,
-                        borderColor: "blue",
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
-        }
-
-        makeStatChart();
-        
-    </script>
+    
 
 </body>
 </html>

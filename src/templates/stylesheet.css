@@ -15,14 +15,14 @@ body {
 }
 
 /* NAVBAR */
-.DropDownMenu {
+.drop-down-menu {
     right: 1%;
     position: fixed;
     display: inline;
     z-index: 999;
 }
 
-.DropDownButton {
+.drop-down-button {
     background: none;
     border: none;
     cursor: pointer;
@@ -30,7 +30,20 @@ body {
     z-index: 1000;
 }
 
-.DropDownMenuContent {
+.nav {
+    margin: 10px;
+}
+
+.alarm-button {
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    z-index: 1000;
+    margin: 10px;
+    max-width: 100px;
+}
+
+.drop-down-menu-content {
     display: none;
     position: absolute;
     right: 0;
@@ -40,7 +53,7 @@ body {
     z-index: 1000;
 }
 
-.DropDownMenuContent a {
+.drop-down-menu-content a {
     float: none;
     color: black;
     padding: 12px 16px;
@@ -50,24 +63,30 @@ body {
     z-index: 1000;
 }
 
-.DropDownMenuContent a:hover {
+.drop-down-menu-content a:hover {
     background-color: whitesmoke;
 }
 
-.DropDownMenu:focus-within .DropDownMenuContent {
+.drop-down-menu:focus-within .drop-down-menu-content {
     display: block;
 }
-
-.statTable {
-    overflow: scroll;
+.stat-grid {
     display: grid;
-    place-items: center;
-    height: 30vh;
-    margin-left: 20%;
-    margin-right: 20%;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
 }
 
-.statChart {
+.stat-table {
+    display: grid;
+    place-items: center;
+    max-height: 800px;
+    overflow: scroll;
+    margin-bottom: 40px;
+    max-width: 300px;
+}
+
+
+.stat-chart {
     display: grid;
     place-items: center;
     height: auto;
@@ -76,12 +95,12 @@ body {
     max-width: 60%;
 }
 
-.chartContainer {
+.chart-container {
     display: flex;
     justify-content: center; /* Centers the canvas horizontally */
     align-items: center; /* Centers the canvas vertically if needed */
     width: 100%; /* Full width of the parent */
-    height: auto; /* Adjust height as needed */
+    height: 500px; /* Adjust height as needed */
 }
 
 .centered-div {
@@ -93,6 +112,182 @@ body {
     text-align: center;
 }
 
+.grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    display: grid;
+}
+
 .colored-box {
+
     background-color: #FABA5F;
+}
+
+.device-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+}
+.device-card {
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.status-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 12px;
+}
+.status-ok {
+    background-color: #4CAF50;
+}
+.status-error {
+    background-color: #F44336;
+}
+.device-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.right-hub {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.open-button {
+    background-color: #555;
+    color: white;
+    padding: 16px 20px;
+    border: none;
+    cursor: pointer;
+    opacity: 0.8;
+    position: fixed;
+    bottom: 23px;
+    right: 28px;
+    width: 280px;
+}
+
+.form-popup {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 15px;
+    border: 3px solid #f1f1f1;
+    z-index: 9;
+}
+
+/* Add styles to the form container */
+.form-container {
+    max-width: 300px;
+    padding: 10px;
+    background-color: white;
+}
+
+/* Full-width input fields */
+.form-container input[type=text], .form-container input[type=password] {
+    width: 100%;
+    padding: 15px;
+    margin: 5px 0 22px 0;
+    border: none;
+    background: #f1f1f1;
+    box-sizing: border-box;
+}
+
+/* When the inputs get focus, do something */
+.form-container input[type=text]:focus, .form-container input[type=password]:focus {
+    background-color: #ddd;
+    outline: none;
+}
+
+/* Set a style for the submit/login button */
+.form-container .btn {
+    background-color: #04AA6D;
+    color: white;
+    padding: 16px 20px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom:10px;
+    opacity: 0.8;
+}
+
+/* Add a red background color to the cancel button */
+.form-container .cancel {
+    background-color: red;
+}
+
+/* Add some hover effects to buttons */
+    .form-container .btn:hover, .open-button:hover {
+    opacity: 1;
+}
+
+.about-container {
+    max-width: 800px;
+    margin: 60px auto 0 auto;
+    background: #fffbe9;
+    border-radius: 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 2.5rem 2rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.about-image {
+    width: 180px;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    margin-bottom: 1.5rem;
+    border: 5px solid #FABA5F;
+    background: #fff;
+}
+.about-title {
+    font-size: 2rem;
+    color: #313131;
+    margin-bottom: 1rem;
+    font-weight: bold;
+}
+.about-text {
+    font-size: 1.15rem;
+    color: #313131;
+    line-height: 1.7;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 600px) {
+    .about-container {
+        padding: 1rem 0.5rem;
+    }
+    .about-title {
+        font-size: 1.3rem;
+    }
+    .about-image {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+.tables {
+    margin-left: 50px;
 }

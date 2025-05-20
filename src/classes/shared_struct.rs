@@ -1,9 +1,10 @@
-use mongodb::{bson::{oid::ObjectId, Binary}, Client};
+use mongodb::{bson::Binary, Client};
+use chrono::DateTime;
+
 use super::{
     state_handler::StateHandler,
     web_handler::WebHandler,
 };
-use crate::classes::state_handler::StateLog;
 
 use ring::{digest, pbkdf2};
 use std::num::NonZeroU32;
@@ -17,7 +18,7 @@ pub static MONGODB_URI: &str = "mongodb://localhost:27017";
 pub static RESIDENT_DATA: &str = "resident_data";
 pub static RESIDENT_LOGS: &str = "resident_logs";
 pub static DEVICE_HEALTH: &str = "device_health";
-pub static STATES: &str = "States";
+pub static STATES: &str = "states";
 pub static SENSOR_LOOKUP: &str = "sensor_lookup";
 pub static IP_ADDRESSES: &str = "ip_addresses";
 
@@ -56,8 +57,7 @@ pub struct AppState {
 }
 
 // HEUCOD event standard, needs implementing.
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Result<States, std::io::ErrorKind>")]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Event {
     pub time_stamp: String,
     pub mode: String,
@@ -69,37 +69,27 @@ pub struct Event {
     pub gateway_id: u32,
     pub id: String,
 }
+impl Message for Event {type Result = Result<States, std::io::ErrorKind>; }
 
-#[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug)]
+
+#[derive(PartialEq, Eq, Deserialize, Serialize, Clone, Debug, Ord, PartialOrd)]
 pub enum States {
-    Initialization,
-    Standby,
-    Attended,
-    Unattended,
-    Alarmed,
-    CriticallyAlarmed,
-    Faulty,
+    Initialization = 0,
+    Standby = 1,
+    Attended = 2,
+    Unattended = 3,
+    Alarmed = 4,
+    CriticallyAlarmed = 5,
+    Faulty = 6,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "Option<Vec<StateLog>>")]
-pub struct ResIdFetcher {
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct HealthCheck {
     pub res_id: String,
+    pub data: Vec<(String, String)>
 }
+impl Message for HealthCheck { type Result = (); }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Message)]
-#[rtype(result = "()")]
-pub struct HealthData {
-    pub res_id: String,
-    pub kitchen_pir: String,
-    pub living_room_pir: String,
-    pub bathroom_pir: String,
-    pub bathroom_LED: String,
-    pub living_room_LED: String,
-    pub power_plug: String,
-    pub bridge: String,
-    pub pi: String,
-}
 // For saving login informatino in db
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct UsersLoggedInformation {
@@ -124,7 +114,6 @@ pub struct ValidateSession {
     pub cookie: String
 }
 
-
 // holds lists for a residents devices. Note that requirements state we need 5 PIR sensors
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SensorLookup {
@@ -142,13 +131,16 @@ pub struct InitState {
     pub ip_addr: String,
 }
 
-
 #[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]
 pub struct ScheduledTask {
   pub res_id: String,
   pub execute_at: Instant,
 }
+
+// #[derive(Debug, Message, Clone)]
+// #[rtype(result = ())]
+// pub struct NotifyRelatives {}
 
 #[derive(Message, Deserialize)]
 #[rtype(result = "Option<String>")]
@@ -160,13 +152,47 @@ pub struct CreateUser {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct IpCollection {
-    _id: ObjectId,
     pub res_ip: String,
     pub res_id: String,
 }
+
 #[derive(Message, Deserialize)]
 #[rtype(result = "()")]
 pub struct AddRelative {
     pub res_id: String,
     pub username: String,
 }
+
+// For when an alarm is sounded
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct StateLog {
+    pub res_id: String,
+    pub timestamp: DateTime<chrono::Utc>,
+    pub state: States,
+    pub current_room_pir: String,
+    pub context: String,            // Store full system state snapshot here
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ResIdFetcher {
+    pub res_id: String,
+}
+impl Message for ResIdFetcher {type Result = Option<Vec<StateLog>>;}
+
+#[derive(Deserialize, Serialize)]
+pub struct GetStoveData {
+    pub res_id: String,
+}
+impl Message for GetStoveData {type Result = Option<Vec<Event>>;}
+
+#[derive(Deserialize, Serialize)]
+pub struct GetHealthData {
+    pub res_id: String,
+}
+impl Message for GetHealthData {type Result = Option<HealthCheck>;}
+
+#[derive(Deserialize, Serialize)]
+pub struct TurnOffalarm {
+    pub res_id: String
+}
+impl Message for TurnOffalarm {type Result = (); }
