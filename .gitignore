@@ -2,3 +2,4 @@ target/
 mongod – genvej.lnk
 src/.env
 .env
+app.log

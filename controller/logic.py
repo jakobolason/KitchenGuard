@@ -8,6 +8,7 @@ import environment
 import threading
 import time
 from heartbeat_class import Heartbeat
+import logging
 
 class Logic:
 	
@@ -15,6 +16,11 @@ class Logic:
 		# Connect
 		self.client = mqtt.Client()
 		self.client.connect(environment.MQTT_BROKER_HOST, environment.MQTT_BROKER_PORT)
+		logging.basicConfig(
+			filename='app.log',
+			level=logging.INFO,
+			format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+		)
 		
 		# Setup HTTP via Flask
 		self.app = Flask(__name__)
@@ -85,6 +91,7 @@ class Logic:
 		self.stop_event_audio.set()
 
 	def heartbeat_scheduler(self):
+		logging.info("starting heartbeat check")
 		my_heartbeat = Heartbeat()
 		while True:
 			heartbeat_thread = threading.Thread(target = my_heartbeat.heartbeat)
@@ -99,11 +106,13 @@ class Logic:
 	def handleState(self, data):
 		state = data["new_state"]
 		room = data["current_room_pir"]
+		logging.info(f"Recieved new state: {state}. relative is in room {room}")
 		
 		print("CURRENT STATE: " + str(state))
 		print("Resident is in room " + str(room))
 		
 		if (state == "Initialization"):
+			logging.info("In initialization!")
 			threading.Thread(target=self.heartbeat_scheduler).start()
 			self.flag_first_run = True
 
@@ -112,7 +121,8 @@ class Logic:
 			self.health_check_interval = environment.HEALTH_CHECK_INTERVAL_IDEAL
 			for i in range(len(environment.ROOMS)):
 				self.Change_LED_OFF(environment.ROOMS[i])
-
+				logging.info("turning off LED")
+			logging.info("And powerplug and stopping audio")
 			self.Power_plug_ON()
 			self.stopAudio()
 			
@@ -126,8 +136,10 @@ class Logic:
 		
 		# Going into alarmed state
 		elif (state == "Alarmed"):
+			logging.warning("In alarmed")
 			for i in range(len(environment.ROOMS)):
-				self.Change_LED_ON(environment.ROOMS[i], environment.ALARMED_COLOR)
+				if environment.ROOMS[i]["PIR"] == room:
+					self.Change_LED_ON(environment.ROOMS[i], environment.ALARMED_COLOR)
 			
 			self.Power_plug_ON()
 			
@@ -136,6 +148,7 @@ class Logic:
 		
 		# Going into critically alarmed state
 		elif (state == "CriticallyAlarmed"):
+			logging.warning("In critically alarmed")
 			for i in range(len(environment.ROOMS)):
 				self.Change_LED_ON(environment.ROOMS[i], environment.CRITICALLY_ALARMED_COLOR)
 			
@@ -143,6 +156,7 @@ class Logic:
 		
 		# Going into the faulty state
 		elif (state == "Faulty"):
+			logging.critical("Going into faulty!")
 			# Make the LED's pink to visualize the setup went wrong
 			for i in range(len(environment.ROOMS)):
 				self.Change_LED_ON(environment.ROOMS[i], environment.FAULTY_COLOR)

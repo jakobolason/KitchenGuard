@@ -1,5 +1,5 @@
 # CHANGE THESE
-HTTP_HOST = "http://172.20.10.9:8080"
+HTTP_HOST = "http://192.168.116.236:8080"
 
 # Sensor names
 KITCHEN_PIR = "kitchen_pir"
@@ -17,12 +17,15 @@ ROOM_4_LED = ""
 # Power plug
 POWER_PLUG = "power_plug"
 
-
-
-
-
-
-
+# FILL THESE HEX NUMBERS
+SENSOR_DICT = {
+	"0x54ef44100094740b": KITCHEN_PIR,
+	"0x54ef441000948cbd": ROOM_1_PIR,
+	"0x00158d0005729f18": ROOM_2_PIR,
+	"0x842e14fffe9e2d85": ROOM_1_LED,
+	"0x60a423fffe02319c": ROOM_2_LED,
+	"0x54ef4410008b372e": POWER_PLUG
+}
 
 
 # DO NOT TOUCH
@@ -42,14 +45,6 @@ for i in range(len(LEDs)):
         })
 
 
-SENSOR_DICT = {
-	"0x54ef44100094740b": KITCHEN_PIR,
-	"0x54ef441000948cbd": ROOM_1_PIR,
-	"0x00158d0005729f18": ROOM_2_PIR,
-	"0x842e14fffe9e2d85": ROOM_1_LED,
-	"0x60a423fffe02319c": ROOM_2_LED,
-	"0x54ef4410008b372e": POWER_PLUG
-}
 
 DEVICES = list(SENSOR_DICT.keys())
 
