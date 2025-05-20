@@ -3,6 +3,7 @@ from Worker import (Cep2Zigbee2mqttClient,
 import requests
 import datetime
 import environment
+import logging
 
 class MQTT_Listener:
     """ The controller is responsible for managing events received from zigbee2mqtt and handle them.
@@ -78,6 +79,7 @@ class MQTT_Listener:
             return
 
         crnt_time = f"{datetime.datetime.now()}"
+        logging.info("trying to save event")
         # Convert event_data to string
         data_str = f"{data}"
         # Register event in the remote web server.
@@ -97,6 +99,7 @@ class MQTT_Listener:
             print("Trying to save: ", web_event)
             responseSave = requests.post(environment.DB_ENDPOINT, json = web_event)
             print("Response from save function: ", responseSave)
+            logging.info(f"response from Kitchen Guard Server: {responseSave}")
                 
         except ConnectionError as ex:
             print(f"{ex}")
