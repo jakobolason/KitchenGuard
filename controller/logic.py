@@ -17,7 +17,7 @@ class Logic:
 		self.client = mqtt.Client()
 		self.client.connect(environment.MQTT_BROKER_HOST, environment.MQTT_BROKER_PORT)
 		logging.basicConfig(
-			filename=f'app_{time.strftime("%Y-%m-%d")}.log',
+			filename='app.log',
 			level=logging.INFO,
 			format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 		)
