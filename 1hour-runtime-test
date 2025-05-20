@@ -1,0 +1,880 @@
+2025-05-20 11:43:59,366 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 11:43:59,366 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 11:43:59,401 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 11:43:59,401 - root - INFO - In initialization!
+2025-05-20 11:43:59,401 - root - INFO - starting heartbeat check
+2025-05-20 11:43:59,402 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:43:59] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:44:29,965 - root - INFO - Recieved new state: Faulty. relative is in room kitchen_pir
+2025-05-20 11:44:29,965 - root - CRITICAL - Going into faulty!
+2025-05-20 11:44:29,966 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:44:29] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:44:59,020 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 11:44:59,020 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 11:44:59,068 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 11:44:59,068 - root - INFO - In initialization!
+2025-05-20 11:44:59,068 - root - INFO - starting heartbeat check
+2025-05-20 11:44:59,069 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:44:59] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:45:29,617 - root - INFO - Recieved new state: Faulty. relative is in room kitchen_pir
+2025-05-20 11:45:29,617 - root - CRITICAL - Going into faulty!
+2025-05-20 11:45:29,617 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:45:29] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:46:18,561 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 11:46:18,562 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 11:46:18,608 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 11:46:18,608 - root - INFO - In initialization!
+2025-05-20 11:46:18,608 - root - INFO - starting heartbeat check
+2025-05-20 11:46:18,609 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:46:18] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:46:49,177 - root - INFO - Recieved new state: Faulty. relative is in room kitchen_pir
+2025-05-20 11:46:49,178 - root - CRITICAL - Going into faulty!
+2025-05-20 11:46:49,178 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:46:49] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:47:13,966 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 11:47:13,966 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 11:47:14,007 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 11:47:14,008 - root - INFO - In initialization!
+2025-05-20 11:47:14,008 - root - INFO - starting heartbeat check
+2025-05-20 11:47:14,008 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:47:14] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:47:44,571 - root - INFO - Recieved new state: Faulty. relative is in room kitchen_pir
+2025-05-20 11:47:44,572 - root - CRITICAL - Going into faulty!
+2025-05-20 11:47:44,572 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:47:44] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:53:23,853 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 11:53:23,854 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 11:53:23,895 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 11:53:23,895 - root - INFO - In initialization!
+2025-05-20 11:53:23,896 - root - INFO - starting heartbeat check
+2025-05-20 11:53:23,896 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:53:23] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 11:53:34,435 - root - INFO - Recieved new state: Standby. relative is in room kitchen_pir
+2025-05-20 11:53:34,436 - root - INFO - turning off LED
+2025-05-20 11:53:34,436 - root - INFO - turning off LED
+2025-05-20 11:53:34,436 - root - INFO - And powerplug and stopping audio
+2025-05-20 11:53:34,491 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 11:53:34] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 13:10:19,099 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 13:10:19,100 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 13:10:19,150 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 13:10:19,150 - root - INFO - In initialization!
+2025-05-20 13:10:19,150 - root - INFO - starting heartbeat check
+2025-05-20 13:10:19,151 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 13:10:19] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 13:11:01,900 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 13:11:01,901 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 13:11:01,935 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 13:11:01,935 - root - INFO - In initialization!
+2025-05-20 13:11:01,935 - root - INFO - starting heartbeat check
+2025-05-20 13:11:01,936 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 13:11:01] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 13:11:52,047 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.116.97:9000
+2025-05-20 13:11:52,047 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-20 13:11:52,105 - root - INFO - Recieved new state: Initialization. relative is in room kitchen_pir
+2025-05-20 13:11:52,105 - root - INFO - In initialization!
+2025-05-20 13:11:52,105 - root - INFO - starting heartbeat check
+2025-05-20 13:11:52,105 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 13:11:52] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 13:12:02,695 - root - INFO - Recieved new state: Standby. relative is in room kitchen_pir
+2025-05-20 13:12:02,696 - root - INFO - turning off LED
+2025-05-20 13:12:02,696 - root - INFO - turning off LED
+2025-05-20 13:12:02,696 - root - INFO - And powerplug and stopping audio
+2025-05-20 13:12:02,712 - werkzeug - INFO - 192.168.116.236 - - [20/May/2025 13:12:02] "POST /state_listener HTTP/1.1" 200 -
+2025-05-20 13:12:06,682 - root - INFO - Trying to send request to server
+2025-05-20 13:12:06,754 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:14,558 - root - INFO - Trying to send request to server
+2025-05-20 13:12:14,588 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:19,143 - root - INFO - Trying to send request to server
+2025-05-20 13:12:19,188 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:38,688 - root - INFO - Trying to send request to server
+2025-05-20 13:12:38,726 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:44,706 - root - INFO - Trying to send request to server
+2025-05-20 13:12:44,736 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:47,414 - root - INFO - Trying to send request to server
+2025-05-20 13:12:47,458 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:48,947 - root - INFO - Trying to send request to server
+2025-05-20 13:12:48,982 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:58,826 - root - INFO - Trying to send request to server
+2025-05-20 13:12:58,902 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:12:58,902 - root - INFO - Trying to send request to server
+2025-05-20 13:12:58,931 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:18,798 - root - INFO - Trying to send request to server
+2025-05-20 13:13:18,835 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:19,414 - root - INFO - Trying to send request to server
+2025-05-20 13:13:19,440 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:22,535 - root - INFO - Trying to send request to server
+2025-05-20 13:13:22,561 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:25,275 - root - INFO - Trying to send request to server
+2025-05-20 13:13:25,297 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:25,297 - root - INFO - Trying to send request to server
+2025-05-20 13:13:25,373 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:49,642 - root - INFO - Trying to send request to server
+2025-05-20 13:13:49,746 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:54,539 - root - INFO - Trying to send request to server
+2025-05-20 13:13:54,565 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:13:56,077 - root - INFO - Trying to send request to server
+2025-05-20 13:13:56,107 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:14:20,024 - root - INFO - Trying to send request to server
+2025-05-20 13:14:20,064 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:14:24,131 - root - INFO - Trying to send request to server
+2025-05-20 13:14:24,170 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:14:24,171 - root - INFO - Trying to send request to server
+2025-05-20 13:14:24,199 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:14:25,947 - root - INFO - Trying to send request to server
+2025-05-20 13:14:25,978 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:14:52,026 - root - INFO - Trying to send request to server
+2025-05-20 13:14:52,092 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:14:57,954 - root - INFO - Trying to send request to server
+2025-05-20 13:14:58,095 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:15:13,268 - root - INFO - Trying to send request to server
+2025-05-20 13:15:13,310 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:15:13,468 - root - INFO - Trying to send request to server
+2025-05-20 13:15:13,491 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:15:43,229 - root - INFO - Trying to send request to server
+2025-05-20 13:15:43,281 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:15:45,468 - root - INFO - Trying to send request to server
+2025-05-20 13:15:45,503 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:15:54,134 - root - INFO - Trying to send request to server
+2025-05-20 13:15:54,227 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:15:59,334 - root - INFO - Trying to send request to server
+2025-05-20 13:15:59,368 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:16:15,230 - root - INFO - Trying to send request to server
+2025-05-20 13:16:15,294 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:16:15,347 - root - INFO - Trying to send request to server
+2025-05-20 13:16:15,384 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:16:31,334 - root - INFO - Trying to send request to server
+2025-05-20 13:16:31,417 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:16:42,660 - root - INFO - Trying to send request to server
+2025-05-20 13:16:42,693 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:16:45,299 - root - INFO - Trying to send request to server
+2025-05-20 13:16:45,344 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:16:46,498 - root - INFO - Trying to send request to server
+2025-05-20 13:16:46,581 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:16:46,582 - root - INFO - Trying to send request to server
+2025-05-20 13:16:46,603 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:14,663 - root - INFO - Trying to send request to server
+2025-05-20 13:17:14,720 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:15,117 - root - INFO - Trying to send request to server
+2025-05-20 13:17:15,147 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:21,447 - root - INFO - Trying to send request to server
+2025-05-20 13:17:21,493 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:22,256 - root - INFO - Trying to send request to server
+2025-05-20 13:17:22,292 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:22,293 - root - INFO - Trying to send request to server
+2025-05-20 13:17:22,315 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:47,124 - root - INFO - Trying to send request to server
+2025-05-20 13:17:47,166 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:49,405 - root - INFO - Trying to send request to server
+2025-05-20 13:17:49,435 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:52,681 - root - INFO - Trying to send request to server
+2025-05-20 13:17:52,715 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:58,869 - root - INFO - Trying to send request to server
+2025-05-20 13:17:58,913 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:17:58,914 - root - INFO - Trying to send request to server
+2025-05-20 13:17:58,935 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:18:21,405 - root - INFO - Trying to send request to server
+2025-05-20 13:18:21,430 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:18:24,685 - root - INFO - Trying to send request to server
+2025-05-20 13:18:24,725 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:18:30,909 - root - INFO - Trying to send request to server
+2025-05-20 13:18:30,939 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:02,912 - root - INFO - Trying to send request to server
+2025-05-20 13:19:02,962 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:04,137 - root - INFO - Trying to send request to server
+2025-05-20 13:19:04,159 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:10,764 - root - INFO - Trying to send request to server
+2025-05-20 13:19:10,794 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:28,879 - root - INFO - Trying to send request to server
+2025-05-20 13:19:28,906 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:36,143 - root - INFO - Trying to send request to server
+2025-05-20 13:19:36,179 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:42,767 - root - INFO - Trying to send request to server
+2025-05-20 13:19:42,808 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:46,586 - root - INFO - Trying to send request to server
+2025-05-20 13:19:46,615 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:19:46,616 - root - INFO - Trying to send request to server
+2025-05-20 13:19:46,637 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:20:03,412 - root - INFO - Trying to send request to server
+2025-05-20 13:20:03,484 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:20:03,484 - root - INFO - Trying to send request to server
+2025-05-20 13:20:03,517 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:20:16,669 - root - INFO - Trying to send request to server
+2025-05-20 13:20:16,701 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:20:18,588 - root - INFO - Trying to send request to server
+2025-05-20 13:20:18,625 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:20:42,941 - root - INFO - Trying to send request to server
+2025-05-20 13:20:43,979 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:20:48,675 - root - INFO - Trying to send request to server
+2025-05-20 13:20:48,772 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:20:49,336 - root - INFO - Trying to send request to server
+2025-05-20 13:20:49,358 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:21:12,742 - root - INFO - Trying to send request to server
+2025-05-20 13:21:12,810 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:21:19,153 - root - INFO - Trying to send request to server
+2025-05-20 13:21:19,179 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:21:33,418 - root - INFO - Trying to send request to server
+2025-05-20 13:21:33,562 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:21:44,746 - root - INFO - Trying to send request to server
+2025-05-20 13:21:44,774 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:21:45,686 - root - INFO - Trying to send request to server
+2025-05-20 13:21:45,712 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:21:49,916 - root - INFO - Trying to send request to server
+2025-05-20 13:21:49,950 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:22:17,694 - root - INFO - Trying to send request to server
+2025-05-20 13:22:17,746 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:22:20,817 - root - INFO - Trying to send request to server
+2025-05-20 13:22:20,850 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:22:21,115 - root - INFO - Trying to send request to server
+2025-05-20 13:22:21,142 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:22:50,614 - root - INFO - Trying to send request to server
+2025-05-20 13:22:50,715 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:22:51,913 - root - INFO - Trying to send request to server
+2025-05-20 13:22:51,939 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:23:21,104 - root - INFO - Trying to send request to server
+2025-05-20 13:23:21,142 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:23:23,914 - root - INFO - Trying to send request to server
+2025-05-20 13:23:23,944 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:23:29,610 - root - INFO - Trying to send request to server
+2025-05-20 13:23:29,659 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:23:53,106 - root - INFO - Trying to send request to server
+2025-05-20 13:23:53,144 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:23:57,284 - root - INFO - Trying to send request to server
+2025-05-20 13:23:57,327 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:23:59,423 - root - INFO - Trying to send request to server
+2025-05-20 13:23:59,455 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:24:29,291 - root - INFO - Trying to send request to server
+2025-05-20 13:24:29,331 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:24:31,424 - root - INFO - Trying to send request to server
+2025-05-20 13:24:31,447 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:24:32,213 - root - INFO - Trying to send request to server
+2025-05-20 13:24:32,245 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:24:32,295 - root - INFO - Trying to send request to server
+2025-05-20 13:24:32,322 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:25:02,097 - root - INFO - Trying to send request to server
+2025-05-20 13:25:02,141 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:25:02,392 - root - INFO - Trying to send request to server
+2025-05-20 13:25:02,416 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:25:31,897 - root - INFO - Trying to send request to server
+2025-05-20 13:25:31,994 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:25:32,210 - root - INFO - Trying to send request to server
+2025-05-20 13:25:32,396 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:26:03,899 - root - INFO - Trying to send request to server
+2025-05-20 13:26:04,001 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:26:04,210 - root - INFO - Trying to send request to server
+2025-05-20 13:26:04,238 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:26:04,662 - root - INFO - Trying to send request to server
+2025-05-20 13:26:04,728 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:26:06,234 - root - INFO - Trying to send request to server
+2025-05-20 13:26:06,263 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:26:34,462 - root - INFO - Trying to send request to server
+2025-05-20 13:26:34,546 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:26:36,051 - root - INFO - Trying to send request to server
+2025-05-20 13:26:36,080 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:27:05,946 - root - INFO - Trying to send request to server
+2025-05-20 13:27:06,011 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:27:06,091 - root - INFO - Trying to send request to server
+2025-05-20 13:27:06,130 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:27:37,429 - root - INFO - Trying to send request to server
+2025-05-20 13:27:37,461 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:27:37,538 - root - INFO - Trying to send request to server
+2025-05-20 13:27:37,564 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:09,439 - root - INFO - Trying to send request to server
+2025-05-20 13:28:09,503 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:09,538 - root - INFO - Trying to send request to server
+2025-05-20 13:28:09,604 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:10,201 - root - INFO - Trying to send request to server
+2025-05-20 13:28:10,231 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:11,200 - root - INFO - Trying to send request to server
+2025-05-20 13:28:11,229 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:42,203 - root - INFO - Trying to send request to server
+2025-05-20 13:28:42,351 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:43,202 - root - INFO - Trying to send request to server
+2025-05-20 13:28:43,230 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:47,721 - root - INFO - Trying to send request to server
+2025-05-20 13:28:47,823 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:28:48,728 - root - INFO - Trying to send request to server
+2025-05-20 13:28:48,839 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:29:19,733 - root - INFO - Trying to send request to server
+2025-05-20 13:29:19,777 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:29:20,726 - root - INFO - Trying to send request to server
+2025-05-20 13:29:20,789 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:29:32,369 - root - INFO - Trying to send request to server
+2025-05-20 13:29:32,511 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:29:32,511 - root - INFO - Trying to send request to server
+2025-05-20 13:29:32,537 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:04,372 - root - INFO - Trying to send request to server
+2025-05-20 13:30:04,399 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:04,405 - root - INFO - Trying to send request to server
+2025-05-20 13:30:04,488 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:12,649 - root - INFO - Trying to send request to server
+2025-05-20 13:30:12,684 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:12,830 - root - INFO - Trying to send request to server
+2025-05-20 13:30:12,848 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:44,653 - root - INFO - Trying to send request to server
+2025-05-20 13:30:44,738 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:44,830 - root - INFO - Trying to send request to server
+2025-05-20 13:30:44,855 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:46,922 - root - INFO - Trying to send request to server
+2025-05-20 13:30:47,034 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:30:47,081 - root - INFO - Trying to send request to server
+2025-05-20 13:30:47,145 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:31:18,932 - root - INFO - Trying to send request to server
+2025-05-20 13:31:19,024 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:31:19,081 - root - INFO - Trying to send request to server
+2025-05-20 13:31:19,139 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:31:24,255 - root - INFO - Trying to send request to server
+2025-05-20 13:31:24,354 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:31:26,980 - root - INFO - Trying to send request to server
+2025-05-20 13:31:27,008 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:31:54,090 - root - INFO - Trying to send request to server
+2025-05-20 13:31:54,142 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:31:58,983 - root - INFO - Trying to send request to server
+2025-05-20 13:31:59,032 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:32:00,338 - root - INFO - Trying to send request to server
+2025-05-20 13:32:00,433 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:32:26,095 - root - INFO - Trying to send request to server
+2025-05-20 13:32:26,187 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:32:26,955 - root - INFO - Trying to send request to server
+2025-05-20 13:32:26,986 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:32:32,340 - root - INFO - Trying to send request to server
+2025-05-20 13:32:32,378 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:32:36,412 - root - INFO - Trying to send request to server
+2025-05-20 13:32:36,490 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:32:58,958 - root - INFO - Trying to send request to server
+2025-05-20 13:32:59,040 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:33:08,420 - root - INFO - Trying to send request to server
+2025-05-20 13:33:08,456 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:33:13,021 - root - INFO - Trying to send request to server
+2025-05-20 13:33:13,050 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:33:13,136 - root - INFO - Trying to send request to server
+2025-05-20 13:33:13,162 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:33:45,026 - root - INFO - Trying to send request to server
+2025-05-20 13:33:45,114 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:33:45,136 - root - INFO - Trying to send request to server
+2025-05-20 13:33:45,153 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:33:45,890 - root - INFO - Trying to send request to server
+2025-05-20 13:33:45,930 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:33:53,420 - root - INFO - Trying to send request to server
+2025-05-20 13:33:53,452 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:34:15,688 - root - INFO - Trying to send request to server
+2025-05-20 13:34:15,835 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:34:25,425 - root - INFO - Trying to send request to server
+2025-05-20 13:34:25,455 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:34:41,899 - root - INFO - Trying to send request to server
+2025-05-20 13:34:41,968 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:34:47,694 - root - INFO - Trying to send request to server
+2025-05-20 13:34:47,725 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:34:57,595 - root - INFO - Trying to send request to server
+2025-05-20 13:34:57,637 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:35:13,901 - root - INFO - Trying to send request to server
+2025-05-20 13:35:13,929 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:35:14,028 - root - INFO - Trying to send request to server
+2025-05-20 13:35:14,131 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:35:27,392 - root - INFO - Trying to send request to server
+2025-05-20 13:35:27,430 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:35:43,854 - root - INFO - Trying to send request to server
+2025-05-20 13:35:44,915 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:35:59,400 - root - INFO - Trying to send request to server
+2025-05-20 13:35:59,490 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:35:59,560 - root - INFO - Trying to send request to server
+2025-05-20 13:35:59,669 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:15,859 - root - INFO - Trying to send request to server
+2025-05-20 13:36:15,888 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:20,675 - root - INFO - Trying to send request to server
+2025-05-20 13:36:20,772 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:31,558 - root - INFO - Trying to send request to server
+2025-05-20 13:36:31,718 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:31,937 - root - INFO - Trying to send request to server
+2025-05-20 13:36:31,959 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:39,829 - root - INFO - Trying to send request to server
+2025-05-20 13:36:39,862 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:39,863 - root - INFO - Trying to send request to server
+2025-05-20 13:36:39,886 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:46,960 - root - INFO - Trying to send request to server
+2025-05-20 13:36:47,037 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:47,038 - root - INFO - Trying to send request to server
+2025-05-20 13:36:47,060 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:52,676 - root - INFO - Trying to send request to server
+2025-05-20 13:36:52,711 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:56,602 - root - INFO - Trying to send request to server
+2025-05-20 13:36:56,628 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:36:59,981 - root - INFO - Trying to send request to server
+2025-05-20 13:37:00,032 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:00,032 - root - INFO - Trying to send request to server
+2025-05-20 13:37:00,077 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:03,939 - root - INFO - Trying to send request to server
+2025-05-20 13:37:03,967 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:04,722 - root - INFO - Trying to send request to server
+2025-05-20 13:37:04,750 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:11,953 - root - INFO - Trying to send request to server
+2025-05-20 13:37:11,986 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:11,986 - root - INFO - Trying to send request to server
+2025-05-20 13:37:12,007 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:21,431 - root - INFO - Trying to send request to server
+2025-05-20 13:37:21,519 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:21,519 - root - INFO - Trying to send request to server
+2025-05-20 13:37:21,548 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:26,797 - root - INFO - Trying to send request to server
+2025-05-20 13:37:26,822 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:36,729 - root - INFO - Trying to send request to server
+2025-05-20 13:37:36,758 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:49,657 - root - INFO - Trying to send request to server
+2025-05-20 13:37:49,748 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:37:58,799 - root - INFO - Trying to send request to server
+2025-05-20 13:37:58,823 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:38:01,884 - root - INFO - Trying to send request to server
+2025-05-20 13:38:01,919 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:38:21,659 - root - INFO - Trying to send request to server
+2025-05-20 13:38:22,711 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:38:29,146 - root - INFO - Trying to send request to server
+2025-05-20 13:38:29,177 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:38:33,887 - root - INFO - Trying to send request to server
+2025-05-20 13:38:33,939 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:38:46,901 - root - INFO - Trying to send request to server
+2025-05-20 13:38:46,991 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:38:51,434 - root - INFO - Trying to send request to server
+2025-05-20 13:38:51,461 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:39:01,146 - root - INFO - Trying to send request to server
+2025-05-20 13:39:01,173 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:39:11,055 - root - INFO - Trying to send request to server
+2025-05-20 13:39:11,086 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:39:17,083 - root - INFO - Trying to send request to server
+2025-05-20 13:39:17,112 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:39:43,055 - root - INFO - Trying to send request to server
+2025-05-20 13:39:43,128 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:39:46,549 - root - INFO - Trying to send request to server
+2025-05-20 13:39:46,590 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:39:46,896 - root - INFO - Trying to send request to server
+2025-05-20 13:39:46,928 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:40:18,556 - root - INFO - Trying to send request to server
+2025-05-20 13:40:18,639 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:40:18,898 - root - INFO - Trying to send request to server
+2025-05-20 13:40:18,966 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:40:28,609 - root - INFO - Trying to send request to server
+2025-05-20 13:40:28,682 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:40:32,408 - root - INFO - Trying to send request to server
+2025-05-20 13:40:32,437 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:00,609 - root - INFO - Trying to send request to server
+2025-05-20 13:41:00,635 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:03,059 - root - INFO - Trying to send request to server
+2025-05-20 13:41:03,086 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:03,544 - root - INFO - Trying to send request to server
+2025-05-20 13:41:03,569 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:35,064 - root - INFO - Trying to send request to server
+2025-05-20 13:41:35,091 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:35,545 - root - INFO - Trying to send request to server
+2025-05-20 13:41:35,573 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:36,477 - root - INFO - Trying to send request to server
+2025-05-20 13:41:36,518 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:40,911 - root - INFO - Trying to send request to server
+2025-05-20 13:41:41,004 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:53,486 - root - INFO - Trying to send request to server
+2025-05-20 13:41:53,567 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:41:53,567 - root - INFO - Trying to send request to server
+2025-05-20 13:41:53,598 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:42:07,513 - root - INFO - Trying to send request to server
+2025-05-20 13:42:07,545 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:42:11,426 - root - INFO - Trying to send request to server
+2025-05-20 13:42:11,458 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:42:37,663 - root - INFO - Trying to send request to server
+2025-05-20 13:42:37,738 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:42:42,188 - root - INFO - Trying to send request to server
+2025-05-20 13:42:42,223 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:43:07,509 - root - INFO - Trying to send request to server
+2025-05-20 13:43:07,601 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:43:14,192 - root - INFO - Trying to send request to server
+2025-05-20 13:43:14,218 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:43:20,285 - root - INFO - Trying to send request to server
+2025-05-20 13:43:20,325 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:43:23,490 - root - INFO - Trying to send request to server
+2025-05-20 13:43:23,567 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:43:37,355 - root - INFO - Trying to send request to server
+2025-05-20 13:43:37,505 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:43:52,095 - root - INFO - Trying to send request to server
+2025-05-20 13:43:52,181 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:09,363 - root - INFO - Trying to send request to server
+2025-05-20 13:44:09,473 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:24,098 - root - INFO - Trying to send request to server
+2025-05-20 13:44:24,198 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:26,145 - root - INFO - Trying to send request to server
+2025-05-20 13:44:26,176 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:26,249 - root - INFO - Trying to send request to server
+2025-05-20 13:44:26,279 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:28,596 - root - INFO - Trying to send request to server
+2025-05-20 13:44:28,624 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:28,625 - root - INFO - Trying to send request to server
+2025-05-20 13:44:28,645 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:56,628 - root - INFO - Trying to send request to server
+2025-05-20 13:44:56,755 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:56,755 - root - INFO - Trying to send request to server
+2025-05-20 13:44:56,786 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:59,508 - root - INFO - Trying to send request to server
+2025-05-20 13:44:59,546 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:44:59,547 - root - INFO - Trying to send request to server
+2025-05-20 13:44:59,572 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:45:28,630 - root - INFO - Trying to send request to server
+2025-05-20 13:45:28,712 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:45:28,712 - root - INFO - Trying to send request to server
+2025-05-20 13:45:28,733 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:45:38,829 - root - INFO - Trying to send request to server
+2025-05-20 13:45:38,861 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:45:38,864 - root - INFO - Trying to send request to server
+2025-05-20 13:45:38,884 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:46:10,141 - root - INFO - Trying to send request to server
+2025-05-20 13:46:10,227 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:46:10,829 - root - INFO - Trying to send request to server
+2025-05-20 13:46:10,869 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:46:11,205 - root - INFO - Trying to send request to server
+2025-05-20 13:46:11,231 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:46:29,132 - root - INFO - Trying to send request to server
+2025-05-20 13:46:29,167 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:46:29,168 - root - INFO - Trying to send request to server
+2025-05-20 13:46:29,190 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:46:39,939 - root - INFO - Trying to send request to server
+2025-05-20 13:46:39,971 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:46:41,021 - root - INFO - Trying to send request to server
+2025-05-20 13:46:41,171 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:47:11,939 - root - INFO - Trying to send request to server
+2025-05-20 13:47:11,982 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:47:13,022 - root - INFO - Trying to send request to server
+2025-05-20 13:47:13,046 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:47:19,885 - root - INFO - Trying to send request to server
+2025-05-20 13:47:19,921 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:47:20,207 - root - INFO - Trying to send request to server
+2025-05-20 13:47:20,246 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:47:50,360 - root - INFO - Trying to send request to server
+2025-05-20 13:47:50,402 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:47:52,208 - root - INFO - Trying to send request to server
+2025-05-20 13:47:52,241 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:47:59,137 - root - INFO - Trying to send request to server
+2025-05-20 13:47:59,186 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:48:03,745 - root - INFO - Trying to send request to server
+2025-05-20 13:48:03,779 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:48:20,251 - root - INFO - Trying to send request to server
+2025-05-20 13:48:20,294 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:48:34,810 - root - INFO - Trying to send request to server
+2025-05-20 13:48:34,851 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:48:52,252 - root - INFO - Trying to send request to server
+2025-05-20 13:48:52,290 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:01,310 - root - INFO - Trying to send request to server
+2025-05-20 13:49:01,351 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:05,090 - root - INFO - Trying to send request to server
+2025-05-20 13:49:05,119 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:31,596 - root - INFO - Trying to send request to server
+2025-05-20 13:49:31,635 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:32,790 - root - INFO - Trying to send request to server
+2025-05-20 13:49:32,871 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:32,872 - root - INFO - Trying to send request to server
+2025-05-20 13:49:32,917 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:36,852 - root - INFO - Trying to send request to server
+2025-05-20 13:49:36,880 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:56,615 - root - INFO - Trying to send request to server
+2025-05-20 13:49:56,646 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:49:56,647 - root - INFO - Trying to send request to server
+2025-05-20 13:49:56,730 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:50:01,414 - root - INFO - Trying to send request to server
+2025-05-20 13:50:01,452 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:50:07,168 - root - INFO - Trying to send request to server
+2025-05-20 13:50:07,212 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:50:31,231 - root - INFO - Trying to send request to server
+2025-05-20 13:50:31,263 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:50:39,173 - root - INFO - Trying to send request to server
+2025-05-20 13:50:39,200 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:50:46,951 - root - INFO - Trying to send request to server
+2025-05-20 13:50:46,996 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:51:01,709 - root - INFO - Trying to send request to server
+2025-05-20 13:51:01,753 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:51:18,958 - root - INFO - Trying to send request to server
+2025-05-20 13:51:18,984 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:51:21,578 - root - INFO - Trying to send request to server
+2025-05-20 13:51:21,615 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:51:26,618 - root - INFO - Trying to send request to server
+2025-05-20 13:51:26,703 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:51:33,712 - root - INFO - Trying to send request to server
+2025-05-20 13:51:33,739 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:51:34,242 - root - INFO - Trying to send request to server
+2025-05-20 13:51:34,363 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:51:51,738 - root - INFO - Trying to send request to server
+2025-05-20 13:51:51,776 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:05,835 - root - INFO - Trying to send request to server
+2025-05-20 13:52:05,918 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:23,737 - root - INFO - Trying to send request to server
+2025-05-20 13:52:23,764 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:24,222 - root - INFO - Trying to send request to server
+2025-05-20 13:52:24,250 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:29,305 - root - INFO - Trying to send request to server
+2025-05-20 13:52:29,351 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:29,351 - root - INFO - Trying to send request to server
+2025-05-20 13:52:29,371 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:37,841 - root - INFO - Trying to send request to server
+2025-05-20 13:52:37,874 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:48,784 - root - INFO - Trying to send request to server
+2025-05-20 13:52:48,822 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:48,822 - root - INFO - Trying to send request to server
+2025-05-20 13:52:48,846 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:56,228 - root - INFO - Trying to send request to server
+2025-05-20 13:52:56,264 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:52:57,067 - root - INFO - Trying to send request to server
+2025-05-20 13:52:57,103 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:06,402 - root - INFO - Trying to send request to server
+2025-05-20 13:53:06,451 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:19,395 - root - INFO - Trying to send request to server
+2025-05-20 13:53:19,432 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:19,433 - root - INFO - Trying to send request to server
+2025-05-20 13:53:19,454 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:29,075 - root - INFO - Trying to send request to server
+2025-05-20 13:53:29,104 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:30,237 - root - INFO - Trying to send request to server
+2025-05-20 13:53:30,280 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:30,281 - root - INFO - Trying to send request to server
+2025-05-20 13:53:30,304 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:38,409 - root - INFO - Trying to send request to server
+2025-05-20 13:53:38,450 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:39,915 - root - INFO - Trying to send request to server
+2025-05-20 13:53:39,945 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:39,976 - root - INFO - Trying to send request to server
+2025-05-20 13:53:39,997 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:42,142 - root - INFO - Trying to send request to server
+2025-05-20 13:53:42,204 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:53:42,204 - root - INFO - Trying to send request to server
+2025-05-20 13:53:42,240 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:54:09,738 - root - INFO - Trying to send request to server
+2025-05-20 13:54:09,768 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:54:09,771 - root - INFO - Trying to send request to server
+2025-05-20 13:54:09,797 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:54:41,254 - root - INFO - Trying to send request to server
+2025-05-20 13:54:41,320 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:54:41,771 - root - INFO - Trying to send request to server
+2025-05-20 13:54:41,797 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:54:48,616 - root - INFO - Trying to send request to server
+2025-05-20 13:54:48,660 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:12,147 - root - INFO - Trying to send request to server
+2025-05-20 13:55:12,240 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:12,240 - root - INFO - Trying to send request to server
+2025-05-20 13:55:12,267 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:20,623 - root - INFO - Trying to send request to server
+2025-05-20 13:55:20,701 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:23,684 - root - INFO - Trying to send request to server
+2025-05-20 13:55:23,717 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:44,214 - root - INFO - Trying to send request to server
+2025-05-20 13:55:44,255 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:45,666 - root - INFO - Trying to send request to server
+2025-05-20 13:55:45,758 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:55,687 - root - INFO - Trying to send request to server
+2025-05-20 13:55:55,727 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:55:57,272 - root - INFO - Trying to send request to server
+2025-05-20 13:55:57,314 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:56:14,350 - root - INFO - Trying to send request to server
+2025-05-20 13:56:14,387 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:56:14,387 - root - INFO - Trying to send request to server
+2025-05-20 13:56:14,413 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:56:15,484 - root - INFO - Trying to send request to server
+2025-05-20 13:56:15,521 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:56:27,073 - root - INFO - Trying to send request to server
+2025-05-20 13:56:27,111 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:56:45,308 - root - INFO - Trying to send request to server
+2025-05-20 13:56:45,355 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:56:56,869 - root - INFO - Trying to send request to server
+2025-05-20 13:56:56,911 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:02,013 - root - INFO - Trying to send request to server
+2025-05-20 13:57:02,042 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:02,042 - root - INFO - Trying to send request to server
+2025-05-20 13:57:02,063 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:15,126 - root - INFO - Trying to send request to server
+2025-05-20 13:57:15,162 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:28,870 - root - INFO - Trying to send request to server
+2025-05-20 13:57:28,952 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:33,854 - root - INFO - Trying to send request to server
+2025-05-20 13:57:33,892 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:34,696 - root - INFO - Trying to send request to server
+2025-05-20 13:57:34,722 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:34,723 - root - INFO - Trying to send request to server
+2025-05-20 13:57:34,745 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:45,486 - root - INFO - Trying to send request to server
+2025-05-20 13:57:45,581 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:54,007 - root - INFO - Trying to send request to server
+2025-05-20 13:57:54,035 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:57:54,036 - root - INFO - Trying to send request to server
+2025-05-20 13:57:54,055 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:58:03,652 - root - INFO - Trying to send request to server
+2025-05-20 13:58:03,695 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:58:08,254 - root - INFO - Trying to send request to server
+2025-05-20 13:58:08,295 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:58:10,850 - root - INFO - Trying to send request to server
+2025-05-20 13:58:10,893 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:58:10,893 - root - INFO - Trying to send request to server
+2025-05-20 13:58:10,924 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:58:15,510 - root - INFO - Trying to send request to server
+2025-05-20 13:58:15,543 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:58:35,656 - root - INFO - Trying to send request to server
+2025-05-20 13:58:35,683 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:58:46,371 - root - INFO - Trying to send request to server
+2025-05-20 13:58:46,425 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:59:06,272 - root - INFO - Trying to send request to server
+2025-05-20 13:59:06,308 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:59:06,309 - root - INFO - Trying to send request to server
+2025-05-20 13:59:06,332 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:59:12,668 - root - INFO - Trying to send request to server
+2025-05-20 13:59:12,709 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:59:12,709 - root - INFO - Trying to send request to server
+2025-05-20 13:59:12,737 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:59:18,378 - root - INFO - Trying to send request to server
+2025-05-20 13:59:18,406 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:59:23,086 - root - INFO - Trying to send request to server
+2025-05-20 13:59:23,130 - root - INFO - response from server: <Response [200]>
+2025-05-20 13:59:52,901 - root - INFO - Trying to send request to server
+2025-05-20 13:59:52,943 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:00:12,905 - root - INFO - Trying to send request to server
+2025-05-20 14:00:12,958 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:00:12,959 - root - INFO - Trying to send request to server
+2025-05-20 14:00:12,981 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:00:22,867 - root - INFO - Trying to send request to server
+2025-05-20 14:00:22,962 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:00:52,684 - root - INFO - Trying to send request to server
+2025-05-20 14:00:52,720 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:01:22,500 - root - INFO - Trying to send request to server
+2025-05-20 14:01:22,599 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:01:42,907 - root - INFO - Trying to send request to server
+2025-05-20 14:01:42,939 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:01:52,886 - root - INFO - Trying to send request to server
+2025-05-20 14:01:52,913 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:02:22,769 - root - INFO - Trying to send request to server
+2025-05-20 14:02:22,802 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:02:29,493 - root - INFO - Trying to send request to server
+2025-05-20 14:02:29,539 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:02:29,539 - root - INFO - Trying to send request to server
+2025-05-20 14:02:29,565 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:02:53,757 - root - INFO - Trying to send request to server
+2025-05-20 14:02:53,796 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:03:12,825 - root - INFO - Trying to send request to server
+2025-05-20 14:03:12,897 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:03:24,145 - root - INFO - Trying to send request to server
+2025-05-20 14:03:24,183 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:03:53,962 - root - INFO - Trying to send request to server
+2025-05-20 14:03:53,993 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:03:59,499 - root - INFO - Trying to send request to server
+2025-05-20 14:03:59,547 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:04:25,967 - root - INFO - Trying to send request to server
+2025-05-20 14:04:26,009 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:04:28,752 - root - INFO - Trying to send request to server
+2025-05-20 14:04:28,791 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:04:48,055 - root - INFO - Trying to send request to server
+2025-05-20 14:04:48,081 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:04:48,082 - root - INFO - Trying to send request to server
+2025-05-20 14:04:48,107 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:04:59,406 - root - INFO - Trying to send request to server
+2025-05-20 14:04:59,452 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:05:01,731 - root - INFO - Trying to send request to server
+2025-05-20 14:05:01,762 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:05:01,762 - root - INFO - Trying to send request to server
+2025-05-20 14:05:01,784 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:05:30,315 - root - INFO - Trying to send request to server
+2025-05-20 14:05:30,402 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:05:41,570 - root - INFO - Trying to send request to server
+2025-05-20 14:05:41,649 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:05:41,649 - root - INFO - Trying to send request to server
+2025-05-20 14:05:41,700 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:06:00,138 - root - INFO - Trying to send request to server
+2025-05-20 14:06:00,183 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:06:02,799 - root - INFO - Trying to send request to server
+2025-05-20 14:06:02,838 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:06:02,838 - root - INFO - Trying to send request to server
+2025-05-20 14:06:02,863 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:06:29,954 - root - INFO - Trying to send request to server
+2025-05-20 14:06:29,984 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:07:01,802 - root - INFO - Trying to send request to server
+2025-05-20 14:07:01,837 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:07:32,199 - root - INFO - Trying to send request to server
+2025-05-20 14:07:32,243 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:07:32,802 - root - INFO - Trying to send request to server
+2025-05-20 14:07:32,830 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:07:32,831 - root - INFO - Trying to send request to server
+2025-05-20 14:07:32,854 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:07:32,854 - root - INFO - Trying to send request to server
+2025-05-20 14:07:32,881 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:04,199 - root - INFO - Trying to send request to server
+2025-05-20 14:08:04,244 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:05,152 - root - INFO - Trying to send request to server
+2025-05-20 14:08:05,285 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:37,159 - root - INFO - Trying to send request to server
+2025-05-20 14:08:37,203 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:39,489 - root - INFO - Trying to send request to server
+2025-05-20 14:08:39,535 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:42,348 - root - INFO - Trying to send request to server
+2025-05-20 14:08:42,387 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:42,387 - root - INFO - Trying to send request to server
+2025-05-20 14:08:42,414 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:50,117 - root - INFO - Trying to send request to server
+2025-05-20 14:08:50,170 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:08:50,170 - root - INFO - Trying to send request to server
+2025-05-20 14:08:50,194 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:09:11,501 - root - INFO - Trying to send request to server
+2025-05-20 14:09:11,540 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:09:13,810 - root - INFO - Trying to send request to server
+2025-05-20 14:09:13,840 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:09:45,814 - root - INFO - Trying to send request to server
+2025-05-20 14:09:45,866 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:09:51,689 - root - INFO - Trying to send request to server
+2025-05-20 14:09:51,721 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:20,128 - root - INFO - Trying to send request to server
+2025-05-20 14:10:20,161 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:21,746 - root - INFO - Trying to send request to server
+2025-05-20 14:10:21,852 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:29,272 - root - INFO - Trying to send request to server
+2025-05-20 14:10:29,308 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:29,308 - root - INFO - Trying to send request to server
+2025-05-20 14:10:29,333 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:38,673 - root - INFO - Trying to send request to server
+2025-05-20 14:10:38,704 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:38,705 - root - INFO - Trying to send request to server
+2025-05-20 14:10:38,727 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:51,564 - root - INFO - Trying to send request to server
+2025-05-20 14:10:51,616 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:56,477 - root - INFO - Trying to send request to server
+2025-05-20 14:10:56,514 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:10:56,514 - root - INFO - Trying to send request to server
+2025-05-20 14:10:56,536 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:11:23,565 - root - INFO - Trying to send request to server
+2025-05-20 14:11:23,592 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:11:35,195 - root - INFO - Trying to send request to server
+2025-05-20 14:11:35,236 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:11:47,729 - root - INFO - Trying to send request to server
+2025-05-20 14:11:47,768 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:11:47,768 - root - INFO - Trying to send request to server
+2025-05-20 14:11:47,798 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:12:06,924 - root - INFO - Trying to send request to server
+2025-05-20 14:12:06,983 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:12:15,050 - root - INFO - Trying to send request to server
+2025-05-20 14:12:15,091 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:12:15,091 - root - INFO - Trying to send request to server
+2025-05-20 14:12:15,114 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:12:38,926 - root - INFO - Trying to send request to server
+2025-05-20 14:12:39,003 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:13:06,558 - root - INFO - Trying to send request to server
+2025-05-20 14:13:06,595 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:13:36,372 - root - INFO - Trying to send request to server
+2025-05-20 14:13:36,427 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:13:45,056 - root - INFO - Trying to send request to server
+2025-05-20 14:13:45,096 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:14:08,380 - root - INFO - Trying to send request to server
+2025-05-20 14:14:08,414 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:14:15,143 - root - INFO - Trying to send request to server
+2025-05-20 14:14:15,198 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:14:46,825 - root - INFO - Trying to send request to server
+2025-05-20 14:14:46,907 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:15:16,718 - root - INFO - Trying to send request to server
+2025-05-20 14:15:16,748 - root - INFO - response from server: <Response [200]>
+2025-05-20 14:15:47,271 - root - INFO - Trying to send request to server
+2025-05-20 14:15:47,321 - root - INFO - response from server: <Response [200]>
