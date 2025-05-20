@@ -17,18 +17,23 @@ ROOM_4_LED = ""
 # Power plug
 POWER_PLUG = "power_plug"
 
+LEDs = [ROOM_1_LED, ROOM_2_LED, ROOM_3_LED, ROOM_4_LED]
+PIRs = [ROOM_1_PIR, ROOM_2_PIR, ROOM_3_PIR, ROOM_4_PIR]
 
-
-
+SENSOR_DICT = {
+	"0x54ef44100094740b": KITCHEN_PIR,
+	"0x54ef441000948cbd": ROOM_1_PIR,
+	"0x00158d0005729f18": ROOM_2_PIR,
+	"0x842e14fffe9e2d85": ROOM_1_LED,
+	"0x60a423fffe02319c": ROOM_2_LED,
+	"0x54ef4410008b372e": POWER_PLUG
+}
 
 
 
 
 
 # DO NOT TOUCH
-
-LEDs = [ROOM_1_LED, ROOM_2_LED, ROOM_3_LED, ROOM_4_LED]
-PIRs = [ROOM_1_PIR, ROOM_2_PIR, ROOM_3_PIR, ROOM_4_PIR]
 
 # Create the rooms
 ROOMS = []
@@ -41,15 +46,6 @@ for i in range(len(LEDs)):
             "LED_TOPIC": "zigbee2mqtt/" + LEDs[i] + "/set",
         })
 
-
-SENSOR_DICT = {
-	"0x54ef44100094740b": KITCHEN_PIR,
-	"0x54ef441000948cbd": ROOM_1_PIR,
-	"0x00158d0005729f18": ROOM_2_PIR,
-	"0x842e14fffe9e2d85": ROOM_1_LED,
-	"0x60a423fffe02319c": ROOM_2_LED,
-	"0x54ef4410008b372e": POWER_PLUG
-}
 
 DEVICES = list(SENSOR_DICT.keys())
 
