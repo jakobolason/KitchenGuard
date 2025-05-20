@@ -3,6 +3,7 @@ from Worker import (Cep2Zigbee2mqttClient,
 import requests
 import datetime
 import environment
+import logging
 
 class MQTT_Listener:
     """ The controller is responsible for managing events received from zigbee2mqtt and handle them.
@@ -95,8 +96,10 @@ class MQTT_Listener:
 
         try:
             print("Trying to save: ", web_event)
+            logging.info("Trying to send request to server")
             responseSave = requests.post(environment.DB_ENDPOINT, json = web_event)
             print("Response from save function: ", responseSave)
+            logging.info(f"response from server: {responseSave}")
                 
         except ConnectionError as ex:
             print(f"{ex}")
