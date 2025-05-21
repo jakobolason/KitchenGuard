@@ -209,7 +209,7 @@ impl StateHandler {
                         panic!("Invalid state transition detected");
                     }
                 }
-            } else if data.device_model == "JobScheduler" {
+            } else if data.device_model == shared_struct::JOBSSCHEDULER_ID {
                 println!("device found to be from jobscheduler");
                 // An event from jobscheduler means that a timer was done, so give the appropriate task duration
                 let next_state = match current_state {
@@ -420,7 +420,7 @@ impl StateHandler {
         let (new_state, room_pir) = StateHandler::determine_new_state(latest_statelog.clone(), &sensor_lookup, &data);
         println!("new state found to be: {:?} with old state: {:?}", new_state, current_state);
 
-        if new_state == shared_struct::States::CriticallyAlarmed && new_state == current_state && data.device_model == "JobScheduler" {
+        if new_state == shared_struct::States::CriticallyAlarmed && new_state == current_state && data.device_model == shared_struct::JOBSSCHEDULER_ID {
             println!(" SENDING SMS TO RELATIVES");
             // If we are currently in CriticallyAlarmed, then 8 minutes has passed and R6 describes 
             // notifiying the relatives now
@@ -522,10 +522,10 @@ impl Handler<HealthCheck> for StateHandler {
                     event_data: "A healthy check was given".to_string(),
                     event_type_enum: "INIT".to_string(),
                     res_id: res_id.clone(),
-                    device_model: "StateHandler".to_string(),
+                    device_model: shared_struct::STATEHANDLER_ID.to_string(),
                     device_vendor: "KG2".to_string(),
                     gateway_id: 1,
-                    id: "StateHandler".to_string()
+                    id: shared_struct::STATEHANDLER_ID.to_string()
                 };
                 let collection = db_client.database(shared_struct::RESIDENT_DATA).collection::<shared_struct::Event>(shared_struct::RESIDENT_LOGS);
                 if let Err(err) = collection.insert_one(initialization_event).await {
@@ -556,10 +556,10 @@ impl Handler<HealthCheck> for StateHandler {
                     event_data: "some sensor was faulty, look in db".to_string(),
                     event_type_enum: "FAULTY".to_string(),
                     res_id: res_id.clone(),
-                    device_model: "StateHandler".to_string(),
+                    device_model: shared_struct::STATEHANDLER_ID.to_string(),
                     device_vendor: "KG2".to_string(),
                     gateway_id: 1,
-                    id: "StateHandler".to_string()
+                    id: shared_struct::STATEHANDLER_ID.to_string()
                 };
                 let collection = db_client.database(shared_struct::RESIDENT_DATA)
                     .collection::<shared_struct::Event>(shared_struct::RESIDENT_LOGS);

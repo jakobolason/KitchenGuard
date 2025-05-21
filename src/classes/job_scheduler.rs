@@ -3,7 +3,7 @@ use std::time::{Instant, Duration};
 use std::collections::VecDeque;
 
 use super::state_handler::StateHandler;
-use super::shared_struct::{ScheduledTask, Event};
+use super::shared_struct::{ScheduledTask, Event, JOBSSCHEDULER_ID};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -142,7 +142,7 @@ impl JobsScheduler {
 				event_data: "COMPLETED".to_string(),
 				event_type_enum: "job_scheduler".to_string(),
 				res_id: task.res_id,
-				device_model: "JobScheduler".to_string(),
+				device_model: JOBSSCHEDULER_ID.to_string(),
 				device_vendor: "SELF".to_string(),
 				gateway_id: 1,
 				id: "1".to_string(),

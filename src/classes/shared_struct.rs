@@ -26,6 +26,10 @@ pub static IP_ADDRESSES: &str = "ip_addresses";
 pub static USERS: &str = "users";
 pub static INFO: &str = "info";
 
+// For communication between JobsScheduler and StateHandler
+pub static JOBSSCHEDULER_ID: &str = "JobsScheduler";
+pub static STATEHANDLER_ID: &str = "StateHandler";
+
 /// The endpoint configured on the Pi
 pub static PI_LISTENER: &str = "state_listener";
 pub static SMS_SERVICE: &str = "https://api.twilio.com/2010-04-01/Accounts/";
