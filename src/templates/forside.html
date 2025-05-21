@@ -47,44 +47,14 @@
             <input type="password" placeholder="Indtast password" name="password" required></input>
 
             <button type="submit" class="btn">Login</button>
-            <!-- Forgot password option -->
             <div style="display: flex; justify-content: space-between; margin-top: 2px; margin-bottom: 30px;">
                 <a onClick="openOpretBruger()" style="color: #4DA6FF; text-decoration: none;">Create user</a>
-                <a onClick="openForgotPasswordForm()" style="color: #4DA6FF; text-decoration: none;">Forgot password?</a>
             </div>
             <button type="button" class="btn cancel" onClick="closeForm()">Luk</button>
         </form>
     </div>
 
-    <!-- Forgot password form -->
-    <div class="form-popup" id="forgotPasswordForm" style="display: none;">
-        <form action="/api/create_user" method="POST" class="form-container">
-            <h1>Forgot password</h1>
-            <br>
-            <p>
-                Forgot your password? Input username, phonenumber and new code:
-            </p>
-            <br>
-            <br>
-            
-            <label for="username"><b>Username</b></label>
-            <input type="text" placeholder="John" name="username" required></input>
 
-            <label for="phone_number"><b>Phonenumber</b></label>
-            <input type="text" placeholder="12345678 (+45)" name="phone_number" required></input>
-
-            <label for="password"><b>New password</b></label>
-            <input type="password" placeholder="Strong1Password" name="password" required></input>
-
-            <button type="submit" class="btn">Create User</button>
-
-            <!-- Back to login -->
-            <div style="display: flex; justify-content: space-between; margin-top: 2px; margin-bottom: 30px;">
-                <a onClick="closeForm(); openForm()" style="color: #4DA6FF; text-decoration: none;">Login</a>
-            </div>
-            <button type="button" class="btn cancel" onClick="closeForm()">Luk</button>
-        </form>
-    </div>
 
     <!-- Opret bruger form -->
     <div class="form-popup" id="opretBrugerForm" style="display: none;">
@@ -112,63 +82,7 @@
         </form>
     </div>
 
-    <!-- multiple elements div -->
-    <div class="centered-div">
-        <div class="colored-box">
-            <!-- Split elements div -->
-            <div style="width: 100%;">
-                <!-- Left element -->
-                <div style="width: 40%; float: left;">
-                    <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.rnafacilitiesmanagement.com%2Fwp-content%2Fuploads%2F2020%2F06%2Fsecurity-guards-scaled.jpeg&f=1&nofb=1&ipt=b40305d68d4a55f57adc859b0cbed90cf63d166e7002e29b8a81aac0510988e4" style="width: 100%; height: 100%; float: left;">
-                </div>
-    
-                <!-- Right element -->
-                <div style="width: 60%; float: right;">
-                    <br>
-                    <br>
-                    <!-- Text div -->
-                    <div style="margin-left: 5%; margin-right: 5%; margin-bottom: 1%; text-align: justify;">
-                        <p>
-                            This is your KitchenGuard system's information page, which provides you with relevant information about the operation of the setup. KitchenGuard is your partner in creating a 
-                            safe and intelligent kitchen environment. With KitchenGuard, you get access to advanced features that help you monitor and optimize your kitchen. Whether it's security, statistics, 
-                            or customization, KitchenGuard is here to make your everyday life easier. Discover a new standard for kitchen management with our easy-to-use and innovative solutions. KitchenGuard is 
-                            designed to give you peace of mind and a seamless experience in your kitchen.
-                        </p>
-                        <br>
-                        <p>
-                            Click on <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.thenounproject.com%2Fpng%2F1123247-200.png&f=1&nofb=1&ipt=01f476a25d20356b4901c217bd2fe9329571477b13b9006da797367ca4d2ddd4&ipo=images", style="width: 20; height:20px;"> 
-                            In the upper right corner for more information.
-                        </p>
-                    </div>
-                </div>
-            </div>
 
-        </div>
-    </div>
-
-
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
-
-    <div class="colored-box">
-        <div style="margin-left: 5%; margin-right: 5%;">
-            <br>
-            <p>
-                <h2>Kontakt</h2>
-            </p>
-            <br>
-            <p><strong>Mail:</strong> kitchenguard@systems.com</p>
-            <p><strong>Tlf:</strong> +45 00 00 00 00</p>
-        </div>
-        <br>
-        <br>
-    </div>
 
     <script>
         function openForm() {

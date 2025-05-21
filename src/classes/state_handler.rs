@@ -486,7 +486,6 @@ impl StateHandler {
         Ok(new_state)
     }
 
-    /// Simply logs the health check
     async fn save_health_check(data: &shared_struct::HealthCheck, db_client: &Client) -> bool {
         // HealthCheck is a vector of tuples. Compare each entries first el to a sensor in SensorLookup
         if let Err(err) = db_client.database(shared_struct::RESIDENT_DATA)
