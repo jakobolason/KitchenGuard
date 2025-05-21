@@ -136,7 +136,7 @@ impl StateHandler {
         if *is_test {println!("we are in tests");}
         else { println!("not in tests...");}
         match new_state {
-            shared_struct::States::Unattended => Instant::now() + if *is_test { Duration::from_secs(30) } else { Duration::from_secs(20*60) }, // 20 minutes
+            shared_struct::States::Unattended => Instant::now() + if *is_test { Duration::from_secs(10) } else { Duration::from_secs(20*60) }, // 20 minutes
             shared_struct::States::Alarmed => Instant::now() + if *is_test { Duration::from_secs(15) } else { Duration::from_secs(2*60) }, // 2 minutes
             shared_struct::States::CriticallyAlarmed => Instant::now() + if *is_test { Duration::from_secs(20) } else { Duration::from_secs(8*60)}, // 8 minutes
             _ => panic!("You should not give state '{:?}' to this function!", new_state),
@@ -470,8 +470,16 @@ impl StateHandler {
                     println!("cancelling timer in jobsscheduler!");
                     let res_id = task_el.res_id;
                     job_scheduler.do_send(CancelTask {
-                        res_id,
+                        res_id: res_id.clone(),
                     });
+                    if data.device_model == "USER" {
+                        // When the user clicks 'turn off alarm', then the timer to go into critically should be cancelled, but a 
+                        // new timer for being in unattended should be set also 
+                        job_scheduler.do_send( ScheduledTask {
+                            res_id,
+                            execute_at: StateHandler::alarm_duration_from_state(&new_state, &is_test)
+                        })
+                    }
                 }
             }
         }

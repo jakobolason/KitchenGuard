@@ -107,6 +107,8 @@ impl Actor for WebHandler {
     type Context = Context<Self>;
 }
 
+/// Checks against a username and password. If it is correct, then it uses the same actor's internal state
+/// to add a cookie to it's CookieManager.
 impl Handler<LoginInformation> for WebHandler {
     type Result = ResponseActFuture<Self, Option<String>>;
 
