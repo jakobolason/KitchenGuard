@@ -85,7 +85,7 @@ class MQTT_Listener:
             "time_stamp": crnt_time, 
             "mode": str(mode),
             "event_data": data_str, 
-            "event_type_enum": "17", # We don't use this
+            "event_type_enum": "17",
             "res_id": environment.RES_ID, 
             "device_model": device, 
             "device_vendor": "Aqara", 
